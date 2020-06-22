@@ -16,7 +16,7 @@ use rustc_codegen_ssa::common::TypeKind;
 use rustc_codegen_ssa::glue;
 use rustc_codegen_ssa::mir::operand::{OperandRef, OperandValue};
 use rustc_codegen_ssa::mir::place::PlaceRef;
-use rustc_codegen_ssa::mir::FunctionCx;
+//use rustc_codegen_ssa::mir::FunctionCx;
 use rustc_codegen_ssa::traits::*;
 use rustc_codegen_ssa::MemFlags;
 use rustc_hir as hir;
@@ -82,14 +82,16 @@ fn get_simple_intrinsic(cx: &CodegenCx<'ll, '_>, name: &str) -> Option<&'ll Valu
 }
 
 impl IntrinsicCallMethods<'tcx> for Builder<'a, 'll, 'tcx> {
-    fn codegen_intrinsic_call<'b, Bx: BuilderMethods<'b, 'tcx>>(
+//    fn codegen_intrinsic_call<'b, Bx: BuilderMethods<'b, 'tcx>>(
+    fn codegen_intrinsic_call(
         &mut self,
-        fx: &FunctionCx<'b, 'tcx, Bx>,
+//        fx: &FunctionCx<'b, 'tcx, Bx>,
         instance: ty::Instance<'tcx>,
         fn_abi: &FnAbi<'tcx, Ty<'tcx>>,
         args: &[OperandRef<'tcx, &'ll Value>],
         llresult: &'ll Value,
         span: Span,
+        caller_instance: ty::Instance<'tcx>,
     ) {
         let tcx = self.tcx;
         let callee_ty = instance.monomorphic_ty(tcx);
@@ -141,17 +143,24 @@ impl IntrinsicCallMethods<'tcx> for Builder<'a, 'll, 'tcx> {
                 self.call(llfn, &[], None)
             }
             "count_code_region" => {
-                let coverage_data = fx.mir.coverage_data.as_ref().unwrap();
-                let mangled_fn = tcx.symbol_name(fx.instance);
-                let (mangled_fn_name, _len_val) = self.const_str(mangled_fn.name);
-                let hash = self.const_u64(coverage_data.hash);
-                let index = args[0].immediate();
-                let num_counters = self.const_u32(coverage_data.num_counters as u32);
-                debug!(
-                    "count_code_region to LLVM intrinsic instrprof.increment(fn_name={}, hash={:?}, num_counters={:?}, index={:?})",
-                    mangled_fn.name, hash, index, num_counters
-                );
-                self.instrprof_increment(mangled_fn_name, hash, num_counters, index)
+                //let coverage_data = fx.mir.coverage_data.as_ref().unwrap();
+                match caller_instance.def {
+                    ty::InstanceDef::Item(caller_def_id) => {
+                        let coverage_data = tcx.coverage_data(caller_def_id.expect_local()).unwrap();
+                        //let mangled_fn = tcx.symbol_name(fx.instance);
+                        let mangled_fn = tcx.symbol_name(caller_instance);
+                        let (mangled_fn_name, _len_val) = self.const_str(mangled_fn.name);
+                        let hash = self.const_u64(coverage_data.hash);
+                        let index = args[0].immediate();
+                        let num_counters = self.const_u32(coverage_data.num_counters);
+                        debug!(
+                            "count_code_region to LLVM intrinsic instrprof.increment(fn_name={}, hash={:?}, num_counters={:?}, index={:?})",
+                            mangled_fn.name, hash, index, num_counters
+                        );
+                        self.instrprof_increment(mangled_fn_name, hash, num_counters, index)
+                    }
+                    _ => bug!("count_code_region caller should be an `InstanceDef::Item`"),
+                }
             }
             "va_start" => self.va_start(args[0].immediate()),
             "va_end" => self.va_end(args[0].immediate()),

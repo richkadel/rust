@@ -1119,6 +1119,21 @@ impl<'a, 'tcx> CrateMetadataRef<'a> {
             .decode((self, tcx))
     }
 
+    // fn get_coverage_data(&self, tcx: TyCtxt<'tcx>, id: DefIndex) -> Option<mir::CoverageData> {
+    //     self.root
+    //         .tables
+    //         .coverage_data
+    //         .get(self, id)
+    //         .unwrap_or_else(|| {
+    //             bug!("get_coverage_data: missing `coverage_data` for `{:?}`", self.local_def_id(id))
+    //         })
+    //         .decode((self, tcx))
+    // }
+
+    // // fn coverage_data(&self, id: DefIndex) -> Option<mir::CoverageData> {
+    // //     self.coverage_data(id)
+    // // }
+
     fn mir_const_qualif(&self, id: DefIndex) -> mir::ConstQualifs {
         match self.kind(id) {
             EntryKind::Const(qualif, _)

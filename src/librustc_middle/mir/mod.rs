@@ -88,18 +88,20 @@ impl MirPhase {
     }
 }
 
-/// Coverage data computed by the `InstrumentCoverage` MIR pass, when compiling with
-/// `-Zinstrument_coverage`.
-#[derive(Clone, RustcEncodable, RustcDecodable, Debug, HashStable, TypeFoldable)]
-pub struct CoverageData {
-    /// A hash value that can be used by the consumer of the coverage profile data to detect
-    /// changes to the instrumented source of the associated MIR body (typically, for an
-    /// individual function).
-    pub hash: u64,
+// /// Coverage data computed by the `InstrumentCoverage` MIR pass, when compiling with
+// /// `-Zinstrument_coverage`.
+// #[derive(Clone, RustcEncodable, RustcDecodable, Debug, HashStable)]
+// //#[derive(Clone, RustcEncodable, RustcDecodable, Debug, HashStable, TypeFoldable)]
+// // If it doesn't need to be foldable, remove the impl for u32
+// pub struct CoverageData {
+//     /// A hash value that can be used by the consumer of the coverage profile data to detect
+//     /// changes to the instrumented source of the associated MIR body (typically, for an
+//     /// individual function).
+//     pub hash: u64,
 
-    /// The total number of coverage region counters added to this MIR Body.
-    pub num_counters: usize,
-}
+//     /// The total number of coverage region counters added to this MIR Body.
+//     pub num_counters: u32,
+// }
 
 /// The lowered representation of a single function.
 #[derive(Clone, RustcEncodable, RustcDecodable, Debug, HashStable, TypeFoldable)]
@@ -184,9 +186,9 @@ pub struct Body<'tcx> {
     /// FIXME(oli-obk): rewrite the promoted during promotion to eliminate the cell components.
     pub ignore_interior_mut_in_const_validation: bool,
 
-    /// If compiling with `-Zinstrument_coverage`, the `InstrumentCoverage` pass stores summary
-    /// information associated with the MIR, used in code generation of the coverage counters.
-    pub coverage_data: Option<CoverageData>,
+    // /// If compiling with `-Zinstrument_coverage`, the `InstrumentCoverage` pass stores summary
+    // /// information associated with the MIR, used in code generation of the coverage counters.
+    // pub coverage_data: Option<CoverageData>,
 
     predecessor_cache: PredecessorCache,
 }
@@ -228,7 +230,7 @@ impl<'tcx> Body<'tcx> {
             required_consts: Vec::new(),
             ignore_interior_mut_in_const_validation: false,
             control_flow_destroyed,
-            coverage_data: None,
+//            coverage_data: None,
             predecessor_cache: PredecessorCache::new(),
         }
     }
@@ -256,7 +258,7 @@ impl<'tcx> Body<'tcx> {
             generator_kind: None,
             var_debug_info: Vec::new(),
             ignore_interior_mut_in_const_validation: false,
-            coverage_data: None,
+//            coverage_data: None,
             predecessor_cache: PredecessorCache::new(),
         }
     }

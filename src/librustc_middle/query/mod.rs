@@ -196,6 +196,12 @@ rustc_queries! {
             desc { |tcx| "elaborating drops for `{}`", tcx.def_path_str(key.to_def_id()) }
         }
 
+        query coverage_data(key: DefId) -> Option<mir::CoverageData> {
+            storage(ArenaCacheSelector<'tcx>)
+            no_hash
+            desc { |tcx| "if enabled, injecting coverage counters in `{}`", tcx.def_path_str(key) }
+        }
+
         query mir_validated(key: LocalDefId) ->
             (
                 Steal<mir::Body<'tcx>>,

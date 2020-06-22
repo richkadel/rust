@@ -688,12 +688,13 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
                 .collect();
 
             bx.codegen_intrinsic_call(
-                self,
+//                self,
                 *instance.as_ref().unwrap(),
                 &fn_abi,
                 &args,
                 dest,
                 terminator.source_info.span,
+                self.instance,
             );
 
             if let ReturnDest::IndirectOperand(dst, _) = ret_dest {

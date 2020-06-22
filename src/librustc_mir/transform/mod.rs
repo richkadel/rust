@@ -56,6 +56,7 @@ pub(crate) fn provide(providers: &mut Providers<'_>) {
         promoted_mir,
         ..*providers
     };
+    instrument_coverage::provide(providers);
 }
 
 fn is_mir_available(tcx: TyCtxt<'_>, def_id: DefId) -> bool {
@@ -289,10 +290,10 @@ fn mir_validated(
             // What we need to run borrowck etc.
             &promote_pass,
             &simplify::SimplifyCfg::new("qualify-consts"),
-            // If the `instrument-coverage` option is enabled, analyze the CFG, identify each
-            // conditional branch, construct a coverage map to be passed to LLVM, and inject counters
-            // where needed.
-            &instrument_coverage::InstrumentCoverage,
+            // // If the `instrument-coverage` option is enabled, analyze the CFG, identify each
+            // // conditional branch, construct a coverage map to be passed to LLVM, and inject counters
+            // // where needed.
+            // &instrument_coverage::InstrumentCoverage,
         ]],
     );
 
@@ -326,6 +327,14 @@ fn run_post_borrowck_cleanup_passes<'tcx>(
     debug!("post_borrowck_cleanup({:?})", def_id);
 
     let post_borrowck_cleanup: &[&dyn MirPass<'tcx>] = &[
+        // If the `instrument-coverage` option is enabled, analyze the CFG, identify each
+        // conditional branch, construct a coverage map to be passed to LLVM, and inject counters
+        // where needed.
+// This pass runs as a query, which only takes a DefId, and must get the Body from another query.
+// It gets the Body from query `validated_mir`, which must have completed before this set of
+// passes starts.
+        // &instrument_coverage::InstrumentCoverage,
+
         // Remove all things only needed by analysis
         &no_landing_pads::NoLandingPads::new(tcx),
         &simplify_branches::SimplifyBranches::new("initial"),
@@ -401,6 +410,14 @@ fn run_optimization_passes<'tcx>(
     ];
 
     let pre_codegen_cleanup: &[&dyn MirPass<'tcx>] = &[
+        // If the `instrument-coverage` option is enabled, analyze the CFG, identify each
+        // conditional branch, construct a coverage map to be passed to LLVM, and inject counters
+        // where needed.
+// This pass runs as a query, which only takes a DefId, and must get the Body from another query.
+// It gets the Body from query `validated_mir`, which must have completed before this set of
+// passes starts.
+        &instrument_coverage::InstrumentCoverage,
+
         &add_call_guards::CriticalCallEdges,
         // Dump the end result for testing and debugging purposes.
         &dump_mir::Marker("PreCodegen"),

@@ -831,6 +831,11 @@ impl EncodeContext<'tcx> {
         }
     }
 
+    // fn encode_coverage_data(&mut self, def_id: DefId) {
+    //     debug!("EncodeContext::encode_coverage_data({:?})", def_id);
+    //     record!(self.tables.coverage_data[def_id] <- self.tcx.coverage_data(def_id));
+    // }
+
     fn encode_super_predicates(&mut self, def_id: DefId) {
         debug!("EncodeContext::encode_super_predicates({:?})", def_id);
         record!(self.tables.super_predicates[def_id] <- self.tcx.super_predicates_of(def_id));
@@ -1564,6 +1569,7 @@ impl EncodeContext<'tcx> {
         self.encode_generics(def_id);
         self.encode_explicit_predicates(def_id);
         self.encode_inferred_outlives(def_id);
+        // self.encode_coverage_data(def_id);
     }
 }
 

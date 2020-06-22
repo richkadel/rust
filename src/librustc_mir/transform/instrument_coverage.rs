@@ -11,26 +11,67 @@ use rustc_middle::mir::{
     Terminator, TerminatorKind, START_BLOCK,
 };
 use rustc_middle::ty;
+use rustc_middle::ty::query::Providers;
+//use rustc_middle::ty::{InstanceDef, TyCtxt};
 use rustc_middle::ty::TyCtxt;
 use rustc_span::def_id::DefId;
 use rustc_span::Span;
 
+pub(crate) fn provide(providers: &mut Providers<'_>) {
+    //let coverage_data = |tcx: TyCtxt<'_>, def_id: DefId| {
+    providers.coverage_data = |tcx, def_id| {
+        debug!("instrument_coverage::provide coverage_data closure for {:?}", def_id);
+        let src = MirSource::item(def_id);
+        let mut mir_body = tcx.mir_validated(def_id.expect_local()).0.steal();
+
+// NOPE... "THIS IS THE MIR READY FOR CODEGEN... NOT MUTABLE"        let mir_body = tcx.optimized_mir(def_id.expect_local());
+
+// [DEBUG rustc_mir::transform::instrument_coverage] InstrumentCoverage::run_pass for DefId(0:4 ~ basic[317d]::main[0])
+// [DEBUG rustc_mir::transform::instrument_coverage] instrument_coverage::provide coverage_data closure for DefId(0:4 ~ basic[317d]::main[0])
+// thread 'rustc' panicked at 'attempt to read from stolen value', /usr/local/google/home/richkadel/rust/src/librustc_middle/ty/steal.rs:42:9
+
+// 17:     0x7f755810954b - rustc_middle::ty::steal::Steal<T>::steal::h514b1948688803d5
+// at /usr/local/google/home/richkadel/rust/src/librustc_middle/ty/steal.rs:42
+// 18:     0x7f7557f0040f - rustc_mir::transform::instrument_coverage::provide::{{closure}}::ha7d6cdcc2626b8ed
+// at src/librustc_mir/transform/instrument_coverage.rs:25
+
+        InstrumentCoverage::compute_on_query(tcx, src, &mut mir_body)
+    };
+    // *providers = Providers {
+    //     coverage_data,
+    //     ..*providers
+    // };
+}
+
 /// Inserts call to count_code_region() as a placeholder to be replaced during code generation with
 /// the intrinsic llvm.instrprof.increment.
 pub struct InstrumentCoverage;
+// pub struct InstrumentCoverage {
+//     mir_body: Option<&mut mir::Body<'tcx>>,
+// }
 
 struct Instrumentor<'tcx> {
     tcx: TyCtxt<'tcx>,
-    num_counters: usize,
+    num_counters: u32,
 }
 
 impl<'tcx> MirPass<'tcx> for InstrumentCoverage {
-    fn run_pass(&self, tcx: TyCtxt<'tcx>, src: MirSource<'tcx>, mir_body: &mut mir::Body<'tcx>) {
+    fn run_pass(&self, tcx: TyCtxt<'tcx>, src: MirSource<'tcx>, _mir_body: &mut mir::Body<'tcx>) {
+//        self.mir_body = mir_body;
+        debug!("InstrumentCoverage::run_pass for {:?}", src.def_id());
+        let _ = tcx.coverage_data(src.def_id());
+    }
+}
+
+impl<'tcx> InstrumentCoverage {
+    fn compute_on_query(tcx: TyCtxt<'tcx>, src: MirSource<'tcx>, mir_body: &mut mir::Body<'tcx>) -> Option<CoverageData> {
+        debug!("InstrumentCoverage::compute_on_query for {:?}", src.def_id());
         if tcx.sess.opts.debugging_opts.instrument_coverage {
             // If the InstrumentCoverage pass is called on promoted MIRs, skip them.
             // See: https://github.com/rust-lang/rust/pull/73011#discussion_r438317601
             if src.promoted.is_none() {
-                assert!(mir_body.coverage_data.is_none());
+//                assert!(mir_body.coverage_data.is_none());
+// FIXME REPLACE THIS ASSERT?
 
                 let hash = hash_mir_source(tcx, &src);
 
@@ -43,9 +84,12 @@ impl<'tcx> MirPass<'tcx> for InstrumentCoverage {
 
                 let num_counters = Instrumentor::new(tcx).inject_counters(mir_body);
 
-                mir_body.coverage_data = Some(CoverageData { hash, num_counters });
+// //                mir_body.coverage_data = Some(CoverageData { hash, num_counters });
+//                 tcx.cstore.??? = Some(CoverageData { hash, num_counters });
+                return Some(CoverageData { hash, num_counters })
             }
         }
+        None
     }
 }
 
@@ -55,12 +99,12 @@ impl<'tcx> Instrumentor<'tcx> {
     }
 
     fn next_counter(&mut self) -> u32 {
-        let next = self.num_counters as u32;
+        let next = self.num_counters;
         self.num_counters += 1;
         next
     }
 
-    fn inject_counters(&mut self, mir_body: &mut mir::Body<'tcx>) -> usize {
+    fn inject_counters(&mut self, mir_body: &mut mir::Body<'tcx>) -> u32 {
         // FIXME(richkadel): As a first step, counters are only injected at the top of each
         // function. The complete solution will inject counters at each conditional code branch.
         let top_of_function = START_BLOCK;

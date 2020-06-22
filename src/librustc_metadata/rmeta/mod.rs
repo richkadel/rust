@@ -277,6 +277,7 @@ define_tables! {
     super_predicates: Table<DefIndex, Lazy!(ty::GenericPredicates<'tcx>)>,
     mir: Table<DefIndex, Lazy!(mir::Body<'tcx>)>,
     promoted_mir: Table<DefIndex, Lazy!(IndexVec<mir::Promoted, mir::Body<'tcx>>)>,
+    // coverage_data: Table<DefIndex, Lazy<mir::CoverageData>>,
 }
 
 #[derive(Copy, Clone, RustcEncodable, RustcDecodable)]
@@ -298,6 +299,7 @@ enum EntryKind {
     Variant(Lazy<VariantData>),
     Struct(Lazy<VariantData>, ReprOptions),
     Union(Lazy<VariantData>, ReprOptions),
+    //Fn(Lazy<FnData>, Option<mir::CoverageData>),
     Fn(Lazy<FnData>),
     ForeignFn(Lazy<FnData>),
     Mod(Lazy<ModData>),

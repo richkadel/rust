@@ -95,6 +95,24 @@ pub struct ConstQualifs {
     pub custom_eq: bool,
 }
 
+/// The result of the `coverage_data` query, if `Option::Some()`.
+///
+/// This data is computed by the `InstrumentCoverage` MIR pass, when compiling with
+/// `-Zinstrument_coverage`, and used during codegen to build the intrinsic call to
+/// `llvm.instrprof.increment`.
+#[derive(Clone, Copy, Debug, Default, RustcEncodable, RustcDecodable/*, HashStable*/)]
+//#[derive(Clone, RustcEncodable, RustcDecodable, Debug, HashStable, TypeFoldable)]
+// If it doesn't need to be foldable, remove the impl for u32
+pub struct CoverageData {
+    /// A hash value that can be used by the consumer of the coverage profile data to detect
+    /// changes to the instrumented source of the associated MIR body (typically, for an
+    /// individual function).
+    pub hash: u64,
+
+    /// The total number of coverage region counters added to this MIR Body.
+    pub num_counters: u32,
+}
+
 /// After we borrow check a closure, we are left with various
 /// requirements that we have inferred between the free regions that
 /// appear in the closure's signature or on its field types. These

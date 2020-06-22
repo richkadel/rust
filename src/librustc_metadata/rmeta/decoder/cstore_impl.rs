@@ -239,6 +239,8 @@ provide! { <'tcx> tcx, def_id, other, cdata,
 
         syms
     }
+    // coverage_data => { cdata.get_coverage_data(tcx, def_id.index) }
+    // coverage_data => { cdata.coverage_data(def_id.index) }
 }
 
 pub fn provide(providers: &mut Providers<'_>) {
