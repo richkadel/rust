@@ -94,6 +94,7 @@ macro_rules! arena_types {
             [] upvars_mentioned: rustc_data_structures::fx::FxIndexMap<rustc_hir::HirId, rustc_hir::Upvar>, rustc_data_structures::fx::FxIndexMap<rustc_hir::HirId, rustc_hir::Upvar>;
             [] object_safety_violations: rustc_middle::traits::ObjectSafetyViolation, rustc_middle::traits::ObjectSafetyViolation;
             [] codegen_unit: rustc_middle::mir::mono::CodegenUnit<$tcx>, rustc_middle::mir::mono::CodegenUnit<'_x>;
+            [] coverage_data: rustc_middle::mir::CoverageData, rustc_middle::mir::CoverageData;
             [] attribute: rustc_ast::ast::Attribute, rustc_ast::ast::Attribute;
             [] name_set: rustc_data_structures::fx::FxHashSet<rustc_span::symbol::Symbol>, rustc_data_structures::fx::FxHashSet<rustc_span::symbol::Symbol>;
             [] hir_id_set: rustc_hir::HirIdSet, rustc_hir::HirIdSet;

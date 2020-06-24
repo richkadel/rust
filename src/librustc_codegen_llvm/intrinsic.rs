@@ -140,6 +140,9 @@ impl IntrinsicCallMethods<'tcx> for Builder<'a, 'll, 'tcx> {
                 self.call(llfn, &[], None)
             }
             "count_code_region" => {
+                use rustc_middle::mir::count_code_region_args::{
+                    COUNTER_INDEX, END_BYTE_POS, START_BYTE_POS,
+                };
                 // FIXME(richkadel): The current implementation assumes the MIR for the given
                 // caller_instance represents a single function. Validate and/or correct if inlining
                 // and/or monomorphization invalidates these assumptions.
@@ -148,10 +151,16 @@ impl IntrinsicCallMethods<'tcx> for Builder<'a, 'll, 'tcx> {
                 let (mangled_fn_name, _len_val) = self.const_str(mangled_fn.name);
                 let hash = self.const_u64(coverage_data.hash);
                 let num_counters = self.const_u32(coverage_data.num_counters);
-                let index = args[0].immediate();
+                let index = args[COUNTER_INDEX].immediate();
                 debug!(
-                    "count_code_region to LLVM intrinsic instrprof.increment(fn_name={}, hash={:?}, num_counters={:?}, index={:?})",
-                    mangled_fn.name, hash, num_counters, index
+                    "count_code_region to LLVM intrinsic instrprof.increment(fn_name={}, hash={:?}, num_counters={:?}, index={:?}), byte range {:?}..{:?}, coverage_regions: {:?}",
+                    mangled_fn.name,
+                    hash,
+                    num_counters,
+                    index,
+                    args[START_BYTE_POS].immediate(),
+                    args[END_BYTE_POS].immediate(),
+                    coverage_data.coverage_regions,
                 );
                 self.instrprof_increment(mangled_fn_name, hash, num_counters, index)
             }

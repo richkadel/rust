@@ -1956,7 +1956,7 @@ extern "rust-intrinsic" {
     /// generation.
     #[cfg(not(bootstrap))]
     #[lang = "count_code_region"]
-    pub fn count_code_region(index: u32);
+    pub fn count_code_region(index: u32, start_byte_pos: u32, end_byte_pos: u32);
 
     /// See documentation of `<*const T>::guaranteed_eq` for details.
     #[rustc_const_unstable(feature = "const_raw_ptr_comparison", issue = "53020")]

@@ -231,7 +231,7 @@ rustc_queries! {
             cache_on_disk_if { key.is_local() }
         }
 
-        query coverage_data(key: DefId) -> mir::CoverageData {
+        query coverage_data(key: DefId) -> &'tcx mir::CoverageData {
             desc { |tcx| "retrieving coverage data from MIR for `{}`", tcx.def_path_str(key) }
             storage(ArenaCacheSelector<'tcx>)
             cache_on_disk_if { key.is_local() }
