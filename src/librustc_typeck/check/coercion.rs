@@ -10,45 +10,30 @@
 //!
 //! Note that if we are expecting a reference, we will *reborrow*
 //! even if the argument provided was already a reference. This is
-//! useful for freezing mut/const things (that is, when the expected is &T
-//! but you have &const T or &mut T) and also for avoiding the linearity
+//! useful for freezing mut things (that is, when the expected type is &T
+//! but you have &mut T) and also for avoiding the linearity
 //! of mut things (when the expected is &mut T and you have &mut T). See
-//! the various `src/test/ui/coerce-reborrow-*.rs` tests for
+//! the various `src/test/ui/coerce/*.rs` tests for
 //! examples of where this is useful.
 //!
 //! ## Subtle note
 //!
-//! When deciding what type coercions to consider, we do not attempt to
-//! resolve any type variables we may encounter. This is because `b`
-//! represents the expected type "as the user wrote it", meaning that if
-//! the user defined a generic function like
+//! When infering the generic arguments of functions, the argument
+//! order is relevant, which can lead to the following edge case:
 //!
-//!    fn foo<A>(a: A, b: A) { ... }
+//! ```rust
+//! fn foo<T>(a: T, b: T) {
+//!     // ...
+//! }
 //!
-//! and then we wrote `foo(&1, @2)`, we will not auto-borrow
-//! either argument. In older code we went to some lengths to
-//! resolve the `b` variable, which could mean that we'd
-//! auto-borrow later arguments but not earlier ones, which
-//! seems very confusing.
+//! foo(&7i32, &mut 7i32);
+//! // This compiles, as we first infer `T` to be `&i32`,
+//! // and then coerce `&mut 7i32` to `&7i32`.
 //!
-//! ## Subtler note
-//!
-//! However, right now, if the user manually specifies the
-//! values for the type variables, as so:
-//!
-//!    foo::<&int>(@1, @2)
-//!
-//! then we *will* auto-borrow, because we can't distinguish this from a
-//! function that declared `&int`. This is inconsistent but it's easiest
-//! at the moment. The right thing to do, I think, is to consider the
-//! *unsubstituted* type when deciding whether to auto-borrow, but the
-//! *substituted* type when considering the bounds and so forth. But most
-//! of our methods don't give access to the unsubstituted type, and
-//! rightly so because they'd be error-prone. So maybe the thing to do is
-//! to actually determine the kind of coercions that should occur
-//! separately and pass them in. Or maybe it's ok as is. Anyway, it's
-//! sort of a minor point so I've opted to leave it for later -- after all,
-//! we may want to adjust precisely when coercions occur.
+//! foo(&mut 7i32, &7i32);
+//! // This does not compile, as we first infer `T` to be `&mut i32`
+//! // and are then unable to coerce `&7i32` to `&mut i32`.
+//! ```
 
 use crate::astconv::AstConv;
 use crate::check::FnCtxt;
@@ -96,6 +81,8 @@ impl<'a, 'tcx> Deref for Coerce<'a, 'tcx> {
 
 type CoerceResult<'tcx> = InferResult<'tcx, (Vec<Adjustment<'tcx>>, Ty<'tcx>)>;
 
+/// Coercing a mutable reference to an immutable works, while
+/// coercing `&T` to `&mut T` should be forbidden.
 fn coerce_mutbls<'tcx>(
     from_mutbl: hir::Mutability,
     to_mutbl: hir::Mutability,
@@ -422,7 +409,7 @@ impl<'f, 'tcx> Coerce<'f, 'tcx> {
         }
 
         let InferOk { value: mut adjustments, obligations: o } =
-            autoderef.adjust_steps_as_infer_ok(self);
+            self.adjust_steps_as_infer_ok(&autoderef);
         obligations.extend(o);
         obligations.extend(autoderef.into_obligations());
 
@@ -908,7 +895,12 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     {
         let prev_ty = self.resolve_vars_with_obligations(prev_ty);
         let new_ty = self.resolve_vars_with_obligations(new_ty);
-        debug!("coercion::try_find_coercion_lub({:?}, {:?})", prev_ty, new_ty);
+        debug!(
+            "coercion::try_find_coercion_lub({:?}, {:?}, exprs={:?} exprs)",
+            prev_ty,
+            new_ty,
+            exprs.len()
+        );
 
         // Special-case that coercion alone cannot handle:
         // Function items or non-capturing closures of differing IDs or InternalSubsts.
@@ -1014,6 +1006,10 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 Ok(ok) => {
                     let (adjustments, target) = self.register_infer_ok_obligations(ok);
                     self.apply_adjustments(new, adjustments);
+                    debug!(
+                        "coercion::try_find_coercion_lub: was able to coerce from previous type {:?} to new type {:?}",
+                        prev_ty, new_ty,
+                    );
                     return Ok(target);
                 }
                 Err(e) => first_error = Some(e),
@@ -1044,6 +1040,11 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             };
 
             if !noop {
+                debug!(
+                    "coercion::try_find_coercion_lub: older expression {:?} had adjustments, requiring LUB",
+                    expr,
+                );
+
                 return self
                     .commit_if_ok(|_| self.at(cause, self.param_env).lub(prev_ty, new_ty))
                     .map(|ok| self.register_infer_ok_obligations(ok));
@@ -1061,6 +1062,10 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 }
             }
             Ok(ok) => {
+                debug!(
+                    "coercion::try_find_coercion_lub: was able to coerce previous type {:?} to new type {:?}",
+                    prev_ty, new_ty,
+                );
                 let (adjustments, target) = self.register_infer_ok_obligations(ok);
                 for expr in exprs {
                     let expr = expr.as_coercion_site();

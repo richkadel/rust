@@ -49,6 +49,7 @@ crate struct ImportSuggestion {
     pub did: Option<DefId>,
     pub descr: &'static str,
     pub path: Path,
+    pub accessible: bool,
 }
 
 /// Adjust the impl span so that just the `impl` keyword is taken by removing
@@ -107,7 +108,7 @@ impl<'a> Resolver<'a> {
                 match outer_res {
                     Res::SelfTy(maybe_trait_defid, maybe_impl_defid) => {
                         if let Some(impl_span) =
-                            maybe_impl_defid.and_then(|def_id| self.definitions.opt_span(def_id))
+                            maybe_impl_defid.and_then(|def_id| self.opt_span(def_id))
                         {
                             err.span_label(
                                 reduce_impl_span_to_impl_keyword(sm, impl_span),
@@ -126,12 +127,12 @@ impl<'a> Resolver<'a> {
                         return err;
                     }
                     Res::Def(DefKind::TyParam, def_id) => {
-                        if let Some(span) = self.definitions.opt_span(def_id) {
+                        if let Some(span) = self.opt_span(def_id) {
                             err.span_label(span, "type parameter from outer function");
                         }
                     }
                     Res::Def(DefKind::ConstParam, def_id) => {
-                        if let Some(span) = self.definitions.opt_span(def_id) {
+                        if let Some(span) = self.opt_span(def_id) {
                             err.span_label(span, "const parameter from outer function");
                         }
                     }
@@ -640,9 +641,11 @@ impl<'a> Resolver<'a> {
         let mut candidates = Vec::new();
         let mut seen_modules = FxHashSet::default();
         let not_local_module = crate_name.name != kw::Crate;
-        let mut worklist = vec![(start_module, Vec::<ast::PathSegment>::new(), not_local_module)];
+        let mut worklist =
+            vec![(start_module, Vec::<ast::PathSegment>::new(), true, not_local_module)];
 
-        while let Some((in_module, path_segments, in_module_is_extern)) = worklist.pop() {
+        while let Some((in_module, path_segments, accessible, in_module_is_extern)) = worklist.pop()
+        {
             // We have to visit module children in deterministic order to avoid
             // instabilities in reported imports (#43552).
             in_module.for_each_child(self, |this, ident, ns, name_binding| {
@@ -650,8 +653,17 @@ impl<'a> Resolver<'a> {
                 if name_binding.is_import() && !name_binding.is_extern_crate() {
                     return;
                 }
+
                 // avoid non-importable candidates as well
                 if !name_binding.is_importable() {
+                    return;
+                }
+
+                let child_accessible =
+                    accessible && this.is_accessible_from(name_binding.vis, parent_scope.module);
+
+                // do not venture inside inaccessible items of other crates
+                if in_module_is_extern && !child_accessible {
                     return;
                 }
 
@@ -673,21 +685,28 @@ impl<'a> Resolver<'a> {
 
                         segms.push(ast::PathSegment::from_ident(ident));
                         let path = Path { span: name_binding.span, segments: segms };
-                        // the entity is accessible in the following cases:
-                        // 1. if it's defined in the same crate, it's always
-                        // accessible (since private entities can be made public)
-                        // 2. if it's defined in another crate, it's accessible
-                        // only if both the module is public and the entity is
-                        // declared as public (due to pruning, we don't explore
-                        // outside crate private modules => no need to check this)
-                        if !in_module_is_extern || name_binding.vis == ty::Visibility::Public {
-                            let did = match res {
-                                Res::Def(DefKind::Ctor(..), did) => this.parent(did),
-                                _ => res.opt_def_id(),
-                            };
-                            if candidates.iter().all(|v: &ImportSuggestion| v.did != did) {
-                                candidates.push(ImportSuggestion { did, descr: res.descr(), path });
+                        let did = match res {
+                            Res::Def(DefKind::Ctor(..), did) => this.parent(did),
+                            _ => res.opt_def_id(),
+                        };
+
+                        if child_accessible {
+                            // Remove invisible match if exists
+                            if let Some(idx) = candidates
+                                .iter()
+                                .position(|v: &ImportSuggestion| v.did == did && !v.accessible)
+                            {
+                                candidates.remove(idx);
                             }
+                        }
+
+                        if candidates.iter().all(|v: &ImportSuggestion| v.did != did) {
+                            candidates.push(ImportSuggestion {
+                                did,
+                                descr: res.descr(),
+                                path,
+                                accessible: child_accessible,
+                            });
                         }
                     }
                 }
@@ -701,18 +720,20 @@ impl<'a> Resolver<'a> {
                     let is_extern_crate_that_also_appears_in_prelude =
                         name_binding.is_extern_crate() && lookup_ident.span.rust_2018();
 
-                    let is_visible_to_user =
-                        !in_module_is_extern || name_binding.vis == ty::Visibility::Public;
-
-                    if !is_extern_crate_that_also_appears_in_prelude && is_visible_to_user {
-                        // add the module to the lookup
+                    if !is_extern_crate_that_also_appears_in_prelude {
                         let is_extern = in_module_is_extern || name_binding.is_extern_crate();
+                        // add the module to the lookup
                         if seen_modules.insert(module.def_id().unwrap()) {
-                            worklist.push((module, path_segments, is_extern));
+                            worklist.push((module, path_segments, child_accessible, is_extern));
                         }
                     }
                 }
             })
+        }
+
+        // If only some candidates are accessible, take just them
+        if !candidates.iter().all(|v: &ImportSuggestion| !v.accessible) {
+            candidates = candidates.into_iter().filter(|x| x.accessible).collect();
         }
 
         candidates
@@ -825,7 +846,7 @@ impl<'a> Resolver<'a> {
                 Applicability::MaybeIncorrect,
             );
             let def_span = suggestion.res.opt_def_id().and_then(|def_id| match def_id.krate {
-                LOCAL_CRATE => self.definitions.opt_span(def_id),
+                LOCAL_CRATE => self.opt_span(def_id),
                 _ => Some(
                     self.session
                         .source_map()

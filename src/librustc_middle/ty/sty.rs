@@ -1589,19 +1589,16 @@ impl RegionKind {
                 flags = flags | TypeFlags::HAS_FREE_REGIONS;
                 flags = flags | TypeFlags::HAS_FREE_LOCAL_REGIONS;
                 flags = flags | TypeFlags::HAS_RE_INFER;
-                flags = flags | TypeFlags::STILL_FURTHER_SPECIALIZABLE;
             }
             ty::RePlaceholder(..) => {
                 flags = flags | TypeFlags::HAS_FREE_REGIONS;
                 flags = flags | TypeFlags::HAS_FREE_LOCAL_REGIONS;
                 flags = flags | TypeFlags::HAS_RE_PLACEHOLDER;
-                flags = flags | TypeFlags::STILL_FURTHER_SPECIALIZABLE;
             }
             ty::ReEarlyBound(..) => {
                 flags = flags | TypeFlags::HAS_FREE_REGIONS;
                 flags = flags | TypeFlags::HAS_FREE_LOCAL_REGIONS;
                 flags = flags | TypeFlags::HAS_RE_PARAM;
-                flags = flags | TypeFlags::STILL_FURTHER_SPECIALIZABLE;
             }
             ty::ReFree { .. } => {
                 flags = flags | TypeFlags::HAS_FREE_REGIONS;
@@ -2099,6 +2096,9 @@ impl<'tcx> TyS<'tcx> {
         variant_index: VariantIdx,
     ) -> Option<Discr<'tcx>> {
         match self.kind {
+            TyKind::Adt(adt, _) if adt.variants.is_empty() => {
+                bug!("discriminant_for_variant called on zero variant enum");
+            }
             TyKind::Adt(adt, _) if adt.is_enum() => {
                 Some(adt.discriminant_for_variant(tcx, variant_index))
             }

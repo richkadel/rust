@@ -135,7 +135,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let bits = self.force_bits(val, layout_of.size)?;
                 let kind = match layout_of.abi {
                     Abi::Scalar(ref scalar) => scalar.value,
-                    _ => bug!("{} called on invalid type {:?}", intrinsic_name, ty),
+                    _ => span_bug!(
+                        self.cur_span(),
+                        "{} called on invalid type {:?}",
+                        intrinsic_name,
+                        ty
+                    ),
                 };
                 let (nonzero, intrinsic_name) = match intrinsic_name {
                     sym::cttz_nonzero => (true, sym::cttz),
@@ -290,6 +295,11 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let offset_bytes = offset_count.wrapping_mul(pointee_size);
                 let offset_ptr = ptr.ptr_wrapping_signed_offset(offset_bytes, self);
                 self.write_scalar(offset_ptr, dest)?;
+            }
+            sym::ptr_guaranteed_eq | sym::ptr_guaranteed_ne => {
+                // FIXME: return `true` for at least some comparisons where we can reliably
+                // determine the result of runtime (in)equality tests at compile-time.
+                self.write_scalar(Scalar::from_bool(false), dest)?;
             }
             sym::ptr_offset_from => {
                 let a = self.read_immediate(args[0])?.to_scalar()?;

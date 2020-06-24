@@ -16,6 +16,7 @@ use rustc_ast::ptr::P;
 use rustc_ast::util::lev_distance::find_best_match_for_name;
 use rustc_ast::visit::{self, AssocCtxt, FnCtxt, FnKind, Visitor};
 use rustc_ast::{unwrap_or, walk_list};
+use rustc_ast_lowering::Resolver as ResolverAstLowering;
 use rustc_data_structures::fx::{FxHashMap, FxHashSet};
 use rustc_errors::DiagnosticId;
 use rustc_hir::def::Namespace::{self, *};
@@ -24,6 +25,7 @@ use rustc_hir::def_id::{DefId, CRATE_DEF_INDEX};
 use rustc_hir::TraitCandidate;
 use rustc_middle::{bug, span_bug};
 use rustc_session::lint;
+use rustc_span::def_id::LocalDefId;
 use rustc_span::symbol::{kw, sym, Ident, Symbol};
 use rustc_span::Span;
 use smallvec::{smallvec, SmallVec};
@@ -706,7 +708,7 @@ impl<'a, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
     }
 
     fn with_scope<T>(&mut self, id: NodeId, f: impl FnOnce(&mut Self) -> T) -> T {
-        let id = self.r.definitions.local_def_id(id);
+        let id = self.r.local_def_id(id);
         let module = self.r.module_map.get(&id).cloned(); // clones a reference
         if let Some(module) = module {
             // Move down in the graph.
@@ -758,7 +760,7 @@ impl<'a, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
         debug!("resolve_adt");
         self.with_current_self_item(item, |this| {
             this.with_generic_param_rib(generics, ItemRibKind(HasGenericParams::Yes), |this| {
-                let item_def_id = this.r.definitions.local_def_id(item.id).to_def_id();
+                let item_def_id = this.r.local_def_id(item.id).to_def_id();
                 this.with_self_rib(Res::SelfTy(None, Some(item_def_id)), |this| {
                     visit::walk_item(this, item);
                 });
@@ -838,7 +840,7 @@ impl<'a, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
             ItemKind::Trait(.., ref generics, ref bounds, ref trait_items) => {
                 // Create a new rib for the trait-wide type parameters.
                 self.with_generic_param_rib(generics, ItemRibKind(HasGenericParams::Yes), |this| {
-                    let local_def_id = this.r.definitions.local_def_id(item.id).to_def_id();
+                    let local_def_id = this.r.local_def_id(item.id).to_def_id();
                     this.with_self_rib(Res::SelfTy(Some(local_def_id), None), |this| {
                         this.visit_generics(generics);
                         walk_list!(this, visit_param_bound, bounds);
@@ -879,7 +881,7 @@ impl<'a, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
             ItemKind::TraitAlias(ref generics, ref bounds) => {
                 // Create a new rib for the trait-wide type parameters.
                 self.with_generic_param_rib(generics, ItemRibKind(HasGenericParams::Yes), |this| {
-                    let local_def_id = this.r.definitions.local_def_id(item.id).to_def_id();
+                    let local_def_id = this.r.local_def_id(item.id).to_def_id();
                     this.with_self_rib(Res::SelfTy(Some(local_def_id), None), |this| {
                         this.visit_generics(generics);
                         walk_list!(this, visit_param_bound, bounds);
@@ -960,7 +962,7 @@ impl<'a, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
             seen_bindings.entry(ident).or_insert(param.ident.span);
 
             // Plain insert (no renaming).
-            let res = Res::Def(def_kind, self.r.definitions.local_def_id(param.id).to_def_id());
+            let res = Res::Def(def_kind, self.r.local_def_id(param.id).to_def_id());
 
             match param.kind {
                 GenericParamKind::Type { .. } => {
@@ -1110,7 +1112,7 @@ impl<'a, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
             this.with_self_rib(Res::SelfTy(None, None), |this| {
                 // Resolve the trait reference, if necessary.
                 this.with_optional_trait_ref(opt_trait_reference.as_ref(), |this, trait_id| {
-                    let item_def_id = this.r.definitions.local_def_id(item_id).to_def_id();
+                    let item_def_id = this.r.local_def_id(item_id).to_def_id();
                     this.with_self_rib(Res::SelfTy(trait_id, Some(item_def_id)), |this| {
                         if let Some(trait_ref) = opt_trait_reference.as_ref() {
                             // Resolve type arguments in the trait path.
@@ -2001,7 +2003,7 @@ impl<'a, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
             if let StmtKind::Item(ref item) = stmt.kind {
                 if let ItemKind::MacroDef(..) = item.kind {
                     num_macro_definition_ribs += 1;
-                    let res = self.r.definitions.local_def_id(item.id).to_def_id();
+                    let res = self.r.local_def_id(item.id).to_def_id();
                     self.ribs[ValueNS].push(Rib::new(MacroDefinition(res)));
                     self.label_ribs.push(Rib::new(MacroDefinition(res)));
                 }
@@ -2188,7 +2190,7 @@ impl<'a, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
         &mut self,
         mut ident: Ident,
         ns: Namespace,
-    ) -> Vec<TraitCandidate<NodeId>> {
+    ) -> Vec<TraitCandidate> {
         debug!("(getting traits containing item) looking for '{}'", ident.name);
 
         let mut found_traits = Vec::new();
@@ -2233,7 +2235,7 @@ impl<'a, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
         ident: Ident,
         ns: Namespace,
         module: Module<'a>,
-        found_traits: &mut Vec<TraitCandidate<NodeId>>,
+        found_traits: &mut Vec<TraitCandidate>,
     ) {
         assert!(ns == TypeNS || ns == ValueNS);
         let mut traits = module.traits.borrow_mut();
@@ -2292,13 +2294,13 @@ impl<'a, 'b, 'ast> LateResolutionVisitor<'a, 'b, 'ast> {
         &mut self,
         mut kind: &NameBindingKind<'_>,
         trait_name: Ident,
-    ) -> SmallVec<[NodeId; 1]> {
+    ) -> SmallVec<[LocalDefId; 1]> {
         let mut import_ids = smallvec![];
         while let NameBindingKind::Import { import, binding, .. } = kind {
-            let id = self.r.definitions.local_def_id(import.id);
+            let id = self.r.local_def_id(import.id);
             self.r.maybe_unused_trait_imports.insert(id);
             self.r.add_to_glob_map(&import, trait_name);
-            import_ids.push(import.id);
+            import_ids.push(id);
             kind = &binding.kind;
         }
         import_ids

@@ -121,7 +121,6 @@ pub struct ResolverOutputs {
     pub definitions: rustc_hir::definitions::Definitions,
     pub cstore: Box<CrateStoreDyn>,
     pub extern_crate_map: FxHashMap<LocalDefId, CrateNum>,
-    pub trait_map: FxHashMap<hir::HirId, Vec<hir::TraitCandidate<hir::HirId>>>,
     pub maybe_unused_trait_imports: FxHashSet<LocalDefId>,
     pub maybe_unused_extern_crates: Vec<(LocalDefId, Span)>,
     pub export_map: ExportMap<LocalDefId>,
@@ -628,7 +627,7 @@ impl<'tcx> Hash for TyS<'tcx> {
     }
 }
 
-impl<'a, 'tcx> HashStable<StableHashingContext<'a>> for ty::TyS<'tcx> {
+impl<'a, 'tcx> HashStable<StableHashingContext<'a>> for TyS<'tcx> {
     fn hash_stable(&self, hcx: &mut StableHashingContext<'a>, hasher: &mut StableHasher) {
         let ty::TyS {
             ref kind,
@@ -1002,16 +1001,35 @@ impl<'tcx> GenericPredicates<'tcx> {
     }
 }
 
-#[derive(Clone, Copy, Hash, RustcEncodable, RustcDecodable, Lift)]
-#[derive(HashStable)]
-pub struct Predicate<'tcx> {
-    kind: &'tcx PredicateKind<'tcx>,
+#[derive(Debug)]
+crate struct PredicateInner<'tcx> {
+    kind: PredicateKind<'tcx>,
+    flags: TypeFlags,
+    /// See the comment for the corresponding field of [TyS].
+    outer_exclusive_binder: ty::DebruijnIndex,
 }
+
+#[cfg(target_arch = "x86_64")]
+static_assert_size!(PredicateInner<'_>, 40);
+
+#[derive(Clone, Copy, Lift)]
+pub struct Predicate<'tcx> {
+    inner: &'tcx PredicateInner<'tcx>,
+}
+
+impl rustc_serialize::UseSpecializedEncodable for Predicate<'_> {}
+impl rustc_serialize::UseSpecializedDecodable for Predicate<'_> {}
 
 impl<'tcx> PartialEq for Predicate<'tcx> {
     fn eq(&self, other: &Self) -> bool {
         // `self.kind` is always interned.
-        ptr::eq(self.kind, other.kind)
+        ptr::eq(self.inner, other.inner)
+    }
+}
+
+impl Hash for Predicate<'_> {
+    fn hash<H: Hasher>(&self, s: &mut H) {
+        (self.inner as *const PredicateInner<'_>).hash(s)
     }
 }
 
@@ -1020,7 +1038,22 @@ impl<'tcx> Eq for Predicate<'tcx> {}
 impl<'tcx> Predicate<'tcx> {
     #[inline(always)]
     pub fn kind(self) -> &'tcx PredicateKind<'tcx> {
-        self.kind
+        &self.inner.kind
+    }
+}
+
+impl<'a, 'tcx> HashStable<StableHashingContext<'a>> for Predicate<'tcx> {
+    fn hash_stable(&self, hcx: &mut StableHashingContext<'a>, hasher: &mut StableHasher) {
+        let PredicateInner {
+            ref kind,
+
+            // The other fields just provide fast access to information that is
+            // also contained in `kind`, so no need to hash them.
+            flags: _,
+            outer_exclusive_binder: _,
+        } = self.inner;
+
+        kind.hash_stable(hcx, hasher);
     }
 }
 
@@ -1807,6 +1840,19 @@ impl<'tcx> VariantDef {
     pub fn is_field_list_non_exhaustive(&self) -> bool {
         self.flags.intersects(VariantFlags::IS_FIELD_LIST_NON_EXHAUSTIVE)
     }
+
+    /// `repr(transparent)` structs can have a single non-ZST field, this function returns that
+    /// field.
+    pub fn transparent_newtype_field(&self, tcx: TyCtxt<'tcx>) -> Option<&FieldDef> {
+        for field in &self.fields {
+            let field_ty = field.ty(tcx, InternalSubsts::identity_for_item(tcx, self.def_id));
+            if !field_ty.is_zst(tcx, self.def_id) {
+                return Some(field);
+            }
+        }
+
+        None
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, RustcEncodable, RustcDecodable, HashStable)]
@@ -2339,6 +2385,7 @@ impl<'tcx> AdtDef {
     /// Alternatively, if there is no explicit discriminant, returns the
     /// inferred discriminant directly.
     pub fn discriminant_def_for_variant(&self, variant_index: VariantIdx) -> (Option<DefId>, u32) {
+        assert!(!self.variants.is_empty());
         let mut explicit_index = variant_index.as_u32();
         let expr_did;
         loop {
@@ -2375,29 +2422,6 @@ impl<'tcx> AdtDef {
     /// the associated type is behind a pointer (e.g., issue #31299).
     pub fn sized_constraint(&self, tcx: TyCtxt<'tcx>) -> &'tcx [Ty<'tcx>] {
         tcx.adt_sized_constraint(self.did).0
-    }
-
-    /// `repr(transparent)` structs can have a single non-ZST field, this function returns that
-    /// field.
-    pub fn transparent_newtype_field(
-        &self,
-        tcx: TyCtxt<'tcx>,
-        param_env: ParamEnv<'tcx>,
-    ) -> Option<&FieldDef> {
-        assert!(self.is_struct() && self.repr.transparent());
-
-        for field in &self.non_enum_variant().fields {
-            let field_ty = tcx.normalize_erasing_regions(
-                param_env,
-                field.ty(tcx, InternalSubsts::identity_for_item(tcx, self.did)),
-            );
-
-            if !field_ty.is_zst(tcx, self.did) {
-                return Some(field);
-            }
-        }
-
-        None
     }
 }
 

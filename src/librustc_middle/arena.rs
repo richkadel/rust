@@ -100,6 +100,7 @@ macro_rules! arena_types {
 
             // Interned types
             [] tys: rustc_middle::ty::TyS<$tcx>, rustc_middle::ty::TyS<'_x>;
+            [] predicates: rustc_middle::ty::PredicateInner<$tcx>, rustc_middle::ty::PredicateInner<'_x>;
 
             // HIR query types
             [few] indexed_hir: rustc_middle::hir::map::IndexedHir<$tcx>, rustc_middle::hir::map::IndexedHir<'_x>;
@@ -114,6 +115,7 @@ macro_rules! arena_types {
 
             // This is used to decode the &'tcx [Span] for InlineAsm's line_spans.
             [decode] span: rustc_span::Span, rustc_span::Span;
+            [decode] used_trait_imports: rustc_data_structures::fx::FxHashSet<rustc_hir::def_id::LocalDefId>, rustc_data_structures::fx::FxHashSet<rustc_hir::def_id::LocalDefId>;
         ], $tcx);
     )
 }

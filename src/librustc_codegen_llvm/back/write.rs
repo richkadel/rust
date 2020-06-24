@@ -21,8 +21,9 @@ use rustc_fs_util::{link_or_copy, path_to_c_string};
 use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_middle::bug;
 use rustc_middle::ty::TyCtxt;
-use rustc_session::config::{self, Lto, OutputType, Passes, Sanitizer, SwitchWithOptPath};
+use rustc_session::config::{self, Lto, OutputType, Passes, SanitizerSet, SwitchWithOptPath};
 use rustc_session::Session;
+use rustc_span::symbol::sym;
 use rustc_span::InnerSpan;
 use rustc_target::spec::{CodeModel, RelocModel};
 
@@ -140,7 +141,7 @@ pub fn target_machine_factory(
     // lower atomic operations to single-threaded operations.
     if singlethread
         && sess.target.target.llvm_target.contains("wasm32")
-        && features.iter().any(|s| *s == "+atomics")
+        && sess.target_features.contains(&sym::atomics)
     {
         singlethread = false;
     }
@@ -394,12 +395,13 @@ pub(crate) unsafe fn optimize_with_new_llvm_pass_manager(
     let is_lto = opt_stage == llvm::OptStage::ThinLTO || opt_stage == llvm::OptStage::FatLTO;
     // Sanitizer instrumentation is only inserted during the pre-link optimization stage.
     let sanitizer_options = if !is_lto {
-        config.sanitizer.as_ref().map(|s| llvm::SanitizerOptions {
-            sanitize_memory: *s == Sanitizer::Memory,
-            sanitize_thread: *s == Sanitizer::Thread,
-            sanitize_address: *s == Sanitizer::Address,
-            sanitize_recover: config.sanitizer_recover.contains(s),
+        Some(llvm::SanitizerOptions {
+            sanitize_address: config.sanitizer.contains(SanitizerSet::ADDRESS),
+            sanitize_address_recover: config.sanitizer_recover.contains(SanitizerSet::ADDRESS),
+            sanitize_memory: config.sanitizer.contains(SanitizerSet::MEMORY),
+            sanitize_memory_recover: config.sanitizer_recover.contains(SanitizerSet::MEMORY),
             sanitize_memory_track_origins: config.sanitizer_memory_track_origins as c_int,
+            sanitize_thread: config.sanitizer.contains(SanitizerSet::THREAD),
         })
     } else {
         None
@@ -600,25 +602,18 @@ pub(crate) unsafe fn optimize(
 }
 
 unsafe fn add_sanitizer_passes(config: &ModuleConfig, passes: &mut Vec<&'static mut llvm::Pass>) {
-    let sanitizer = match &config.sanitizer {
-        None => return,
-        Some(s) => s,
-    };
-
-    let recover = config.sanitizer_recover.contains(sanitizer);
-    match sanitizer {
-        Sanitizer::Address => {
-            passes.push(llvm::LLVMRustCreateAddressSanitizerFunctionPass(recover));
-            passes.push(llvm::LLVMRustCreateModuleAddressSanitizerPass(recover));
-        }
-        Sanitizer::Memory => {
-            let track_origins = config.sanitizer_memory_track_origins as c_int;
-            passes.push(llvm::LLVMRustCreateMemorySanitizerPass(track_origins, recover));
-        }
-        Sanitizer::Thread => {
-            passes.push(llvm::LLVMRustCreateThreadSanitizerPass());
-        }
-        Sanitizer::Leak => {}
+    if config.sanitizer.contains(SanitizerSet::ADDRESS) {
+        let recover = config.sanitizer_recover.contains(SanitizerSet::ADDRESS);
+        passes.push(llvm::LLVMRustCreateAddressSanitizerFunctionPass(recover));
+        passes.push(llvm::LLVMRustCreateModuleAddressSanitizerPass(recover));
+    }
+    if config.sanitizer.contains(SanitizerSet::MEMORY) {
+        let track_origins = config.sanitizer_memory_track_origins as c_int;
+        let recover = config.sanitizer_recover.contains(SanitizerSet::MEMORY);
+        passes.push(llvm::LLVMRustCreateMemorySanitizerPass(track_origins, recover));
+    }
+    if config.sanitizer.contains(SanitizerSet::THREAD) {
+        passes.push(llvm::LLVMRustCreateThreadSanitizerPass());
     }
 }
 

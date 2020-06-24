@@ -158,7 +158,6 @@ impl Step for Llvm {
             .define("LLVM_INCLUDE_TESTS", "OFF")
             .define("LLVM_INCLUDE_DOCS", "OFF")
             .define("LLVM_INCLUDE_BENCHMARKS", "OFF")
-            .define("LLVM_ENABLE_ZLIB", "OFF")
             .define("WITH_POLLY", "OFF")
             .define("LLVM_ENABLE_TERMINFO", "OFF")
             .define("LLVM_ENABLE_LIBEDIT", "OFF")
@@ -167,6 +166,14 @@ impl Step for Llvm {
             .define("LLVM_PARALLEL_COMPILE_JOBS", builder.jobs().to_string())
             .define("LLVM_TARGET_ARCH", target.split('-').next().unwrap())
             .define("LLVM_DEFAULT_TARGET_TRIPLE", target);
+
+        if !target.contains("netbsd") {
+            cfg.define("LLVM_ENABLE_ZLIB", "ON");
+        } else {
+            // FIXME: Enable zlib on NetBSD too
+            // https://github.com/rust-lang/rust/pull/72696#issuecomment-641517185
+            cfg.define("LLVM_ENABLE_ZLIB", "OFF");
+        }
 
         if builder.config.llvm_thin_lto {
             cfg.define("LLVM_ENABLE_LTO", "Thin");
@@ -689,48 +696,41 @@ fn supported_sanitizers(
     target: Interned<String>,
     channel: &str,
 ) -> Vec<SanitizerRuntime> {
-    let mut result = Vec::new();
+    let darwin_libs = |os: &str, components: &[&str]| -> Vec<SanitizerRuntime> {
+        components
+            .into_iter()
+            .map(move |c| SanitizerRuntime {
+                cmake_target: format!("clang_rt.{}_{}_dynamic", c, os),
+                path: out_dir
+                    .join(&format!("build/lib/darwin/libclang_rt.{}_{}_dynamic.dylib", c, os)),
+                name: format!("librustc-{}_rt.{}.dylib", channel, c),
+            })
+            .collect()
+    };
+
+    let common_libs = |os: &str, arch: &str, components: &[&str]| -> Vec<SanitizerRuntime> {
+        components
+            .into_iter()
+            .map(move |c| SanitizerRuntime {
+                cmake_target: format!("clang_rt.{}-{}", c, arch),
+                path: out_dir.join(&format!("build/lib/{}/libclang_rt.{}-{}.a", os, c, arch)),
+                name: format!("librustc-{}_rt.{}.a", channel, c),
+            })
+            .collect()
+    };
+
     match &*target {
-        "x86_64-apple-darwin" => {
-            for s in &["asan", "lsan", "tsan"] {
-                result.push(SanitizerRuntime {
-                    cmake_target: format!("clang_rt.{}_osx_dynamic", s),
-                    path: out_dir
-                        .join(&format!("build/lib/darwin/libclang_rt.{}_osx_dynamic.dylib", s)),
-                    name: format!("librustc-{}_rt.{}.dylib", channel, s),
-                });
-            }
+        "aarch64-fuchsia" => common_libs("fuchsia", "aarch64", &["asan"]),
+        "aarch64-unknown-linux-gnu" => {
+            common_libs("linux", "aarch64", &["asan", "lsan", "msan", "tsan"])
         }
+        "x86_64-apple-darwin" => darwin_libs("osx", &["asan", "lsan", "tsan"]),
+        "x86_64-fuchsia" => common_libs("fuchsia", "x86_64", &["asan"]),
         "x86_64-unknown-linux-gnu" => {
-            for s in &["asan", "lsan", "msan", "tsan"] {
-                result.push(SanitizerRuntime {
-                    cmake_target: format!("clang_rt.{}-x86_64", s),
-                    path: out_dir.join(&format!("build/lib/linux/libclang_rt.{}-x86_64.a", s)),
-                    name: format!("librustc-{}_rt.{}.a", channel, s),
-                });
-            }
+            common_libs("linux", "x86_64", &["asan", "lsan", "msan", "tsan"])
         }
-        "x86_64-fuchsia" => {
-            for s in &["asan"] {
-                result.push(SanitizerRuntime {
-                    cmake_target: format!("clang_rt.{}-x86_64", s),
-                    path: out_dir.join(&format!("build/lib/fuchsia/libclang_rt.{}-x86_64.a", s)),
-                    name: format!("librustc-{}_rt.{}.a", channel, s),
-                });
-            }
-        }
-        "aarch64-fuchsia" => {
-            for s in &["asan"] {
-                result.push(SanitizerRuntime {
-                    cmake_target: format!("clang_rt.{}-aarch64", s),
-                    path: out_dir.join(&format!("build/lib/fuchsia/libclang_rt.{}-aarch64.a", s)),
-                    name: format!("librustc-{}_rt.{}.a", channel, s),
-                });
-            }
-        }
-        _ => {}
+        _ => Vec::new(),
     }
-    result
 }
 
 struct HashStamp {

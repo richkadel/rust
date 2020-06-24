@@ -6,7 +6,9 @@ use rustc_session::config::Strip;
 use rustc_session::config::{build_configuration, build_session_options, to_crate_config};
 use rustc_session::config::{rustc_optgroups, ErrorOutputType, ExternLocation, Options, Passes};
 use rustc_session::config::{CFGuard, ExternEntry, LinkerPluginLto, LtoCli, SwitchWithOptPath};
-use rustc_session::config::{Externs, OutputType, OutputTypes, Sanitizer, SymbolManglingVersion};
+use rustc_session::config::{
+    Externs, OutputType, OutputTypes, SanitizerSet, SymbolManglingVersion,
+};
 use rustc_session::lint::Level;
 use rustc_session::search_paths::SearchPath;
 use rustc_session::utils::NativeLibKind;
@@ -463,7 +465,6 @@ fn test_debugging_options_tracking_hash() {
     untracked!(ast_json_noexpand, true);
     untracked!(borrowck, String::from("other"));
     untracked!(borrowck_stats, true);
-    untracked!(control_flow_guard, CFGuard::Checks);
     untracked!(deduplicate_diagnostics, true);
     untracked!(dep_tasks, true);
     untracked!(dont_buffer_diagnostics, true);
@@ -537,6 +538,7 @@ fn test_debugging_options_tracking_hash() {
     tracked!(binary_dep_depinfo, true);
     tracked!(chalk, true);
     tracked!(codegen_backend, Some("abc".to_string()));
+    tracked!(control_flow_guard, CFGuard::Checks);
     tracked!(crate_attr, vec!["abc".to_string()]);
     tracked!(debug_macros, true);
     tracked!(dep_info_omit_d_target, true);
@@ -569,9 +571,9 @@ fn test_debugging_options_tracking_hash() {
     tracked!(relro_level, Some(RelroLevel::Full));
     tracked!(report_delayed_bugs, true);
     tracked!(run_dsymutil, false);
-    tracked!(sanitizer, Some(Sanitizer::Address));
+    tracked!(sanitizer, SanitizerSet::ADDRESS);
     tracked!(sanitizer_memory_track_origins, 2);
-    tracked!(sanitizer_recover, vec![Sanitizer::Address]);
+    tracked!(sanitizer_recover, SanitizerSet::ADDRESS);
     tracked!(saturating_float_casts, Some(true));
     tracked!(share_generics, Some(true));
     tracked!(show_span, Some(String::from("abc")));

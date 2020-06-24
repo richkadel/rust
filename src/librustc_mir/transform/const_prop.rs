@@ -505,7 +505,6 @@ impl<'mir, 'tcx> ConstPropagator<'mir, 'tcx> {
             // This is basically `force_bits`.
             let r_bits = r_bits.and_then(|r| r.to_bits_or_ptr(right_size, &self.tcx).ok());
             if r_bits.map_or(false, |b| b >= left_size_bits as u128) {
-                debug!("check_binary_op: reporting assert for {:?}", source_info);
                 self.report_assert_as_lint(
                     lint::builtin::ARITHMETIC_OVERFLOW,
                     source_info,
@@ -575,8 +574,16 @@ impl<'mir, 'tcx> ConstPropagator<'mir, 'tcx> {
             }
 
             // Do not try creating references (#67862)
-            Rvalue::Ref(_, _, place_ref) => {
-                trace!("skipping Ref({:?})", place_ref);
+            Rvalue::AddressOf(_, place) | Rvalue::Ref(_, _, place) => {
+                trace!("skipping AddressOf | Ref for {:?}", place);
+
+                // This may be creating mutable references or immutable references to cells.
+                // If that happens, the pointed to value could be mutated via that reference.
+                // Since we aren't tracking references, the const propagator loses track of what
+                // value the local has right now.
+                // Thus, all locals that have their reference taken
+                // must not take part in propagation.
+                Self::remove_const(&mut self.ecx, place.local);
 
                 return None;
             }
@@ -716,7 +723,8 @@ enum ConstPropMode {
     OnlyInsideOwnBlock,
     /// The `Local` can be propagated into but reads cannot be propagated.
     OnlyPropagateInto,
-    /// No propagation is allowed at all.
+    /// The `Local` cannot be part of propagation at all. Any statement
+    /// referencing it either for reading or writing will not get propagated.
     NoPropagation,
 }
 
@@ -783,12 +791,14 @@ impl<'tcx> Visitor<'tcx> for CanConstProp {
                         // end of the block anyway, and inside the block we overwrite previous
                         // states as applicable.
                         ConstPropMode::OnlyInsideOwnBlock => {}
-                        other => {
+                        ConstPropMode::NoPropagation => {}
+                        ConstPropMode::OnlyPropagateInto => {}
+                        other @ ConstPropMode::FullConstProp => {
                             trace!(
                                 "local {:?} can't be propagated because of multiple assignments",
                                 local,
                             );
-                            *other = ConstPropMode::NoPropagation;
+                            *other = ConstPropMode::OnlyPropagateInto;
                         }
                     }
                 }
@@ -847,35 +857,35 @@ impl<'mir, 'tcx> MutVisitor<'tcx> for ConstPropagator<'mir, 'tcx> {
             if let Ok(place_layout) = self.tcx.layout_of(self.param_env.and(place_ty)) {
                 let can_const_prop = self.can_const_prop[place.local];
                 if let Some(()) = self.const_prop(rval, place_layout, source_info, place) {
-                    if can_const_prop != ConstPropMode::NoPropagation {
-                        // This will return None for variables that are from other blocks,
-                        // so it should be okay to propagate from here on down.
-                        if let Some(value) = self.get_const(place) {
-                            if self.should_const_prop(value) {
-                                trace!("replacing {:?} with {:?}", rval, value);
-                                self.replace_with_const(rval, value, source_info);
-                                if can_const_prop == ConstPropMode::FullConstProp
-                                    || can_const_prop == ConstPropMode::OnlyInsideOwnBlock
-                                {
-                                    trace!("propagated into {:?}", place);
-                                }
-                            }
-                            if can_const_prop == ConstPropMode::OnlyInsideOwnBlock {
-                                trace!(
-                                    "found local restricted to its block. Will remove it from const-prop after block is finished. Local: {:?}",
-                                    place.local
-                                );
-                                self.locals_of_current_block.insert(place.local);
+                    // This will return None for variables that are from other blocks,
+                    // so it should be okay to propagate from here on down.
+                    if let Some(value) = self.get_const(place) {
+                        if self.should_const_prop(value) {
+                            trace!("replacing {:?} with {:?}", rval, value);
+                            self.replace_with_const(rval, value, source_info);
+                            if can_const_prop == ConstPropMode::FullConstProp
+                                || can_const_prop == ConstPropMode::OnlyInsideOwnBlock
+                            {
+                                trace!("propagated into {:?}", place);
                             }
                         }
                     }
-                    if can_const_prop == ConstPropMode::OnlyPropagateInto
-                        || can_const_prop == ConstPropMode::NoPropagation
-                    {
-                        trace!("can't propagate into {:?}", place);
-                        if place.local != RETURN_PLACE {
-                            Self::remove_const(&mut self.ecx, place.local);
+                    match can_const_prop {
+                        ConstPropMode::OnlyInsideOwnBlock => {
+                            trace!(
+                                "found local restricted to its block. \
+                                Will remove it from const-prop after block is finished. Local: {:?}",
+                                place.local
+                            );
+                            self.locals_of_current_block.insert(place.local);
                         }
+                        ConstPropMode::OnlyPropagateInto | ConstPropMode::NoPropagation => {
+                            trace!("can't propagate into {:?}", place);
+                            if place.local != RETURN_PLACE {
+                                Self::remove_const(&mut self.ecx, place.local);
+                            }
+                        }
+                        ConstPropMode::FullConstProp => {}
                     }
                 } else {
                     // Const prop failed, so erase the destination, ensuring that whatever happens
@@ -895,6 +905,12 @@ impl<'mir, 'tcx> MutVisitor<'tcx> for ConstPropagator<'mir, 'tcx> {
                     );
                     Self::remove_const(&mut self.ecx, place.local);
                 }
+            } else {
+                trace!(
+                    "cannot propagate into {:?}, because the type of the local is generic.",
+                    place,
+                );
+                Self::remove_const(&mut self.ecx, place.local);
             }
         } else {
             match statement.kind {

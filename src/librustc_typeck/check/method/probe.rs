@@ -3,7 +3,6 @@ use super::MethodError;
 use super::NoMatchData;
 use super::{CandidateSource, ImplSource, TraitSource};
 
-use crate::check::autoderef::{self, Autoderef};
 use crate::check::FnCtxt;
 use crate::hir::def::DefKind;
 use crate::hir::def_id::DefId;
@@ -28,7 +27,9 @@ use rustc_middle::ty::{
 };
 use rustc_session::config::nightly_options;
 use rustc_session::lint;
+use rustc_span::def_id::LocalDefId;
 use rustc_span::{symbol::Ident, Span, Symbol, DUMMY_SP};
+use rustc_trait_selection::autoderef::{self, Autoderef};
 use rustc_trait_selection::traits::query::evaluate_obligation::InferCtxtExt;
 use rustc_trait_selection::traits::query::method_autoderef::MethodAutoderefBadTy;
 use rustc_trait_selection::traits::query::method_autoderef::{
@@ -129,7 +130,7 @@ struct Candidate<'tcx> {
     xform_ret_ty: Option<Ty<'tcx>>,
     item: ty::AssocItem,
     kind: CandidateKind<'tcx>,
-    import_ids: SmallVec<[hir::HirId; 1]>,
+    import_ids: SmallVec<[LocalDefId; 1]>,
 }
 
 #[derive(Debug)]
@@ -158,7 +159,7 @@ enum ProbeResult {
 pub struct Pick<'tcx> {
     pub item: ty::AssocItem,
     pub kind: PickKind<'tcx>,
-    pub import_ids: SmallVec<[hir::HirId; 1]>,
+    pub import_ids: SmallVec<[LocalDefId; 1]>,
 
     // Indicates that the source expression should be autoderef'd N times
     //
@@ -476,7 +477,7 @@ fn method_autoderef_steps<'tcx>(
             })
             .collect();
 
-        let final_ty = autoderef.maybe_ambiguous_final_ty();
+        let final_ty = autoderef.final_ty(true);
         let opt_bad_ty = match final_ty.kind {
             ty::Infer(ty::TyVar(_)) | ty::Error(_) => Some(MethodAutoderefBadTy {
                 reached_raw_pointer,
@@ -930,7 +931,7 @@ impl<'a, 'tcx> ProbeContext<'a, 'tcx> {
 
     fn assemble_extension_candidates_for_trait(
         &mut self,
-        import_ids: &SmallVec<[hir::HirId; 1]>,
+        import_ids: &SmallVec<[LocalDefId; 1]>,
         trait_def_id: DefId,
     ) -> Result<(), MethodError<'tcx>> {
         debug!("assemble_extension_candidates_for_trait(trait_def_id={:?})", trait_def_id);
@@ -1467,7 +1468,7 @@ impl<'a, 'tcx> ProbeContext<'a, 'tcx> {
     ///
     /// ```
     /// trait Foo { ... }
-    /// impl Foo for Vec<int> { ... }
+    /// impl Foo for Vec<i32> { ... }
     /// impl Foo for Vec<usize> { ... }
     /// ```
     ///

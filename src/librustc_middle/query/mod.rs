@@ -133,6 +133,23 @@ rustc_queries! {
             cache_on_disk_if { key.is_local() }
         }
 
+        /// Returns the list of predicates that can be used for
+        /// `SelectionCandidate::ProjectionCandidate` and
+        /// `ProjectionTyCandidate::TraitDef`.
+        /// Specifically this is the bounds (equivalent to) those
+        /// written on the trait's type definition, or those
+        /// after the `impl` keyword
+        ///
+        /// type X: Bound + 'lt
+        ///         ^^^^^^^^^^^
+        /// impl Debug + Display
+        ///      ^^^^^^^^^^^^^^^
+        ///
+        /// `key` is the `DefId` of the associated type or opaque type.
+        query projection_predicates(key: DefId) -> &'tcx ty::List<ty::Predicate<'tcx>> {
+            desc { |tcx| "finding projection predicates for `{}`", tcx.def_path_str(key) }
+        }
+
         query native_libraries(_: CrateNum) -> Lrc<Vec<NativeLib>> {
             desc { "looking up the native libraries of a linked crate" }
         }
@@ -210,6 +227,12 @@ rustc_queries! {
         /// for codegen. This is also the only query that can fetch non-local MIR, at present.
         query optimized_mir(key: DefId) -> mir::Body<'tcx> {
             desc { |tcx| "optimizing MIR for `{}`", tcx.def_path_str(key) }
+            storage(ArenaCacheSelector<'tcx>)
+            cache_on_disk_if { key.is_local() }
+        }
+
+        query coverage_data(key: DefId) -> mir::CoverageData {
+            desc { |tcx| "retrieving coverage data from MIR for `{}`", tcx.def_path_str(key) }
             storage(ArenaCacheSelector<'tcx>)
             cache_on_disk_if { key.is_local() }
         }
@@ -526,7 +549,7 @@ rustc_queries! {
     }
 
     Other {
-        query used_trait_imports(key: LocalDefId) -> &'tcx DefIdSet {
+        query used_trait_imports(key: LocalDefId) -> &'tcx FxHashSet<LocalDefId> {
             desc { |tcx| "used_trait_imports `{}`", tcx.def_path_str(key.to_def_id()) }
             cache_on_disk_if { true }
         }
@@ -706,7 +729,7 @@ rustc_queries! {
     }
 
     Other {
-        query fn_arg_names(def_id: DefId) -> &'tcx [rustc_span::symbol::Ident] {
+        query fn_arg_names(def_id: DefId) -> &'tcx [Symbol] {
             desc { |tcx| "looking up function parameter names for `{}`", tcx.def_path_str(def_id) }
         }
         /// Gets the rendered value of the specified constant or associated constant.

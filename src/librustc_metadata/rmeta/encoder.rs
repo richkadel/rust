@@ -30,7 +30,7 @@ use rustc_middle::ty::{self, SymbolName, Ty, TyCtxt};
 use rustc_serialize::{opaque, Encodable, Encoder, SpecializedEncoder, UseSpecializedEncodable};
 use rustc_session::config::CrateType;
 use rustc_span::source_map::Spanned;
-use rustc_span::symbol::{sym, Ident, Symbol};
+use rustc_span::symbol::{kw, sym, Ident, Symbol};
 use rustc_span::{self, ExternalSource, FileName, SourceFile, Span};
 use rustc_target::abi::VariantIdx;
 use std::hash::Hash;
@@ -239,6 +239,17 @@ where
     }
 }
 
+impl<'b, 'tcx> SpecializedEncoder<ty::Predicate<'b>> for EncodeContext<'tcx> {
+    fn specialized_encode(&mut self, predicate: &ty::Predicate<'b>) -> Result<(), Self::Error> {
+        debug_assert!(self.tcx.lift(predicate).is_some());
+        let predicate =
+            unsafe { std::mem::transmute::<&ty::Predicate<'b>, &ty::Predicate<'tcx>>(predicate) };
+        ty_codec::encode_with_shorthand(self, predicate, |encoder| {
+            &mut encoder.predicate_shorthands
+        })
+    }
+}
+
 impl<'tcx> SpecializedEncoder<interpret::AllocId> for EncodeContext<'tcx> {
     fn specialized_encode(&mut self, alloc_id: &interpret::AllocId) -> Result<(), Self::Error> {
         use std::collections::hash_map::Entry;
@@ -253,22 +264,6 @@ impl<'tcx> SpecializedEncoder<interpret::AllocId> for EncodeContext<'tcx> {
         };
 
         index.encode(self)
-    }
-}
-
-impl<'a, 'b, 'tcx> SpecializedEncoder<&'a [(ty::Predicate<'b>, Span)]> for EncodeContext<'tcx> {
-    fn specialized_encode(
-        &mut self,
-        predicates: &&'a [(ty::Predicate<'b>, Span)],
-    ) -> Result<(), Self::Error> {
-        debug_assert!(self.tcx.lift(*predicates).is_some());
-        let predicates = unsafe {
-            std::mem::transmute::<
-                &&'a [(ty::Predicate<'b>, Span)],
-                &&'tcx [(ty::Predicate<'tcx>, Span)],
-            >(predicates)
-        };
-        ty_codec::encode_spanned_predicates(self, &predicates, |ecx| &mut ecx.predicate_shorthands)
     }
 }
 
@@ -1009,12 +1004,18 @@ impl EncodeContext<'tcx> {
         }
     }
 
-    fn encode_fn_param_names_for_body(&mut self, body_id: hir::BodyId) -> Lazy<[Ident]> {
-        self.tcx.dep_graph.with_ignore(|| self.lazy(self.tcx.hir().body_param_names(body_id)))
+    fn encode_fn_param_names_for_body(&mut self, body_id: hir::BodyId) -> Lazy<[Symbol]> {
+        self.tcx.dep_graph.with_ignore(|| {
+            let body = self.tcx.hir().body(body_id);
+            self.lazy(body.params.iter().map(|arg| match arg.pat.kind {
+                hir::PatKind::Binding(_, _, ident, _) => ident.name,
+                _ => kw::Invalid,
+            }))
+        })
     }
 
-    fn encode_fn_param_names(&mut self, param_names: &[Ident]) -> Lazy<[Ident]> {
-        self.lazy(param_names.iter())
+    fn encode_fn_param_names(&mut self, param_names: &[Ident]) -> Lazy<[Symbol]> {
+        self.lazy(param_names.iter().map(|ident| ident.name))
     }
 
     fn encode_optimized_mir(&mut self, def_id: LocalDefId) {
@@ -1358,7 +1359,7 @@ impl EncodeContext<'tcx> {
         let const_data = self.encode_rendered_const_for_body(body_id);
         let qualifs = self.tcx.mir_const_qualif(def_id);
 
-        record!(self.tables.kind[def_id.to_def_id()] <- EntryKind::Const(qualifs, const_data));
+        record!(self.tables.kind[def_id.to_def_id()] <- EntryKind::AnonConst(qualifs, const_data));
         record!(self.tables.visibility[def_id.to_def_id()] <- ty::Visibility::Public);
         record!(self.tables.span[def_id.to_def_id()] <- self.tcx.def_span(def_id));
         self.encode_item_type(def_id.to_def_id());

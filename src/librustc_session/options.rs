@@ -248,10 +248,10 @@ macro_rules! options {
         pub const parse_passes: &str = "a space-separated list of passes, or `all`";
         pub const parse_panic_strategy: &str = "either `unwind` or `abort`";
         pub const parse_relro_level: &str = "one of: `full`, `partial`, or `off`";
-        pub const parse_sanitizer: &str = "one of: `address`, `leak`, `memory` or `thread`";
-        pub const parse_sanitizer_list: &str = "comma separated list of sanitizers";
+        pub const parse_sanitizers: &str = "comma separated list of sanitizers: `address`, `leak`, `memory` or `thread`";
         pub const parse_sanitizer_memory_track_origins: &str = "0, 1, or 2";
-        pub const parse_cfguard: &str = "either `disabled`, `nochecks`, or `checks`";
+        pub const parse_cfguard: &str =
+            "either a boolean (`yes`, `no`, `on`, `off`, etc), `checks`, or `nochecks`";
         pub const parse_strip: &str = "either `none`, `debuginfo`, or `symbols`";
         pub const parse_linker_flavor: &str = ::rustc_target::spec::LinkerFlavor::one_of();
         pub const parse_optimization_fuel: &str = "crate=integer";
@@ -459,24 +459,15 @@ macro_rules! options {
             true
         }
 
-        fn parse_sanitizer(slot: &mut Option<Sanitizer>, v: Option<&str>) -> bool {
-            if let Some(Ok(s)) =  v.map(str::parse) {
-                *slot = Some(s);
-                true
-            } else {
-                false
-            }
-        }
-
-        fn parse_sanitizer_list(slot: &mut Vec<Sanitizer>, v: Option<&str>) -> bool {
+        fn parse_sanitizers(slot: &mut SanitizerSet, v: Option<&str>) -> bool {
             if let Some(v) = v {
-                for s in v.split(',').map(str::parse) {
-                    if let Ok(s) = s {
-                        if !slot.contains(&s) {
-                            slot.push(s);
-                        }
-                    } else {
-                        return false;
+                for s in v.split(',') {
+                    *slot |= match s {
+                        "address" => SanitizerSet::ADDRESS,
+                        "leak" => SanitizerSet::LEAK,
+                        "memory" => SanitizerSet::MEMORY,
+                        "thread" => SanitizerSet::THREAD,
+                        _ => return false,
                     }
                 }
                 true
@@ -505,12 +496,24 @@ macro_rules! options {
         }
 
         fn parse_cfguard(slot: &mut CFGuard, v: Option<&str>) -> bool {
-            match v {
-                Some("disabled") => *slot = CFGuard::Disabled,
-                Some("nochecks") => *slot = CFGuard::NoChecks,
-                Some("checks") => *slot = CFGuard::Checks,
-                _ => return false,
+            if v.is_some() {
+                let mut bool_arg = None;
+                if parse_opt_bool(&mut bool_arg, v) {
+                    *slot = if bool_arg.unwrap() {
+                        CFGuard::Checks
+                    } else {
+                        CFGuard::Disabled
+                    };
+                    return true
+                }
             }
+
+            *slot = match v {
+                None => CFGuard::Checks,
+                Some("checks") => CFGuard::Checks,
+                Some("nochecks") => CFGuard::NoChecks,
+                Some(_) => return false,
+            };
             true
         }
 
@@ -806,8 +809,8 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
         "enable the experimental Chalk-based trait solving engine"),
     codegen_backend: Option<String> = (None, parse_opt_string, [TRACKED],
         "the backend to use"),
-    control_flow_guard: CFGuard = (CFGuard::Disabled, parse_cfguard, [UNTRACKED],
-        "use Windows Control Flow Guard (`disabled`, `nochecks` or `checks`)"),
+    control_flow_guard: CFGuard = (CFGuard::Disabled, parse_cfguard, [TRACKED],
+        "use Windows Control Flow Guard (default: no)"),
     crate_attr: Vec<String> = (Vec::new(), parse_string_push, [TRACKED],
         "inject the given attribute in the crate"),
     debug_macros: bool = (false, parse_bool, [TRACKED],
@@ -877,8 +880,9 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
         (such as entering an empty infinite loop) by inserting llvm.sideeffect \
         (default: no)"),
     instrument_coverage: bool = (false, parse_bool, [TRACKED],
-        "instrument the generated code with LLVM code region counters to \
-        (in the future) generate coverage reports (experimental; default: no)"),
+        "instrument the generated code with LLVM code region counters to (in the \
+        future) generate coverage reports (default: no; note, the compiler build \
+        config must include `profiler = true`)"),
     instrument_mcount: bool = (false, parse_bool, [TRACKED],
         "insert function instrument code for mcount-based tracing (default: no)"),
     keep_hygiene_data: bool = (false, parse_bool, [UNTRACKED],
@@ -974,11 +978,11 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
     // soon.
     run_dsymutil: bool = (true, parse_bool, [TRACKED],
         "if on Mac, run `dsymutil` and delete intermediate object files (default: yes)"),
-    sanitizer: Option<Sanitizer> = (None, parse_sanitizer, [TRACKED],
+    sanitizer: SanitizerSet = (SanitizerSet::empty(), parse_sanitizers, [TRACKED],
         "use a sanitizer"),
     sanitizer_memory_track_origins: usize = (0, parse_sanitizer_memory_track_origins, [TRACKED],
         "enable origins tracking in MemorySanitizer"),
-    sanitizer_recover: Vec<Sanitizer> = (vec![], parse_sanitizer_list, [TRACKED],
+    sanitizer_recover: SanitizerSet = (SanitizerSet::empty(), parse_sanitizers, [TRACKED],
         "enable recovery for selected sanitizers"),
     saturating_float_casts: Option<bool> = (None, parse_opt_bool, [TRACKED],
         "make float->int casts UB-free: numbers outside the integer type's range are clipped to \

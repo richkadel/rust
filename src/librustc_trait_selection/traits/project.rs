@@ -24,6 +24,7 @@ use rustc_data_structures::stack::ensure_sufficient_stack;
 use rustc_errors::ErrorReported;
 use rustc_hir::def_id::DefId;
 use rustc_hir::lang_items::{FnOnceTraitLangItem, GeneratorTraitLangItem};
+use rustc_infer::infer::resolve::OpportunisticRegionResolver;
 use rustc_middle::ty::fold::{TypeFoldable, TypeFolder};
 use rustc_middle::ty::subst::Subst;
 use rustc_middle::ty::util::IntTypeExt;
@@ -148,15 +149,12 @@ pub fn poly_project_and_unify_type<'cx, 'tcx>(
     debug!("poly_project_and_unify_type(obligation={:?})", obligation);
 
     let infcx = selcx.infcx();
-    infcx.commit_if_ok(|snapshot| {
-        let (placeholder_predicate, placeholder_map) =
+    infcx.commit_if_ok(|_snapshot| {
+        let (placeholder_predicate, _) =
             infcx.replace_bound_vars_with_placeholders(&obligation.predicate);
 
         let placeholder_obligation = obligation.with(placeholder_predicate);
         let result = project_and_unify_type(selcx, &placeholder_obligation)?;
-        infcx
-            .leak_check(false, &placeholder_map, snapshot)
-            .map_err(|err| MismatchedProjectionTypes { err })?;
         Ok(result)
     })
 }
@@ -360,7 +358,7 @@ impl<'a, 'b, 'tcx> TypeFolder<'tcx> for AssocTypeNormalizer<'a, 'b, 'tcx> {
                 // handle normalization within binders because
                 // otherwise we wind up a need to normalize when doing
                 // trait matching (since you can have a trait
-                // obligation like `for<'a> T::B : Fn(&'a int)`), but
+                // obligation like `for<'a> T::B: Fn(&'a i32)`), but
                 // we can't normalize with bound regions in scope. So
                 // far now we just ignore binders but only normalize
                 // if all bound regions are gone (and then we still
@@ -895,9 +893,12 @@ fn assemble_candidates_from_trait_def<'cx, 'tcx>(
 
     let tcx = selcx.tcx();
     // Check whether the self-type is itself a projection.
-    let (def_id, substs) = match obligation_trait_ref.self_ty().kind {
-        ty::Projection(ref data) => (data.trait_ref(tcx).def_id, data.substs),
-        ty::Opaque(def_id, substs) => (def_id, substs),
+    // If so, extract what we know from the trait and try to come up with a good answer.
+    let bounds = match obligation_trait_ref.self_ty().kind {
+        ty::Projection(ref data) => {
+            tcx.projection_predicates(data.item_def_id).subst(tcx, data.substs)
+        }
+        ty::Opaque(def_id, substs) => tcx.projection_predicates(def_id).subst(tcx, substs),
         ty::Infer(ty::TyVar(_)) => {
             // If the self-type is an inference variable, then it MAY wind up
             // being a projected type, so induce an ambiguity.
@@ -907,17 +908,13 @@ fn assemble_candidates_from_trait_def<'cx, 'tcx>(
         _ => return,
     };
 
-    // If so, extract what we know from the trait and try to come up with a good answer.
-    let trait_predicates = tcx.predicates_of(def_id);
-    let bounds = trait_predicates.instantiate(tcx, substs);
-    let bounds = elaborate_predicates(tcx, bounds.predicates.into_iter()).map(|o| o.predicate);
     assemble_candidates_from_predicates(
         selcx,
         obligation,
         obligation_trait_ref,
         candidate_set,
         ProjectionTyCandidate::TraitDef,
-        bounds,
+        bounds.iter(),
     )
 }
 
@@ -1146,7 +1143,7 @@ fn confirm_candidate<'cx, 'tcx>(
 ) -> Progress<'tcx> {
     debug!("confirm_candidate(candidate={:?}, obligation={:?})", candidate, obligation);
 
-    match candidate {
+    let mut progress = match candidate {
         ProjectionTyCandidate::ParamEnv(poly_projection)
         | ProjectionTyCandidate::TraitDef(poly_projection) => {
             confirm_param_env_candidate(selcx, obligation, poly_projection)
@@ -1155,7 +1152,16 @@ fn confirm_candidate<'cx, 'tcx>(
         ProjectionTyCandidate::Select(impl_source) => {
             confirm_select_candidate(selcx, obligation, obligation_trait_ref, impl_source)
         }
+    };
+    // When checking for cycle during evaluation, we compare predicates with
+    // "syntactic" equality. Since normalization generally introduces a type
+    // with new region variables, we need to resolve them to existing variables
+    // when possible for this to work. See `auto-trait-projection-recursion.rs`
+    // for a case where this matters.
+    if progress.ty.has_infer_regions() {
+        progress.ty = OpportunisticRegionResolver::new(selcx.infcx()).fold_ty(progress.ty);
     }
+    progress
 }
 
 fn confirm_select_candidate<'cx, 'tcx>(
@@ -1474,6 +1480,12 @@ fn confirm_impl_candidate<'cx, 'tcx>(
         );
         return Progress { ty: tcx.ty_error(), obligations: nested };
     }
+    // If we're trying to normalize `<Vec<u32> as X>::A<S>` using
+    //`impl<T> X for Vec<T> { type A<Y> = Box<Y>; }`, then:
+    //
+    // * `obligation.predicate.substs` is `[Vec<u32>, S]`
+    // * `substs` is `[u32]`
+    // * `substs` ends up as `[u32, S]`
     let substs = obligation.predicate.substs.rebase_onto(tcx, trait_def_id, substs);
     let substs =
         translate_substs(selcx.infcx(), param_env, impl_def_id, substs, assoc_ty.defining_node);
