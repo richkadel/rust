@@ -19,6 +19,7 @@ use rustc_codegen_ssa::mir::place::PlaceRef;
 use rustc_codegen_ssa::traits::*;
 use rustc_codegen_ssa::MemFlags;
 use rustc_hir as hir;
+use rustc_middle::mir::coverage;
 use rustc_middle::ty::layout::{FnAbiExt, HasTyCtxt};
 use rustc_middle::ty::{self, Ty};
 use rustc_middle::{bug, span_bug};
@@ -140,27 +141,24 @@ impl IntrinsicCallMethods<'tcx> for Builder<'a, 'll, 'tcx> {
                 self.call(llfn, &[], None)
             }
             "count_code_region" => {
-                use rustc_middle::mir::count_code_region_args::{
-                    COUNTER_INDEX, END_BYTE_POS, START_BYTE_POS,
-                };
+                use coverage::count_code_region_args::*;
                 // FIXME(richkadel): The current implementation assumes the MIR for the given
                 // caller_instance represents a single function. Validate and/or correct if inlining
                 // and/or monomorphization invalidates these assumptions.
-                let coverage_data = tcx.coverage_data(caller_instance.def_id());
+                let coverageinfo = tcx.coverageinfo(caller_instance.def_id());
                 let mangled_fn = tcx.symbol_name(caller_instance);
                 let (mangled_fn_name, _len_val) = self.const_str(mangled_fn.name);
-                let hash = self.const_u64(coverage_data.hash);
-                let num_counters = self.const_u32(coverage_data.num_counters);
+                let hash = self.const_u64(coverageinfo.hash);
+                let num_counters = self.const_u32(coverageinfo.num_counters);
                 let index = args[COUNTER_INDEX].immediate();
                 debug!(
-                    "count_code_region to LLVM intrinsic instrprof.increment(fn_name={}, hash={:?}, num_counters={:?}, index={:?}), byte range {:?}..{:?}, coverage_regions: {:?}",
+                    "count_code_region to LLVM intrinsic instrprof.increment(fn_name={}, hash={:?}, num_counters={:?}, index={:?}), byte range {:?}..{:?}",
                     mangled_fn.name,
                     hash,
                     num_counters,
                     index,
                     args[START_BYTE_POS].immediate(),
                     args[END_BYTE_POS].immediate(),
-                    coverage_data.coverage_regions,
                 );
                 self.instrprof_increment(mangled_fn_name, hash, num_counters, index)
             }

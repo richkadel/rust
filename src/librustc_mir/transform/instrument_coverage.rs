@@ -6,10 +6,12 @@ use rustc_hir::lang_items;
 use rustc_index::vec::IndexVec;
 use rustc_middle::hir;
 use rustc_middle::ich::StableHashingContext;
+use rustc_middle::mir::coverage::count_code_region_args::*;
+use rustc_middle::mir::coverage::{CoverageInfo, CoverageRegion};
 use rustc_middle::mir::interpret::{ConstValue, InterpResult, Scalar};
 use rustc_middle::mir::{
-    self, traversal, BasicBlock, BasicBlockData, CoverageData, CoverageRegion, Operand, Place,
-    SourceInfo, StatementKind, Terminator, TerminatorKind, START_BLOCK,
+    self, traversal, BasicBlock, BasicBlockData, Operand, Place, SourceInfo, StatementKind,
+    Terminator, TerminatorKind, START_BLOCK,
 };
 use rustc_middle::ty;
 use rustc_middle::ty::query::Providers;
@@ -18,19 +20,17 @@ use rustc_middle::ty::{ConstKind, FnDef};
 use rustc_span::def_id::DefId;
 use rustc_span::{Pos, Span};
 
-use rustc_middle::mir::count_code_region_args::{COUNTER_INDEX, END_BYTE_POS, START_BYTE_POS};
-
 /// Inserts call to count_code_region() as a placeholder to be replaced during code generation with
 /// the intrinsic llvm.instrprof.increment.
 pub struct InstrumentCoverage;
 
-/// The `query` provider for `CoverageData`, requested by `codegen_intrinsic_call()` when
+/// The `query` provider for `CoverageInfo`, requested by `codegen_intrinsic_call()` when
 /// constructing the arguments for `llvm.instrprof.increment`.
 pub(crate) fn provide(providers: &mut Providers<'_>) {
-    providers.coverage_data = |tcx, def_id| coverage_data_from_mir(tcx, def_id);
+    providers.coverageinfo = |tcx, def_id| coverageinfo_from_mir(tcx, def_id);
 }
 
-fn coverage_data_from_mir<'tcx>(tcx: TyCtxt<'tcx>, mir_def_id: DefId) -> &'tcx CoverageData {
+fn coverageinfo_from_mir<'tcx>(tcx: TyCtxt<'tcx>, mir_def_id: DefId) -> &'tcx CoverageInfo {
     let mir_body = tcx.optimized_mir(mir_def_id);
     // FIXME(richkadel): The current implementation assumes the MIR for the given DefId
     // represents a single function. Validate and/or correct if inlining and/or monomorphization
@@ -44,7 +44,6 @@ fn coverage_data_from_mir<'tcx>(tcx: TyCtxt<'tcx>, mir_def_id: DefId) -> &'tcx C
     // instrumented function) is valid.
     let mut indexed_regions = vec![];
     let mut num_counters: u32 = 0;
-    //for terminator in count_code_region_terminators(tcx, mir_body) {
     for terminator in traversal::preorder(mir_body)
         .map(|(_, data)| (data, count_code_region_fn))
         .filter_map(count_code_region_terminator_filter)
@@ -77,7 +76,7 @@ fn coverage_data_from_mir<'tcx>(tcx: TyCtxt<'tcx>, mir_def_id: DefId) -> &'tcx C
     for (index, region) in indexed_regions {
         coverage_regions[index] = region;
     }
-    tcx.arena.alloc(CoverageData { num_counters, hash, coverage_regions })
+    tcx.arena.alloc(CoverageInfo { num_counters, hash, coverage_regions })
 }
 
 fn count_code_region_terminator_filter(
@@ -95,18 +94,18 @@ fn count_code_region_terminator_filter(
     None
 }
 
-fn arg<T, F>(to_val: F, args: &Vec<Operand<'tcx>>, pos: usize) -> T
+fn arg<T, F>(to_val: F, args: &Vec<Operand<'tcx>>, arg_index: usize) -> T
 where
     F: FnOnce(Scalar) -> InterpResult<'static, T>,
 {
-    match args.get(pos).unwrap_or_else(|| bug!("count_code_region arg{} not found", pos)) {
+    match args.get(arg_index).unwrap_or_else(|| bug!("arg{} not found", arg_index)) {
         Operand::Constant(constant) => match constant.literal.val {
             ConstKind::Value(ConstValue::Scalar(scalar)) => to_val(scalar).unwrap_or_else(|err| {
-                bug!("count_code_region arg{}, {:?}: {:?}", pos, scalar, err);
+                bug!("count_code_region arg{}, {:?}: {:?}", arg_index, scalar, err);
             }),
-            _ => bug!("count_code_region arg{}: ConstKind::Value expected", pos),
+            _ => bug!("count_code_region arg{}: ConstKind::Value expected", arg_index),
         },
-        _ => bug!("count_code_region arg{}: Operand::Constant expected", pos),
+        _ => bug!("count_code_region arg{}: Operand::Constant expected", arg_index),
     }
 }
 
@@ -178,13 +177,13 @@ impl<'tcx> Instrumentor<'tcx> {
 
         let mut args = Vec::new();
 
-        assert_eq!(COUNTER_INDEX, args.len());
+        debug_assert_eq!(COUNTER_INDEX, args.len());
         args.push(self.const_u32(index, injection_point));
 
-        assert_eq!(START_BYTE_POS, args.len());
+        debug_assert_eq!(START_BYTE_POS, args.len());
         args.push(self.const_u32(code_region.lo().to_u32(), injection_point));
 
-        assert_eq!(END_BYTE_POS, args.len());
+        debug_assert_eq!(END_BYTE_POS, args.len());
         args.push(self.const_u32(code_region.hi().to_u32(), injection_point));
 
         let mut patch = MirPatch::new(mir_body);
