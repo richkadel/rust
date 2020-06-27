@@ -6,7 +6,7 @@ use rustc_middle::ty::{self, Ty};
 use rustc_session::{declare_tool_lint, impl_lint_pass};
 use rustc_span::source_map::Span;
 use rustc_target::abi::LayoutOf;
-use rustc_typeck::expr_use_visitor::{ConsumeMode, Delegate, ExprUseVisitor, PlaceWithHirId, PlaceBase};
+use rustc_typeck::expr_use_visitor::{ConsumeMode, Delegate, ExprUseVisitor, PlaceBase, PlaceWithHirId};
 
 use crate::utils::span_lint;
 
@@ -84,7 +84,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for BoxedLocal {
 
         let fn_def_id = cx.tcx.hir().local_def_id(hir_id);
         cx.tcx.infer_ctxt().enter(|infcx| {
-            ExprUseVisitor::new(&mut v, &infcx, fn_def_id, cx.param_env, cx.tables).consume_body(body);
+            ExprUseVisitor::new(&mut v, &infcx, fn_def_id, cx.param_env, cx.tables()).consume_body(body);
         });
 
         for node in v.set {

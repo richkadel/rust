@@ -62,7 +62,7 @@
 use core::array::LengthAtMost32;
 use core::cmp::{self, Ordering};
 use core::fmt;
-use core::hash::{self, Hash};
+use core::hash::{Hash, Hasher};
 use core::intrinsics::{arith_offset, assume};
 use core::iter::{FromIterator, FusedIterator, TrustedLen};
 use core::marker::PhantomData;
@@ -1801,6 +1801,21 @@ impl<T: Clone> SpecFromElem for T {
     }
 }
 
+impl SpecFromElem for i8 {
+    #[inline]
+    fn from_elem(elem: i8, n: usize) -> Vec<i8> {
+        if elem == 0 {
+            return Vec { buf: RawVec::with_capacity_zeroed(n), len: n };
+        }
+        unsafe {
+            let mut v = Vec::with_capacity(n);
+            ptr::write_bytes(v.as_mut_ptr(), elem as u8, n);
+            v.set_len(n);
+            v
+        }
+    }
+}
+
 impl SpecFromElem for u8 {
     #[inline]
     fn from_elem(elem: u8, n: usize) -> Vec<u8> {
@@ -1845,7 +1860,6 @@ macro_rules! impl_is_zero {
     };
 }
 
-impl_is_zero!(i8, |x| x == 0);
 impl_is_zero!(i16, |x| x == 0);
 impl_is_zero!(i32, |x| x == 0);
 impl_is_zero!(i64, |x| x == 0);
@@ -1943,7 +1957,7 @@ impl<T: Clone> Clone for Vec<T> {
 #[stable(feature = "rust1", since = "1.0.0")]
 impl<T: Hash> Hash for Vec<T> {
     #[inline]
-    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         Hash::hash(&**self, state)
     }
 }

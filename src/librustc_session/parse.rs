@@ -13,6 +13,7 @@ use rustc_span::hygiene::ExpnId;
 use rustc_span::source_map::{FilePathMapping, SourceMap};
 use rustc_span::{MultiSpan, Span, Symbol};
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::str;
 
@@ -63,7 +64,7 @@ impl GatedSpans {
 #[derive(Default)]
 pub struct SymbolGallery {
     /// All symbols occurred and their first occurrance span.
-    pub symbols: Lock<FxHashMap<Symbol, Span>>,
+    pub symbols: Lock<BTreeMap<Symbol, Span>>,
 }
 
 impl SymbolGallery {
@@ -135,6 +136,8 @@ pub struct ParseSess {
     pub symbol_gallery: SymbolGallery,
     /// The parser has reached `Eof` due to an unclosed brace. Used to silence unnecessary errors.
     pub reached_eof: Lock<bool>,
+    /// Environment variables accessed during the build and their values when they exist.
+    pub env_depinfo: Lock<FxHashSet<(Symbol, Option<Symbol>)>>,
 }
 
 impl ParseSess {
@@ -160,6 +163,7 @@ impl ParseSess {
             gated_spans: GatedSpans::default(),
             symbol_gallery: SymbolGallery::default(),
             reached_eof: Lock::new(false),
+            env_depinfo: Default::default(),
         }
     }
 

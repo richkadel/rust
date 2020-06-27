@@ -211,7 +211,8 @@ fn check_impl_items(cx: &LateContext<'_, '_>, item: &Item<'_>, impl_items: &[Imp
 }
 
 fn check_cmp(cx: &LateContext<'_, '_>, span: Span, method: &Expr<'_>, lit: &Expr<'_>, op: &str, compare_to: u32) {
-    if let (&ExprKind::MethodCall(ref method_path, _, ref args, _), &ExprKind::Lit(ref lit)) = (&method.kind, &lit.kind) {
+    if let (&ExprKind::MethodCall(ref method_path, _, ref args, _), &ExprKind::Lit(ref lit)) = (&method.kind, &lit.kind)
+    {
         // check if we are in an is_empty() method
         if let Some(name) = get_item_name(cx, method) {
             if name.as_str() == "is_empty" {
@@ -299,7 +300,7 @@ fn has_is_empty(cx: &LateContext<'_, '_>, expr: &Expr<'_>) -> bool {
         return false;
     }
 
-    let ty = &walk_ptrs_ty(cx.tables.expr_ty(expr));
+    let ty = &walk_ptrs_ty(cx.tables().expr_ty(expr));
     match ty.kind {
         ty::Dynamic(ref tt, ..) => {
             if let Some(principal) = tt.principal() {

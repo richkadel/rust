@@ -603,7 +603,7 @@ declare_lint_pass!(LetUnitValue => [LET_UNIT_VALUE]);
 impl<'a, 'tcx> LateLintPass<'a, 'tcx> for LetUnitValue {
     fn check_stmt(&mut self, cx: &LateContext<'a, 'tcx>, stmt: &'tcx Stmt<'_>) {
         if let StmtKind::Local(ref local) = stmt.kind {
-            if is_unit(cx.tables.pat_ty(&local.pat)) {
+            if is_unit(cx.tables().pat_ty(&local.pat)) {
                 if in_external_macro(cx.sess(), stmt.span) || local.pat.span.from_expansion() {
                     return;
                 }
@@ -688,7 +688,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for UnitCmp {
                 if let ExpnKind::Macro(MacroKind::Bang, symbol) = callee.kind {
                     if let ExprKind::Binary(ref cmp, ref left, _) = expr.kind {
                         let op = cmp.node;
-                        if op.is_comparison() && is_unit(cx.tables.expr_ty(left)) {
+                        if op.is_comparison() && is_unit(cx.tables().expr_ty(left)) {
                             let result = match &*symbol.as_str() {
                                 "assert_eq" | "debug_assert_eq" => "succeed",
                                 "assert_ne" | "debug_assert_ne" => "fail",
@@ -712,7 +712,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for UnitCmp {
         }
         if let ExprKind::Binary(ref cmp, ref left, _) = expr.kind {
             let op = cmp.node;
-            if op.is_comparison() && is_unit(cx.tables.expr_ty(left)) {
+            if op.is_comparison() && is_unit(cx.tables().expr_ty(left)) {
                 let result = match op {
                     BinOpKind::Eq | BinOpKind::Le | BinOpKind::Ge => "true",
                     _ => "false",
@@ -782,7 +782,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for UnitArg {
                 let args_to_recover = args
                     .iter()
                     .filter(|arg| {
-                        if is_unit(cx.tables.expr_ty(arg)) && !is_unit_literal(arg) {
+                        if is_unit(cx.tables().expr_ty(arg)) && !is_unit_literal(arg) {
                             if let ExprKind::Match(.., MatchSource::TryDesugar) = &arg.kind {
                                 false
                             } else {
@@ -1250,7 +1250,7 @@ fn check_loss_of_sign(cx: &LateContext<'_, '_>, expr: &Expr<'_>, op: &Expr<'_>, 
     }
 
     // don't lint for positive constants
-    let const_val = constant(cx, &cx.tables, op);
+    let const_val = constant(cx, &cx.tables(), op);
     if_chain! {
         if let Some((const_val, _)) = const_val;
         if let Constant::Int(n) = const_val;
@@ -1416,7 +1416,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for Casts {
             return;
         }
         if let ExprKind::Cast(ref ex, _) = expr.kind {
-            let (cast_from, cast_to) = (cx.tables.expr_ty(ex), cx.tables.expr_ty(expr));
+            let (cast_from, cast_to) = (cx.tables().expr_ty(ex), cx.tables().expr_ty(expr));
             lint_fn_to_numeric_cast(cx, expr, ex, cast_from, cast_to);
             if let ExprKind::Lit(ref lit) = ex.kind {
                 if_chain! {
@@ -1804,7 +1804,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for CharLitAsU8 {
             if let ExprKind::Cast(e, _) = &expr.kind;
             if let ExprKind::Lit(l) = &e.kind;
             if let LitKind::Char(c) = l.node;
-            if ty::Uint(UintTy::U8) == cx.tables.expr_ty(expr).kind;
+            if ty::Uint(UintTy::U8) == cx.tables().expr_ty(expr).kind;
             then {
                 let mut applicability = Applicability::MachineApplicable;
                 let snippet = snippet_with_applicability(cx, e.span, "'x'", &mut applicability);
@@ -1880,8 +1880,8 @@ enum AbsurdComparisonResult {
 
 fn is_cast_between_fixed_and_target<'a, 'tcx>(cx: &LateContext<'a, 'tcx>, expr: &'tcx Expr<'tcx>) -> bool {
     if let ExprKind::Cast(ref cast_exp, _) = expr.kind {
-        let precast_ty = cx.tables.expr_ty(cast_exp);
-        let cast_ty = cx.tables.expr_ty(expr);
+        let precast_ty = cx.tables().expr_ty(cast_exp);
+        let cast_ty = cx.tables().expr_ty(expr);
 
         return is_isize_or_usize(precast_ty) != is_isize_or_usize(cast_ty);
     }
@@ -1901,7 +1901,7 @@ fn detect_absurd_comparison<'a, 'tcx>(
 
     // absurd comparison only makes sense on primitive types
     // primitive types don't implement comparison operators with each other
-    if cx.tables.expr_ty(lhs) != cx.tables.expr_ty(rhs) {
+    if cx.tables().expr_ty(lhs) != cx.tables().expr_ty(rhs) {
         return None;
     }
 
@@ -1939,22 +1939,18 @@ fn detect_absurd_comparison<'a, 'tcx>(
 fn detect_extreme_expr<'a, 'tcx>(cx: &LateContext<'a, 'tcx>, expr: &'tcx Expr<'_>) -> Option<ExtremeExpr<'tcx>> {
     use crate::types::ExtremeType::{Maximum, Minimum};
 
-    let ty = cx.tables.expr_ty(expr);
+    let ty = cx.tables().expr_ty(expr);
 
-    let cv = constant(cx, cx.tables, expr)?.0;
+    let cv = constant(cx, cx.tables(), expr)?.0;
 
     let which = match (&ty.kind, cv) {
         (&ty::Bool, Constant::Bool(false)) | (&ty::Uint(_), Constant::Int(0)) => Minimum,
-        (&ty::Int(ity), Constant::Int(i))
-            if i == unsext(cx.tcx, i128::MIN >> (128 - int_bits(cx.tcx, ity)), ity) =>
-        {
+        (&ty::Int(ity), Constant::Int(i)) if i == unsext(cx.tcx, i128::MIN >> (128 - int_bits(cx.tcx, ity)), ity) => {
             Minimum
         },
 
         (&ty::Bool, Constant::Bool(true)) => Maximum,
-        (&ty::Int(ity), Constant::Int(i))
-            if i == unsext(cx.tcx, i128::MAX >> (128 - int_bits(cx.tcx, ity)), ity) =>
-        {
+        (&ty::Int(ity), Constant::Int(i)) if i == unsext(cx.tcx, i128::MAX >> (128 - int_bits(cx.tcx, ity)), ity) => {
             Maximum
         },
         (&ty::Uint(uty), Constant::Int(i)) if clip(cx.tcx, u128::MAX, uty) == i => Maximum,
@@ -2075,58 +2071,28 @@ impl Ord for FullInt {
 
 fn numeric_cast_precast_bounds<'a>(cx: &LateContext<'_, '_>, expr: &'a Expr<'_>) -> Option<(FullInt, FullInt)> {
     if let ExprKind::Cast(ref cast_exp, _) = expr.kind {
-        let pre_cast_ty = cx.tables.expr_ty(cast_exp);
-        let cast_ty = cx.tables.expr_ty(expr);
+        let pre_cast_ty = cx.tables().expr_ty(cast_exp);
+        let cast_ty = cx.tables().expr_ty(expr);
         // if it's a cast from i32 to u32 wrapping will invalidate all these checks
         if cx.layout_of(pre_cast_ty).ok().map(|l| l.size) == cx.layout_of(cast_ty).ok().map(|l| l.size) {
             return None;
         }
         match pre_cast_ty.kind {
             ty::Int(int_ty) => Some(match int_ty {
-                IntTy::I8 => (
-                    FullInt::S(i128::from(i8::MIN)),
-                    FullInt::S(i128::from(i8::MAX)),
-                ),
-                IntTy::I16 => (
-                    FullInt::S(i128::from(i16::MIN)),
-                    FullInt::S(i128::from(i16::MAX)),
-                ),
-                IntTy::I32 => (
-                    FullInt::S(i128::from(i32::MIN)),
-                    FullInt::S(i128::from(i32::MAX)),
-                ),
-                IntTy::I64 => (
-                    FullInt::S(i128::from(i64::MIN)),
-                    FullInt::S(i128::from(i64::MAX)),
-                ),
+                IntTy::I8 => (FullInt::S(i128::from(i8::MIN)), FullInt::S(i128::from(i8::MAX))),
+                IntTy::I16 => (FullInt::S(i128::from(i16::MIN)), FullInt::S(i128::from(i16::MAX))),
+                IntTy::I32 => (FullInt::S(i128::from(i32::MIN)), FullInt::S(i128::from(i32::MAX))),
+                IntTy::I64 => (FullInt::S(i128::from(i64::MIN)), FullInt::S(i128::from(i64::MAX))),
                 IntTy::I128 => (FullInt::S(i128::MIN), FullInt::S(i128::MAX)),
-                IntTy::Isize => (
-                    FullInt::S(isize::MIN as i128),
-                    FullInt::S(isize::MAX as i128),
-                ),
+                IntTy::Isize => (FullInt::S(isize::MIN as i128), FullInt::S(isize::MAX as i128)),
             }),
             ty::Uint(uint_ty) => Some(match uint_ty {
-                UintTy::U8 => (
-                    FullInt::U(u128::from(u8::MIN)),
-                    FullInt::U(u128::from(u8::MAX)),
-                ),
-                UintTy::U16 => (
-                    FullInt::U(u128::from(u16::MIN)),
-                    FullInt::U(u128::from(u16::MAX)),
-                ),
-                UintTy::U32 => (
-                    FullInt::U(u128::from(u32::MIN)),
-                    FullInt::U(u128::from(u32::MAX)),
-                ),
-                UintTy::U64 => (
-                    FullInt::U(u128::from(u64::MIN)),
-                    FullInt::U(u128::from(u64::MAX)),
-                ),
+                UintTy::U8 => (FullInt::U(u128::from(u8::MIN)), FullInt::U(u128::from(u8::MAX))),
+                UintTy::U16 => (FullInt::U(u128::from(u16::MIN)), FullInt::U(u128::from(u16::MAX))),
+                UintTy::U32 => (FullInt::U(u128::from(u32::MIN)), FullInt::U(u128::from(u32::MAX))),
+                UintTy::U64 => (FullInt::U(u128::from(u64::MIN)), FullInt::U(u128::from(u64::MAX))),
                 UintTy::U128 => (FullInt::U(u128::MIN), FullInt::U(u128::MAX)),
-                UintTy::Usize => (
-                    FullInt::U(usize::MIN as u128),
-                    FullInt::U(usize::MAX as u128),
-                ),
+                UintTy::Usize => (FullInt::U(usize::MIN as u128), FullInt::U(usize::MAX as u128)),
             }),
             _ => None,
         }
@@ -2136,9 +2102,9 @@ fn numeric_cast_precast_bounds<'a>(cx: &LateContext<'_, '_>, expr: &'a Expr<'_>)
 }
 
 fn node_as_const_fullint<'a, 'tcx>(cx: &LateContext<'a, 'tcx>, expr: &'tcx Expr<'_>) -> Option<FullInt> {
-    let val = constant(cx, cx.tables, expr)?.0;
+    let val = constant(cx, cx.tables(), expr)?.0;
     if let Constant::Int(const_int) = val {
-        match cx.tables.expr_ty(expr).kind {
+        match cx.tables().expr_ty(expr).kind {
             ty::Int(ity) => Some(FullInt::S(sext(cx.tcx, const_int, ity))),
             ty::Uint(_) => Some(FullInt::U(const_int)),
             _ => None,
@@ -2533,7 +2499,7 @@ impl<'a, 'b, 'tcx> ImplicitHasherConstructorVisitor<'a, 'b, 'tcx> {
     fn new(cx: &'a LateContext<'a, 'tcx>, target: &'b ImplicitHasherType<'tcx>) -> Self {
         Self {
             cx,
-            body: cx.tables,
+            body: cx.tables(),
             target,
             suggestions: BTreeMap::new(),
         }
@@ -2642,7 +2608,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for RefToMut {
             if let TyKind::Ptr(MutTy { mutbl: Mutability::Mut, .. }) = t.kind;
             if let ExprKind::Cast(e, t) = &e.kind;
             if let TyKind::Ptr(MutTy { mutbl: Mutability::Not, .. }) = t.kind;
-            if let ty::Ref(..) = cx.tables.node_type(e.hir_id).kind;
+            if let ty::Ref(..) = cx.tables().node_type(e.hir_id).kind;
             then {
                 span_lint(
                     cx,

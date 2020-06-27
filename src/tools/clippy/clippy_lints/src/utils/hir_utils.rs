@@ -32,7 +32,7 @@ impl<'a, 'tcx> SpanlessEq<'a, 'tcx> {
     pub fn new(cx: &'a LateContext<'a, 'tcx>) -> Self {
         Self {
             cx,
-            tables: cx.tables,
+            tables: cx.tables(),
             ignore_fn: false,
         }
     }
@@ -40,7 +40,7 @@ impl<'a, 'tcx> SpanlessEq<'a, 'tcx> {
     pub fn ignore_fn(self) -> Self {
         Self {
             cx: self.cx,
-            tables: self.cx.tables,
+            tables: self.cx.tables(),
             ignore_fn: true,
         }
     }
@@ -309,18 +309,15 @@ fn swap_binop<'a>(
     rhs: &'a Expr<'a>,
 ) -> Option<(BinOpKind, &'a Expr<'a>, &'a Expr<'a>)> {
     match binop {
-        BinOpKind::Add
-        | BinOpKind::Mul
-        | BinOpKind::Eq
-        | BinOpKind::Ne
-        | BinOpKind::BitAnd
-        | BinOpKind::BitXor
-        | BinOpKind::BitOr => Some((binop, rhs, lhs)),
+        BinOpKind::Add | BinOpKind::Eq | BinOpKind::Ne | BinOpKind::BitAnd | BinOpKind::BitXor | BinOpKind::BitOr => {
+            Some((binop, rhs, lhs))
+        },
         BinOpKind::Lt => Some((BinOpKind::Gt, rhs, lhs)),
         BinOpKind::Le => Some((BinOpKind::Ge, rhs, lhs)),
         BinOpKind::Ge => Some((BinOpKind::Le, rhs, lhs)),
         BinOpKind::Gt => Some((BinOpKind::Lt, rhs, lhs)),
-        BinOpKind::Shl
+        BinOpKind::Mul // Not always commutative, e.g. with matrices. See issue #5698
+        | BinOpKind::Shl
         | BinOpKind::Shr
         | BinOpKind::Rem
         | BinOpKind::Sub

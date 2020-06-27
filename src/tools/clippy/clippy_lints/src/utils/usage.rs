@@ -8,7 +8,7 @@ use rustc_lint::LateContext;
 use rustc_middle::hir::map::Map;
 use rustc_middle::ty;
 use rustc_span::symbol::{Ident, Symbol};
-use rustc_typeck::expr_use_visitor::{ConsumeMode, Delegate, ExprUseVisitor, PlaceWithHirId, PlaceBase};
+use rustc_typeck::expr_use_visitor::{ConsumeMode, Delegate, ExprUseVisitor, PlaceBase, PlaceWithHirId};
 
 /// Returns a set of mutated local variable IDs, or `None` if mutations could not be determined.
 pub fn mutated_variables<'a, 'tcx>(expr: &'tcx Expr<'_>, cx: &'a LateContext<'a, 'tcx>) -> Option<FxHashSet<HirId>> {
@@ -18,7 +18,7 @@ pub fn mutated_variables<'a, 'tcx>(expr: &'tcx Expr<'_>, cx: &'a LateContext<'a,
     };
     let def_id = expr.hir_id.owner.to_def_id();
     cx.tcx.infer_ctxt().enter(|infcx| {
-        ExprUseVisitor::new(&mut delegate, &infcx, def_id.expect_local(), cx.param_env, cx.tables).walk_expr(expr);
+        ExprUseVisitor::new(&mut delegate, &infcx, def_id.expect_local(), cx.param_env, cx.tables()).walk_expr(expr);
     });
 
     if delegate.skip {

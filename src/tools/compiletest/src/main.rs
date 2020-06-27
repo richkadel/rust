@@ -1,5 +1,4 @@
 #![crate_name = "compiletest"]
-#![deny(warnings)]
 // The `test` crate is the only unstable feature
 // allowed here, just to share similar code.
 #![feature(test)]
@@ -9,8 +8,6 @@ extern crate test;
 use crate::common::{expected_output_path, output_base_dir, output_relative_path, UI_EXTENSIONS};
 use crate::common::{CompareMode, Config, Debugger, Mode, PassMode, Pretty, TestPaths};
 use crate::util::logv;
-use env_logger;
-use getopts;
 use getopts::Options;
 use log::*;
 use std::env;

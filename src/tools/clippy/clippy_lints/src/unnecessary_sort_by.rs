@@ -95,7 +95,10 @@ fn mirrored_exprs(
         // The two exprs are method calls.
         // Check to see that the function is the same and the arguments are mirrored
         // This is enough because the receiver of the method is listed in the arguments
-        (ExprKind::MethodCall(left_segment, _, left_args, _), ExprKind::MethodCall(right_segment, _, right_args, _)) => {
+        (
+            ExprKind::MethodCall(left_segment, _, left_args, _),
+            ExprKind::MethodCall(right_segment, _, right_args, _),
+        ) => {
             left_segment.ident == right_segment.ident
                 && left_args
                     .iter()
@@ -174,7 +177,7 @@ fn detect_lint(cx: &LateContext<'_, '_>, expr: &Expr<'_>) -> Option<LintTrigger>
         if let name = name_ident.ident.name.to_ident_string();
         if name == "sort_by" || name == "sort_unstable_by";
         if let [vec, Expr { kind: ExprKind::Closure(_, _, closure_body_id, _, _), .. }] = args;
-        if utils::match_type(cx, &cx.tables.expr_ty(vec), &paths::VEC);
+        if utils::match_type(cx, &cx.tables().expr_ty(vec), &paths::VEC);
         if let closure_body = cx.tcx.hir().body(*closure_body_id);
         if let &[
             Param { pat: Pat { kind: PatKind::Binding(_, _, left_ident, _), .. }, ..},

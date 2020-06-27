@@ -358,12 +358,13 @@ pub fn size_of_val<T: ?Sized>(val: &T) -> usize {
 ///     - an (unstable) [extern type], then this function is always safe to
 ///       call, but may panic or otherwise return the wrong value, as the
 ///       extern type's layout is not known. This is the same behavior as
-///       [`size_of_val`] on a reference to an extern type tail.
+///       [`size_of_val`] on a reference to a type with an extern type tail.
 ///     - otherwise, it is conservatively not allowed to call this function.
 ///
 /// [slice]: ../../std/primitive.slice.html
 /// [trait object]: ../../book/ch17-02-trait-objects.html
 /// [extern type]: ../../unstable-book/language-features/extern-types.html
+/// [`size_of_val`]: ../../core/mem/fn.size_of_val.html
 ///
 /// # Examples
 ///
@@ -492,12 +493,13 @@ pub fn align_of_val<T: ?Sized>(val: &T) -> usize {
 ///     - an (unstable) [extern type], then this function is always safe to
 ///       call, but may panic or otherwise return the wrong value, as the
 ///       extern type's layout is not known. This is the same behavior as
-///       [`align_of_val`] on a reference to an extern type tail.
+///       [`align_of_val`] on a reference to a type with an extern type tail.
 ///     - otherwise, it is conservatively not allowed to call this function.
 ///
 /// [slice]: ../../std/primitive.slice.html
 /// [trait object]: ../../book/ch17-02-trait-objects.html
 /// [extern type]: ../../unstable-book/language-features/extern-types.html
+/// [`align_of_val`]: ../../core/mem/fn.align_of_val.html
 ///
 /// # Examples
 ///
@@ -998,4 +1000,34 @@ impl<T> fmt::Debug for Discriminant<T> {
 #[rustc_const_unstable(feature = "const_discriminant", issue = "69821")]
 pub const fn discriminant<T>(v: &T) -> Discriminant<T> {
     Discriminant(intrinsics::discriminant_value(v))
+}
+
+/// Returns the number of variants in the enum type `T`.
+///
+/// If `T` is not an enum, calling this function will not result in undefined behavior, but the
+/// return value is unspecified. Equally, if `T` is an enum with more variants than `usize::MAX`
+/// the return value is unspecified. Uninhabited variants will be counted.
+///
+/// # Examples
+///
+/// ```
+/// # #![feature(never_type)]
+/// # #![feature(variant_count)]
+///
+/// use std::mem;
+///
+/// enum Void {}
+/// enum Foo { A(&'static str), B(i32), C(i32) }
+///
+/// assert_eq!(mem::variant_count::<Void>(), 0);
+/// assert_eq!(mem::variant_count::<Foo>(), 3);
+///
+/// assert_eq!(mem::variant_count::<Option<!>>(), 2);
+/// assert_eq!(mem::variant_count::<Result<!, !>>(), 2);
+/// ```
+#[inline(always)]
+#[unstable(feature = "variant_count", issue = "73662")]
+#[rustc_const_unstable(feature = "variant_count", issue = "73662")]
+pub const fn variant_count<T>() -> usize {
+    intrinsics::variant_count::<T>()
 }
