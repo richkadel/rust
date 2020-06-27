@@ -141,7 +141,6 @@ impl IntrinsicCallMethods<'tcx> for Builder<'a, 'll, 'tcx> {
                 self.call(llfn, &[], None)
             }
             "count_code_region" => {
-                use coverage::count_code_region_args::*;
                 // FIXME(richkadel): The current implementation assumes the MIR for the given
                 // caller_instance represents a single function. Validate and/or correct if inlining
                 // and/or monomorphization invalidates these assumptions.
@@ -150,15 +149,11 @@ impl IntrinsicCallMethods<'tcx> for Builder<'a, 'll, 'tcx> {
                 let (mangled_fn_name, _len_val) = self.const_str(mangled_fn.name);
                 let hash = self.const_u64(coverageinfo.hash);
                 let num_counters = self.const_u32(coverageinfo.num_counters);
+                use coverage::count_code_region_args::*;
                 let index = args[COUNTER_INDEX].immediate();
                 debug!(
-                    "count_code_region to LLVM intrinsic instrprof.increment(fn_name={}, hash={:?}, num_counters={:?}, index={:?}), byte range {:?}..{:?}",
-                    mangled_fn.name,
-                    hash,
-                    num_counters,
-                    index,
-                    args[START_BYTE_POS].immediate(),
-                    args[END_BYTE_POS].immediate(),
+                    "count_code_region to LLVM intrinsic instrprof.increment(fn_name={}, hash={:?}, num_counters={:?}, index={:?})",
+                    mangled_fn.name, hash, num_counters, index,
                 );
                 self.instrprof_increment(mangled_fn_name, hash, num_counters, index)
             }

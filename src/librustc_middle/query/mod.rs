@@ -231,8 +231,10 @@ rustc_queries! {
             cache_on_disk_if { key.is_local() }
         }
 
-        query coverageinfo(key: DefId) -> &'tcx mir::coverage::CoverageInfo {
-            desc { |tcx| "retrieving coverageinfo from MIR for `{}`", tcx.def_path_str(key) }
+        /// Returns coverage summary info for a function, after executing the `InstrumentCoverage`
+        /// MIR pass (assuming the -Zinstrument-coverage option is enabled).
+        query coverageinfo(key: DefId) -> mir::CoverageInfo {
+            desc { |tcx| "retrieving coverage info from MIR for `{}`", tcx.def_path_str(key) }
             storage(ArenaCacheSelector<'tcx>)
             cache_on_disk_if { key.is_local() }
         }

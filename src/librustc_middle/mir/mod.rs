@@ -2321,6 +2321,18 @@ impl<'tcx> Operand<'tcx> {
         })
     }
 
+    /// Convenience helper to make a `Scalar` from the given `Operand`, assuming that `Operand`
+    /// wraps a constant literal value. Panics if this is not the case.
+    pub fn scalar_from_const(operand: &Operand<'tcx>) -> Scalar {
+        match operand {
+            Operand::Constant(constant) => match constant.literal.val.try_to_scalar() {
+                Some(scalar) => scalar,
+                _ => panic!("{:?}: Scalar value expected", constant.literal.val),
+            },
+            _ => panic!("{:?}: Constant expected", operand),
+        }
+    }
+
     pub fn to_copy(&self) -> Self {
         match *self {
             Operand::Copy(_) | Operand::Constant(_) => self.clone(),

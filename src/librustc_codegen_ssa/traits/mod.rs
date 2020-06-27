@@ -33,7 +33,7 @@ pub use self::asm::{AsmBuilderMethods, AsmMethods, InlineAsmOperandRef};
 pub use self::backend::{Backend, BackendTypes, CodegenBackend, ExtraBackendMethods};
 pub use self::builder::{BuilderMethods, OverflowOp};
 pub use self::consts::ConstMethods;
-pub use self::coverageinfo::CoverageInfoMethods;
+pub use self::coverageinfo::{CoverageInfoBuilderMethods, CoverageInfoMethods};
 pub use self::debuginfo::{DebugInfoBuilderMethods, DebugInfoMethods};
 pub use self::declare::{DeclareMethods, PreDefineMethods};
 pub use self::intrinsic::IntrinsicCallMethods;
