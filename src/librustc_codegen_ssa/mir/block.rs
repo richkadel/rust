@@ -658,53 +658,39 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
             // Some of these are metadata placeholder terminators with no backend code.
             match intrinsic {
                 "coverage_counter_add" | "coverage_counter_subtract" => {
-                    let op = if intrinsic == "coverage_counter_add" {
-                        CounterOp::Add
-                    } else {
-                        CounterOp::Subtract
-                    };
                     use coverage::coverage_counter_expression_args::*;
-                    let index = op_to_u32(&args[COUNTER_EXPRESSION_INDEX]);
-                    let lhs = op_to_u32(&args[LEFT_INDEX]);
-                    let rhs = op_to_u32(&args[RIGHT_INDEX]);
-                    let start_byte_pos = op_to_u32(&args[START_BYTE_POS]);
-                    let end_byte_pos = op_to_u32(&args[END_BYTE_POS]);
-                    debug!(
-                        "adding counter expression to coverage map: instance={:?}, index={}, {} {:?} {}, byte range {}..{}",
-                        self.instance, index, lhs, op, rhs, start_byte_pos, end_byte_pos,
-                    );
                     bx.new_counter_expression_region(
                         self.instance,
-                        index,
-                        lhs,
-                        op,
-                        rhs,
-                        start_byte_pos,
-                        end_byte_pos,
+                        op_to_u32(&args[COUNTER_EXPRESSION_INDEX]),
+                        op_to_u32(&args[LEFT_INDEX]),
+                        if intrinsic == "coverage_counter_add" {
+                            CounterOp::Add
+                        } else {
+                            CounterOp::Subtract
+                        },
+                        op_to_u32(&args[RIGHT_INDEX]),
+                        op_to_u32(&args[START_BYTE_POS]),
+                        op_to_u32(&args[END_BYTE_POS]),
                     );
                     return; // Does not inject backend code
                 }
                 "coverage_unreachable" => {
                     use coverage::coverage_unreachable_args::*;
-                    let start_byte_pos = op_to_u32(&args[START_BYTE_POS]);
-                    let end_byte_pos = op_to_u32(&args[END_BYTE_POS]);
-                    debug!(
-                        "adding unreachable code to coverage map: instance={:?}, byte range {}..{}",
-                        self.instance, start_byte_pos, end_byte_pos,
+                    bx.new_unreachable_region(
+                        self.instance,
+                        op_to_u32(&args[START_BYTE_POS]),
+                        op_to_u32(&args[END_BYTE_POS]),
                     );
-                    bx.new_unreachable_region(self.instance, start_byte_pos, end_byte_pos);
                     return; // Does not inject backend code
                 }
                 "count_code_region" => {
                     use coverage::count_code_region_args::*;
-                    let index = op_to_u32(&args[COUNTER_INDEX]);
-                    let start_byte_pos = op_to_u32(&args[START_BYTE_POS]);
-                    let end_byte_pos = op_to_u32(&args[END_BYTE_POS]);
-                    debug!(
-                        "adding counter to coverage map: instance={:?}, index={}, byte range {}..{}",
-                        self.instance, index, start_byte_pos, end_byte_pos,
+                    bx.new_counter_region(
+                        self.instance,
+                        op_to_u32(&args[COUNTER_INDEX]),
+                        op_to_u32(&args[START_BYTE_POS]),
+                        op_to_u32(&args[END_BYTE_POS]),
                     );
-                    bx.new_counter_region(self.instance, index, start_byte_pos, end_byte_pos);
                     // continue, to inject the counter increment in the backend
                 }
                 _ => (), // continue with all other intrinsic calls

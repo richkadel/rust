@@ -73,6 +73,10 @@ impl CoverageInfoBuilderMethods<'tcx> for Builder<'a, 'll, 'tcx> {
         start_byte_pos: u32,
         end_byte_pos: u32,
     ) {
+        debug!(
+            "adding counter to coverage map: instance={:?}, index={}, byte range {}..{}",
+            instance, index, start_byte_pos, end_byte_pos,
+        );
         let mut coverage_regions = self.coverage_context().coverage_regions.borrow_mut();
         coverage_regions
             .entry(instance)
@@ -90,6 +94,10 @@ impl CoverageInfoBuilderMethods<'tcx> for Builder<'a, 'll, 'tcx> {
         start_byte_pos: u32,
         end_byte_pos: u32,
     ) {
+        debug!(
+            "adding counter expression to coverage map: instance={:?}, index={}, {} {:?} {}, byte range {}..{}",
+            instance, index, lhs, op, rhs, start_byte_pos, end_byte_pos,
+        );
         let mut coverage_regions = self.coverage_context().coverage_regions.borrow_mut();
         coverage_regions
             .entry(instance)
@@ -103,6 +111,10 @@ impl CoverageInfoBuilderMethods<'tcx> for Builder<'a, 'll, 'tcx> {
         start_byte_pos: u32,
         end_byte_pos: u32,
     ) {
+        debug!(
+            "adding unreachable code to coverage map: instance={:?}, byte range {}..{}",
+            instance, start_byte_pos, end_byte_pos,
+        );
         let mut coverage_regions = self.coverage_context().coverage_regions.borrow_mut();
         coverage_regions
             .entry(instance)
