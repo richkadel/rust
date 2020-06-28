@@ -5,7 +5,6 @@ use super::{FunctionCx, LocalRef};
 
 use crate::base;
 use crate::common::{self, IntPredicate};
-use crate::coverageinfo::CounterOp;
 use crate::meth;
 use crate::traits::*;
 use crate::MemFlags;
@@ -14,7 +13,6 @@ use rustc_ast::ast;
 use rustc_hir::lang_items;
 use rustc_index::vec::Idx;
 use rustc_middle::mir;
-use rustc_middle::mir::coverage;
 use rustc_middle::mir::interpret::{AllocId, ConstValue, Pointer, Scalar};
 use rustc_middle::mir::AssertKind;
 use rustc_middle::ty::layout::{FnAbiExt, HasTyCtxt};
@@ -654,46 +652,9 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
 
         if intrinsic.is_some() && intrinsic != Some("drop_in_place") {
             let intrinsic = intrinsic.unwrap();
-            // Handle coverage-related terminators, if -Zinstrument-coverage is enabled.
-            // Some of these are metadata placeholder terminators with no backend code.
-            match intrinsic {
-                "coverage_counter_add" | "coverage_counter_subtract" => {
-                    use coverage::coverage_counter_expression_args::*;
-                    bx.new_counter_expression_region(
-                        self.instance,
-                        op_to_u32(&args[COUNTER_EXPRESSION_INDEX]),
-                        op_to_u32(&args[LEFT_INDEX]),
-                        if intrinsic == "coverage_counter_add" {
-                            CounterOp::Add
-                        } else {
-                            CounterOp::Subtract
-                        },
-                        op_to_u32(&args[RIGHT_INDEX]),
-                        op_to_u32(&args[START_BYTE_POS]),
-                        op_to_u32(&args[END_BYTE_POS]),
-                    );
-                    return; // Does not inject backend code
-                }
-                "coverage_unreachable" => {
-                    use coverage::coverage_unreachable_args::*;
-                    bx.new_unreachable_region(
-                        self.instance,
-                        op_to_u32(&args[START_BYTE_POS]),
-                        op_to_u32(&args[END_BYTE_POS]),
-                    );
-                    return; // Does not inject backend code
-                }
-                "count_code_region" => {
-                    use coverage::count_code_region_args::*;
-                    bx.new_counter_region(
-                        self.instance,
-                        op_to_u32(&args[COUNTER_INDEX]),
-                        op_to_u32(&args[START_BYTE_POS]),
-                        op_to_u32(&args[END_BYTE_POS]),
-                    );
-                    // continue, to inject the counter increment in the backend
-                }
-                _ => (), // continue with all other intrinsic calls
+
+            if !bx.is_codegen_intrinsic(intrinsic, &args, self.instance) {
+                return;
             }
 
             let dest = match ret_dest {
@@ -989,10 +950,6 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
             bx.unreachable();
         }
     }
-}
-
-fn op_to_u32<'tcx>(op: &mir::Operand<'tcx>) -> u32 {
-    mir::Operand::scalar_from_const(op).to_u32().expect("Scalar is u32")
 }
 
 impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {

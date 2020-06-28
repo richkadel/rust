@@ -13,6 +13,7 @@ use rustc_ast::ast;
 use rustc_codegen_ssa::base::{compare_simd_types, to_immediate, wants_msvc_seh};
 use rustc_codegen_ssa::common::span_invalid_monomorphization_error;
 use rustc_codegen_ssa::common::{IntPredicate, TypeKind};
+use rustc_codegen_ssa::coverageinfo::CounterOp;
 use rustc_codegen_ssa::glue;
 use rustc_codegen_ssa::mir::operand::{OperandRef, OperandValue};
 use rustc_codegen_ssa::mir::place::PlaceRef;
@@ -20,6 +21,7 @@ use rustc_codegen_ssa::traits::*;
 use rustc_codegen_ssa::MemFlags;
 use rustc_hir as hir;
 use rustc_middle::mir::coverage;
+use rustc_middle::mir::Operand;
 use rustc_middle::ty::layout::{FnAbiExt, HasTyCtxt};
 use rustc_middle::ty::{self, Ty};
 use rustc_middle::{bug, span_bug};
@@ -82,6 +84,53 @@ fn get_simple_intrinsic(cx: &CodegenCx<'ll, '_>, name: &str) -> Option<&'ll Valu
 }
 
 impl IntrinsicCallMethods<'tcx> for Builder<'a, 'll, 'tcx> {
+    fn is_codegen_intrinsic(
+        &mut self,
+        intrinsic: &str,
+        args: &Vec<Operand<'tcx>>,
+        caller_instance: ty::Instance<'tcx>,
+    ) -> bool {
+        match intrinsic {
+            "coverage_counter_add" | "coverage_counter_subtract" => {
+                use coverage::coverage_counter_expression_args::*;
+                self.new_counter_expression_region(
+                    caller_instance,
+                    op_to_u32(&args[COUNTER_EXPRESSION_INDEX]),
+                    op_to_u32(&args[LEFT_INDEX]),
+                    if intrinsic == "coverage_counter_add" {
+                        CounterOp::Add
+                    } else {
+                        CounterOp::Subtract
+                    },
+                    op_to_u32(&args[RIGHT_INDEX]),
+                    op_to_u32(&args[START_BYTE_POS]),
+                    op_to_u32(&args[END_BYTE_POS]),
+                );
+                false // Does not inject backend code
+            }
+            "coverage_unreachable" => {
+                use coverage::coverage_unreachable_args::*;
+                self.new_unreachable_region(
+                    caller_instance,
+                    op_to_u32(&args[START_BYTE_POS]),
+                    op_to_u32(&args[END_BYTE_POS]),
+                );
+                false // Does not inject backend code
+            }
+            "count_code_region" => {
+                use coverage::count_code_region_args::*;
+                self.new_counter_region(
+                    caller_instance,
+                    op_to_u32(&args[COUNTER_INDEX]),
+                    op_to_u32(&args[START_BYTE_POS]),
+                    op_to_u32(&args[END_BYTE_POS]),
+                );
+                true // also injects the counter increment in the backend
+            }
+            _ => true, // unhandled intrinsics should be passed to `codegen_intrinsic_call()`
+        }
+    }
+
     fn codegen_intrinsic_call(
         &mut self,
         instance: ty::Instance<'tcx>,
@@ -2132,4 +2181,8 @@ fn float_type_width(ty: Ty<'_>) -> Option<u64> {
         ty::Float(t) => Some(t.bit_width()),
         _ => None,
     }
+}
+
+fn op_to_u32<'tcx>(op: &Operand<'tcx>) -> u32 {
+    Operand::scalar_from_const(op).to_u32().expect("Scalar is u32")
 }
