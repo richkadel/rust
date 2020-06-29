@@ -6,7 +6,7 @@
 
 #![doc(html_root_url = "https://doc.rust-lang.org/nightly/")]
 #![feature(crate_visibility_modifier)]
-#![feature(const_if_match)]
+#![cfg_attr(bootstrap, feature(const_if_match))]
 #![feature(const_fn)]
 #![feature(const_panic)]
 #![feature(negative_impls)]
@@ -30,8 +30,9 @@ use source_map::SourceMap;
 pub mod edition;
 use edition::Edition;
 pub mod hygiene;
+pub use hygiene::SyntaxContext;
 use hygiene::Transparency;
-pub use hygiene::{DesugaringKind, ExpnData, ExpnId, ExpnKind, MacroKind, SyntaxContext};
+pub use hygiene::{DesugaringKind, ExpnData, ExpnId, ExpnKind, ForLoopLoc, MacroKind};
 pub mod def_id;
 use def_id::{CrateNum, DefId, LOCAL_CRATE};
 mod span_encoding;
