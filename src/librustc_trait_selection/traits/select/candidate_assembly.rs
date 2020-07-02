@@ -220,7 +220,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
         // Okay to skip binder because the substs on generator types never
         // touch bound regions, they just capture the in-scope
         // type/region parameters.
-        let self_ty = *obligation.self_ty().skip_binder();
+        let self_ty = obligation.self_ty().skip_binder();
         match self_ty.kind {
             ty::Generator(..) => {
                 debug!(
@@ -299,14 +299,14 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
         }
 
         // Okay to skip binder because what we are inspecting doesn't involve bound regions.
-        let self_ty = *obligation.self_ty().skip_binder();
+        let self_ty = obligation.self_ty().skip_binder();
         match self_ty.kind {
             ty::Infer(ty::TyVar(_)) => {
                 debug!("assemble_fn_pointer_candidates: ambiguous self-type");
                 candidates.ambiguous = true; // Could wind up being a fn() type.
             }
             // Provide an impl, but only for suitable `fn` pointers.
-            ty::FnDef(..) | ty::FnPtr(_) => {
+            ty::FnPtr(_) => {
                 if let ty::FnSig {
                     unsafety: hir::Unsafety::Normal,
                     abi: Abi::Rust,
@@ -315,6 +315,20 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                 } = self_ty.fn_sig(self.tcx()).skip_binder()
                 {
                     candidates.vec.push(FnPointerCandidate);
+                }
+            }
+            // Provide an impl for suitable functions, rejecting `#[target_feature]` functions (RFC 2396).
+            ty::FnDef(def_id, _) => {
+                if let ty::FnSig {
+                    unsafety: hir::Unsafety::Normal,
+                    abi: Abi::Rust,
+                    c_variadic: false,
+                    ..
+                } = self_ty.fn_sig(self.tcx()).skip_binder()
+                {
+                    if self.tcx().codegen_fn_attrs(def_id).target_features.is_empty() {
+                        candidates.vec.push(FnPointerCandidate);
+                    }
                 }
             }
             _ => {}
@@ -362,7 +376,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
         candidates: &mut SelectionCandidateSet<'tcx>,
     ) -> Result<(), SelectionError<'tcx>> {
         // Okay to skip binder here because the tests we do below do not involve bound regions.
-        let self_ty = *obligation.self_ty().skip_binder();
+        let self_ty = obligation.self_ty().skip_binder();
         debug!("assemble_candidates_from_auto_impls(self_ty={:?})", self_ty);
 
         let def_id = obligation.predicate.def_id();
@@ -583,7 +597,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
         candidates: &mut SelectionCandidateSet<'tcx>,
     ) -> Result<(), SelectionError<'tcx>> {
         // Okay to skip binder here because the tests we do below do not involve bound regions.
-        let self_ty = *obligation.self_ty().skip_binder();
+        let self_ty = obligation.self_ty().skip_binder();
         debug!("assemble_candidates_for_trait_alias(self_ty={:?})", self_ty);
 
         let def_id = obligation.predicate.def_id();

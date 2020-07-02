@@ -950,14 +950,6 @@ impl<'a> Builder<'a> {
             .env("RUSTC", self.out.join("bootstrap/debug/rustc"))
             .env("RUSTC_REAL", self.rustc(compiler))
             .env("RUSTC_STAGE", stage.to_string())
-            .env(
-                "RUSTC_DEBUG_ASSERTIONS",
-                if mode == Mode::Std {
-                    self.config.rust_debug_assertions_std.to_string()
-                } else {
-                    self.config.rust_debug_assertions.to_string()
-                },
-            )
             .env("RUSTC_SYSROOT", &sysroot)
             .env("RUSTC_LIBDIR", &libdir)
             .env("RUSTDOC", self.out.join("bootstrap/debug/rustdoc"))
@@ -981,7 +973,7 @@ impl<'a> Builder<'a> {
         // we're gated on RUSTC_RPATH here.
         //
         // Ok, so the astute might be wondering "why isn't `-C rpath` used
-        // here?" and that is indeed a good question to task. This codegen
+        // here?" and that is indeed a good question to ask. This codegen
         // option is the compiler's current interface to generating an rpath.
         // Unfortunately it doesn't quite suffice for us. The flag currently
         // takes no value as an argument, so the compiler calculates what it
@@ -1041,6 +1033,14 @@ impl<'a> Builder<'a> {
             }
         };
         cargo.env(profile_var("DEBUG"), debuginfo_level.to_string());
+        cargo.env(
+            profile_var("DEBUG_ASSERTIONS"),
+            if mode == Mode::Std {
+                self.config.rust_debug_assertions_std.to_string()
+            } else {
+                self.config.rust_debug_assertions.to_string()
+            },
+        );
 
         if !mode.is_tool() {
             cargo.env("RUSTC_FORCE_UNSTABLE", "1");

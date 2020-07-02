@@ -881,8 +881,9 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
         (default: no)"),
     instrument_coverage: bool = (false, parse_bool, [TRACKED],
         "instrument the generated code with LLVM code region counters to (in the \
-        future) generate coverage reports (default: no; note, the compiler build \
-        config must include `profiler = true`)"),
+        future) generate coverage reports; disables/overrides some optimization \
+        options (note, the compiler build config must include `profiler = true`) \
+        (default: no)"),
     instrument_mcount: bool = (false, parse_bool, [TRACKED],
         "insert function instrument code for mcount-based tracing (default: no)"),
     keep_hygiene_data: bool = (false, parse_bool, [UNTRACKED],
@@ -958,9 +959,6 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
         "print the LLVM optimization passes being run (default: no)"),
     print_mono_items: Option<String> = (None, parse_opt_string, [UNTRACKED],
         "print the result of the monomorphization collection pass"),
-    print_region_graph: bool = (false, parse_bool, [UNTRACKED],
-        "prints region inference graph. \
-        Use with RUST_REGION_GRAPH=help for more info (default: no)"),
     print_type_sizes: bool = (false, parse_bool, [UNTRACKED],
         "print layout information for each type encountered (default: no)"),
     profile: bool = (false, parse_bool, [TRACKED],
