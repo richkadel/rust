@@ -225,6 +225,12 @@ pub fn build_string(f: impl FnOnce(&RustString)) -> Result<String, FromUtf8Error
     String::from_utf8(sr.bytes.into_inner())
 }
 
+pub fn build_byte_buffer(f: impl FnOnce(&RustString)) -> Vec<u8> {
+    let sr = RustString { bytes: RefCell::new(Vec::new()) };
+    f(&sr);
+    sr.bytes.into_inner()
+}
+
 pub fn twine_to_string(tr: &Twine) -> String {
     unsafe {
         build_string(|s| LLVMRustWriteTwineToString(tr, s)).expect("got a non-UTF8 Twine from LLVM")
@@ -264,5 +270,21 @@ impl Drop for OperandBundleDef<'a> {
         unsafe {
             LLVMRustFreeOperandBundleDef(&mut *(self.raw as *mut _));
         }
+    }
+}
+
+pub struct SmallVector<'a,T> {
+    pub raw: &'a mut ffi::SmallVector<'a,T>,
+}
+
+impl<T> SmallVector<'a,T> {
+    pub fn new(alloc: impl FnOnce() -> &mut ffi::SmallVector<'a,T>, free: impl FnOnce(&mut ffi::SmallVector<'a,T>)) -> Self {
+        Self { raw: alloc() }
+    }
+}
+
+impl<T> Drop for SmallVector<'a,T> {
+    fn drop(&mut self) {
+        self.free(&mut self.raw);
     }
 }

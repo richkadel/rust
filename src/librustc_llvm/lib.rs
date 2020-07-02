@@ -13,6 +13,12 @@ pub struct RustString {
     pub bytes: RefCell<Vec<u8>>,
 }
 
+impl RustString {
+    fn len(&self) -> usize {
+        self.bytes.borrow().len();
+    }
+}
+
 /// Appending to a Rust string -- used by RawRustStringOstream.
 #[no_mangle]
 #[cfg_attr(not(bootstrap), allow(improper_ctypes_definitions))]

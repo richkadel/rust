@@ -1,4 +1,7 @@
 use rustc_data_structures::fx::FxHashMap;
+use rustc_data_structures::sync::Lrc;
+use rustc_span::source_map::{SourceFile, SourceFileAndLine, SourceMap};
+
 use std::collections::hash_map;
 use std::slice;
 
@@ -8,19 +11,64 @@ pub enum CounterOp {
     Subtract,
 }
 
+#[derive(Debug)]
 pub enum CoverageKind {
     Counter,
     CounterExpression(u32, CounterOp, u32),
 }
 
+#[derive(Debug)]
 pub struct CoverageSpan {
     pub start_byte_pos: u32,
     pub end_byte_pos: u32,
 }
 
+#[derive(Debug)]
 pub struct CoverageRegion {
     pub kind: CoverageKind,
     pub coverage_span: CoverageSpan,
+}
+
+/// A source code region used with coverage information.
+#[derive(Debug)]
+pub struct CoverageLoc {
+    /// Information about the original source file.
+    pub file: Lrc<SourceFile>,
+    /// The (1-based) line number of the region start.
+    pub start_line: u32,
+    /// The (1-based) column number of the region start.
+    pub start_col: u32,
+    /// The (1-based) line number of the region end.
+    pub end_line: u32,
+    /// The (1-based) column number of the region end.
+    pub end_col: u32,
+}
+
+fn lookup_file_line_col(source_map: &SourceMap, byte_pos: usize) -> (Lrc<SourceFile>, u32, u32) {
+    let found = source_map.lookup_line(byte_pos).expect("should find coverage region byte position in source");
+    let file = found.sf;
+    let line_pos = file.line_begin_pos(byte_pos);
+
+    // Use 1-based indexing.
+    let line = (found.line + 1) as u32;
+    let col = (byte_pos - line_pos).to_u32() + 1;
+
+    (file, line, col)
+}
+
+impl CoverageRegion {
+    fn coverage_loc<'ll, 'tcx>(&self, cx: &CodegenCx<'ll, 'tcx>) -> CoverageLoc {
+        let source_map = self.sess().source_map();
+        let (file, start_line, start_col) = lookup_file_line_col(source_map, self.coverage_span.start_byte_pos);
+        let (_, end_line, end_col) = lookup_file_line_col(source_map, self.coverage_span.end_byte_pos);
+        CoverageLoc {
+            file,
+            start_line,
+            start_col,
+            end_line,
+            end_col,
+        }
+    }
 }
 
 /// Collects all of the coverage regions associated with (a) injected counters, (b) counter

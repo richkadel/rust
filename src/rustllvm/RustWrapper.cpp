@@ -1365,9 +1365,14 @@ extern "C" LLVMValueRef LLVMRustBuildCall(LLVMBuilderRef B, LLVMValueRef Fn,
       unwrap(Fn), makeArrayRef(unwrap(Args), NumArgs), Bundles));
 }
 
-extern "C" LLVMValueRef LLVMRustGetInstrprofIncrementIntrinsic(LLVMModuleRef M) {
+extern "C" LLVMValueRef LLVMRustGetInstrProfIncrementIntrinsic(LLVMModuleRef M) {
   return wrap(llvm::Intrinsic::getDeclaration(unwrap(M),
               (llvm::Intrinsic::ID)llvm::Intrinsic::instrprof_increment));
+}
+
+extern "C" uint64_t LLVMRustIndexedInstrProfComputeHash(const char *Name, size_t NameLen) {
+  StringRef NameRef(Name, NameLen);
+  return IndexedInstrProf::ComputeHash(NameRef);
 }
 
 extern "C" LLVMValueRef LLVMRustBuildMemCpy(LLVMBuilderRef B,
