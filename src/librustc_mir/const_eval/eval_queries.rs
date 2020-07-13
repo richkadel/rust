@@ -226,9 +226,9 @@ pub fn const_eval_validated_provider<'tcx>(
     key: ty::ParamEnvAnd<'tcx, GlobalId<'tcx>>,
 ) -> ::rustc_middle::mir::interpret::ConstEvalResult<'tcx> {
     // see comment in const_eval_raw_provider for what we're doing here
-    if key.param_env.reveal == Reveal::All {
+    if key.param_env.reveal() == Reveal::All {
         let mut key = key;
-        key.param_env.reveal = Reveal::UserFacing;
+        key.param_env = key.param_env.with_user_facing();
         match tcx.const_eval_validated(key) {
             // try again with reveal all as requested
             Err(ErrorHandled::TooGeneric) => {}
@@ -267,9 +267,9 @@ pub fn const_eval_raw_provider<'tcx>(
     // information being available.
 
     // In case we fail in the `UserFacing` variant, we just do the real computation.
-    if key.param_env.reveal == Reveal::All {
+    if key.param_env.reveal() == Reveal::All {
         let mut key = key;
-        key.param_env.reveal = Reveal::UserFacing;
+        key.param_env = key.param_env.with_user_facing();
         match tcx.const_eval_raw(key) {
             // try again with reveal all as requested
             Err(ErrorHandled::TooGeneric) => {}
@@ -326,7 +326,7 @@ pub fn const_eval_raw_provider<'tcx>(
                 // this is `Reveal::UserFacing`, then it's expected that we could get a
                 // `TooGeneric` error. When we fall back to `Reveal::All`, then it will either
                 // succeed or we'll report this error then.
-                if key.param_env.reveal == Reveal::All {
+                if key.param_env.reveal() == Reveal::All {
                     tcx.sess.delay_span_bug(
                         err.span,
                         &format!("static eval failure did not emit an error: {:#?}", v),
@@ -334,9 +334,9 @@ pub fn const_eval_raw_provider<'tcx>(
                 }
 
                 v
-            } else if def_id.is_local() {
+            } else if let Some(def_id) = def_id.as_local() {
                 // constant defined in this crate, we can figure out a lint level!
-                match tcx.def_kind(def_id) {
+                match tcx.def_kind(def_id.to_def_id()) {
                     // constants never produce a hard error at the definition site. Anything else is
                     // a backwards compatibility hazard (and will break old versions of winapi for
                     // sure)
@@ -346,7 +346,7 @@ pub fn const_eval_raw_provider<'tcx>(
                     // validation thus preventing such a hard error from being a backwards
                     // compatibility hazard
                     DefKind::Const | DefKind::AssocConst => {
-                        let hir_id = tcx.hir().as_local_hir_id(def_id.expect_local());
+                        let hir_id = tcx.hir().as_local_hir_id(def_id);
                         err.report_as_lint(
                             tcx.at(tcx.def_span(def_id)),
                             "any use of this value will cause an error",
@@ -369,7 +369,7 @@ pub fn const_eval_raw_provider<'tcx>(
                                 err.report_as_lint(
                                     tcx.at(span),
                                     "reaching this expression at runtime will panic or abort",
-                                    tcx.hir().as_local_hir_id(def_id.expect_local()),
+                                    tcx.hir().as_local_hir_id(def_id),
                                     Some(err.span),
                                 )
                             }

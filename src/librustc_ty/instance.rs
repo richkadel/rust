@@ -126,7 +126,7 @@ fn resolve_associated_item<'tcx>(
                 // and the obligation is monomorphic, otherwise passes such as
                 // transmute checking and polymorphic MIR optimizations could
                 // get a result which isn't correct for all monomorphizations.
-                if param_env.reveal == Reveal::All {
+                if param_env.reveal() == Reveal::All {
                     !trait_ref.still_further_specializable()
                 } else {
                     false
@@ -243,6 +243,6 @@ fn resolve_associated_item<'tcx>(
     })
 }
 
-pub fn provide(providers: &mut ty::query::Providers<'_>) {
+pub fn provide(providers: &mut ty::query::Providers) {
     *providers = ty::query::Providers { resolve_instance, ..*providers };
 }

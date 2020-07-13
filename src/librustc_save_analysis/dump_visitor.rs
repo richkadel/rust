@@ -72,12 +72,12 @@ macro_rules! access_from_vis {
     };
 }
 
-pub struct DumpVisitor<'l, 'tcx> {
-    pub save_ctxt: SaveContext<'l, 'tcx>,
+pub struct DumpVisitor<'tcx> {
+    pub save_ctxt: SaveContext<'tcx>,
     tcx: TyCtxt<'tcx>,
     dumper: Dumper,
 
-    span: SpanUtils<'l>,
+    span: SpanUtils<'tcx>,
     // Set of macro definition (callee) spans, and the set
     // of macro use (callsite) spans. We store these to ensure
     // we only write one macro def per unique macro definition, and
@@ -86,8 +86,8 @@ pub struct DumpVisitor<'l, 'tcx> {
     // macro_calls: FxHashSet<Span>,
 }
 
-impl<'l, 'tcx> DumpVisitor<'l, 'tcx> {
-    pub fn new(save_ctxt: SaveContext<'l, 'tcx>) -> DumpVisitor<'l, 'tcx> {
+impl<'tcx> DumpVisitor<'tcx> {
+    pub fn new(save_ctxt: SaveContext<'tcx>) -> DumpVisitor<'tcx> {
         let span_utils = SpanUtils::new(&save_ctxt.tcx.sess);
         let dumper = Dumper::new(save_ctxt.config.clone());
         DumpVisitor {
@@ -109,15 +109,15 @@ impl<'l, 'tcx> DumpVisitor<'l, 'tcx> {
         F: FnOnce(&mut Self),
     {
         let tables = if self.tcx.has_typeck_tables(item_def_id) {
-            self.tcx.typeck_tables_of(item_def_id)
+            Some(self.tcx.typeck_tables_of(item_def_id))
         } else {
-            self.save_ctxt.empty_tables
+            None
         };
 
-        let old_tables = self.save_ctxt.tables;
-        self.save_ctxt.tables = tables;
+        let old_maybe_typeck_tables = self.save_ctxt.maybe_typeck_tables;
+        self.save_ctxt.maybe_typeck_tables = tables;
         f(self);
-        self.save_ctxt.tables = old_tables;
+        self.save_ctxt.maybe_typeck_tables = old_maybe_typeck_tables;
     }
 
     fn span_from_span(&self, span: Span) -> SpanData {
@@ -226,7 +226,7 @@ impl<'l, 'tcx> DumpVisitor<'l, 'tcx> {
             collector.visit_pat(&arg.pat);
 
             for (hir_id, ident, ..) in collector.collected_idents {
-                let typ = match self.save_ctxt.tables.node_type_opt(hir_id) {
+                let typ = match self.save_ctxt.tables().node_type_opt(hir_id) {
                     Some(s) => s.to_string(),
                     None => continue,
                 };
@@ -859,7 +859,7 @@ impl<'l, 'tcx> DumpVisitor<'l, 'tcx> {
         match p.kind {
             hir::PatKind::Struct(ref _path, fields, _) => {
                 // FIXME do something with _path?
-                let adt = match self.save_ctxt.tables.node_type_opt(p.hir_id) {
+                let adt = match self.save_ctxt.tables().node_type_opt(p.hir_id) {
                     Some(ty) if ty.ty_adt_def().is_some() => ty.ty_adt_def().unwrap(),
                     _ => {
                         intravisit::walk_pat(self, p);
@@ -900,7 +900,7 @@ impl<'l, 'tcx> DumpVisitor<'l, 'tcx> {
                 Res::Local(hir_id) => {
                     let typ = self
                         .save_ctxt
-                        .tables
+                        .tables()
                         .node_type_opt(hir_id)
                         .map(|t| t.to_string())
                         .unwrap_or_default();
@@ -1160,7 +1160,7 @@ impl<'l, 'tcx> DumpVisitor<'l, 'tcx> {
     }
 }
 
-impl<'l, 'tcx> Visitor<'tcx> for DumpVisitor<'l, 'tcx> {
+impl<'tcx> Visitor<'tcx> for DumpVisitor<'tcx> {
     type Map = Map<'tcx>;
 
     fn nested_visit_map(&mut self) -> intravisit::NestedVisitorMap<Self::Map> {
@@ -1393,7 +1393,7 @@ impl<'l, 'tcx> Visitor<'tcx> for DumpVisitor<'l, 'tcx> {
         match ex.kind {
             hir::ExprKind::Struct(ref path, ref fields, ref base) => {
                 let hir_expr = self.save_ctxt.tcx.hir().expect_expr(ex.hir_id);
-                let adt = match self.save_ctxt.tables.expr_ty_opt(&hir_expr) {
+                let adt = match self.save_ctxt.tables().expr_ty_opt(&hir_expr) {
                     Some(ty) if ty.ty_adt_def().is_some() => ty.ty_adt_def().unwrap(),
                     _ => {
                         intravisit::walk_expr(self, ex);

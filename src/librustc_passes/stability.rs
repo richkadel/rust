@@ -331,12 +331,12 @@ impl<'a, 'tcx> Visitor<'tcx> for Annotator<'a, 'tcx> {
     }
 }
 
-struct MissingStabilityAnnotations<'a, 'tcx> {
+struct MissingStabilityAnnotations<'tcx> {
     tcx: TyCtxt<'tcx>,
-    access_levels: &'a AccessLevels,
+    access_levels: &'tcx AccessLevels,
 }
 
-impl<'a, 'tcx> MissingStabilityAnnotations<'a, 'tcx> {
+impl<'tcx> MissingStabilityAnnotations<'tcx> {
     fn check_missing_stability(&self, hir_id: HirId, span: Span) {
         let stab = self.tcx.stability().local_stability(hir_id);
         let is_error =
@@ -349,7 +349,7 @@ impl<'a, 'tcx> MissingStabilityAnnotations<'a, 'tcx> {
     }
 }
 
-impl<'a, 'tcx> Visitor<'tcx> for MissingStabilityAnnotations<'a, 'tcx> {
+impl<'tcx> Visitor<'tcx> for MissingStabilityAnnotations<'tcx> {
     type Map = Map<'tcx>;
 
     fn nested_visit_map(&mut self) -> NestedVisitorMap<Self::Map> {
@@ -476,7 +476,7 @@ fn check_mod_unstable_api_usage(tcx: TyCtxt<'_>, module_def_id: LocalDefId) {
     tcx.hir().visit_item_likes_in_module(module_def_id, &mut Checker { tcx }.as_deep_visitor());
 }
 
-pub(crate) fn provide(providers: &mut Providers<'_>) {
+pub(crate) fn provide(providers: &mut Providers) {
     *providers = Providers { check_mod_unstable_api_usage, ..*providers };
     providers.stability_index = |tcx, cnum| {
         assert_eq!(cnum, LOCAL_CRATE);

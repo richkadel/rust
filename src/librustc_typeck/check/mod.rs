@@ -760,7 +760,7 @@ fn check_impl_item_well_formed(tcx: TyCtxt<'_>, def_id: LocalDefId) {
     wfcheck::check_impl_item(tcx, def_id);
 }
 
-pub fn provide(providers: &mut Providers<'_>) {
+pub fn provide(providers: &mut Providers) {
     method::provide(providers);
     *providers = Providers {
         typeck_item_bodies,
@@ -1126,7 +1126,7 @@ fn typeck_tables_of_with_fallback<'tcx>(
 
     // Consistency check our TypeckTables instance can hold all ItemLocalIds
     // it will need to hold.
-    assert_eq!(tables.hir_owner, Some(id.owner));
+    assert_eq!(tables.hir_owner, id.owner);
 
     tables
 }
@@ -1321,8 +1321,8 @@ fn check_fn<'a, 'tcx>(
         fcx.resume_yield_tys = Some((resume_ty, yield_ty));
     }
 
-    let outer_def_id = tcx.closure_base_def_id(hir.local_def_id(fn_id).to_def_id());
-    let outer_hir_id = hir.as_local_hir_id(outer_def_id.expect_local());
+    let outer_def_id = tcx.closure_base_def_id(hir.local_def_id(fn_id).to_def_id()).expect_local();
+    let outer_hir_id = hir.as_local_hir_id(outer_def_id);
     GatherLocalsVisitor { fcx: &fcx, parent_id: outer_hir_id }.visit_body(body);
 
     // C-variadic fns also have a `VaList` input that's not listed in `fn_sig`
@@ -2927,18 +2927,20 @@ impl<'a, 'tcx> AstConv<'tcx> for FnCtxt<'a, 'tcx> {
         let index = generics.param_def_id_to_index[&def_id];
         ty::GenericPredicates {
             parent: None,
-            predicates: tcx.arena.alloc_from_iter(self.param_env.caller_bounds.iter().filter_map(
-                |predicate| match predicate.kind() {
-                    ty::PredicateKind::Trait(ref data, _)
-                        if data.skip_binder().self_ty().is_param(index) =>
-                    {
-                        // HACK(eddyb) should get the original `Span`.
-                        let span = tcx.def_span(def_id);
-                        Some((predicate, span))
+            predicates: tcx.arena.alloc_from_iter(
+                self.param_env.caller_bounds().iter().filter_map(|predicate| {
+                    match predicate.kind() {
+                        ty::PredicateKind::Trait(ref data, _)
+                            if data.skip_binder().self_ty().is_param(index) =>
+                        {
+                            // HACK(eddyb) should get the original `Span`.
+                            let span = tcx.def_span(def_id);
+                            Some((predicate, span))
+                        }
+                        _ => None,
                     }
-                    _ => None,
-                },
-            )),
+                }),
+            ),
         }
     }
 
@@ -3427,7 +3429,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
         let (value, opaque_type_map) =
             self.register_infer_ok_obligations(self.instantiate_opaque_types(
-                parent_def_id.to_def_id(),
+                parent_def_id,
                 self.body_id,
                 self.param_env,
                 value,

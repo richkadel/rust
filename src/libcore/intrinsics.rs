@@ -1285,7 +1285,9 @@ extern "rust-intrinsic" {
     /// }
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
-    #[rustc_const_unstable(feature = "const_transmute", issue = "53605")]
+    // NOTE: While this makes the intrinsic const stable, we have some custom code in const fn
+    // checks that prevent its use within `const fn`.
+    #[rustc_const_stable(feature = "const_transmute", since = "1.46.0")]
     pub fn transmute<T, U>(e: T) -> U;
 
     /// Returns `true` if the actual type given as `T` requires drop
@@ -2002,12 +2004,6 @@ extern "rust-intrinsic" {
     #[rustc_const_unstable(feature = "const_raw_ptr_comparison", issue = "53020")]
     #[cfg(not(bootstrap))]
     pub fn ptr_guaranteed_ne<T>(ptr: *const T, other: *const T) -> bool;
-}
-
-#[rustc_const_unstable(feature = "variant_count", issue = "73662")]
-#[cfg(bootstrap)]
-pub const fn variant_count<T>() -> usize {
-    0
 }
 
 // Some functions are defined here because they accidentally got made

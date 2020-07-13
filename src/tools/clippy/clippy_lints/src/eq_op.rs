@@ -16,7 +16,7 @@ declare_clippy_lint! {
     /// **Known problems:** False negatives: We had some false positives regarding
     /// calls (notably [racer](https://github.com/phildawes/racer) had one instance
     /// of `x.pop() && x.pop()`), so we removed matching any function or method
-    /// calls. We may introduce a whitelist of known pure functions in the future.
+    /// calls. We may introduce a list of known pure functions in the future.
     ///
     /// **Example:**
     /// ```rust
@@ -52,9 +52,9 @@ declare_clippy_lint! {
 
 declare_lint_pass!(EqOp => [EQ_OP, OP_REF]);
 
-impl<'a, 'tcx> LateLintPass<'a, 'tcx> for EqOp {
+impl<'tcx> LateLintPass<'tcx> for EqOp {
     #[allow(clippy::similar_names, clippy::too_many_lines)]
-    fn check_expr(&mut self, cx: &LateContext<'a, 'tcx>, e: &'tcx Expr<'_>) {
+    fn check_expr(&mut self, cx: &LateContext<'tcx>, e: &'tcx Expr<'_>) {
         if let ExprKind::Binary(op, ref left, ref right) = e.kind {
             if e.span.from_expansion() {
                 return;

@@ -33,6 +33,10 @@ type Res = def::Res<ast::NodeId>;
 /// A vector of spans and replacements, a message and applicability.
 crate type Suggestion = (Vec<(Span, String)>, String, Applicability);
 
+/// Potential candidate for an undeclared or out-of-scope label - contains the ident of a
+/// similarly named label and whether or not it is reachable.
+crate type LabelSuggestion = (Ident, bool);
+
 crate struct TypoSuggestion {
     pub candidate: Symbol,
     pub res: Res,
@@ -282,7 +286,7 @@ impl<'a> Resolver<'a> {
                 err.span_label(span, "used in a pattern more than once");
                 err
             }
-            ResolutionError::UndeclaredLabel(name, lev_candidate) => {
+            ResolutionError::UndeclaredLabel { name, suggestion } => {
                 let mut err = struct_span_err!(
                     self.session,
                     span,
@@ -290,16 +294,31 @@ impl<'a> Resolver<'a> {
                     "use of undeclared label `{}`",
                     name
                 );
-                if let Some(lev_candidate) = lev_candidate {
-                    err.span_suggestion(
-                        span,
-                        "a label with a similar name exists in this scope",
-                        lev_candidate.to_string(),
-                        Applicability::MaybeIncorrect,
-                    );
-                } else {
-                    err.span_label(span, format!("undeclared label `{}`", name));
+
+                err.span_label(span, format!("undeclared label `{}`", name));
+
+                match suggestion {
+                    // A reachable label with a similar name exists.
+                    Some((ident, true)) => {
+                        err.span_label(ident.span, "a label with a similar name is reachable");
+                        err.span_suggestion(
+                            span,
+                            "try using similarly named label",
+                            ident.name.to_string(),
+                            Applicability::MaybeIncorrect,
+                        );
+                    }
+                    // An unreachable label with a similar name exists.
+                    Some((ident, false)) => {
+                        err.span_label(
+                            ident.span,
+                            "a label with a similar name exists but is unreachable",
+                        );
+                    }
+                    // No similarly-named labels exist.
+                    None => (),
                 }
+
                 err
             }
             ResolutionError::SelfImportsOnlyAllowedWithin { root, span_with_rename } => {
@@ -431,6 +450,45 @@ impl<'a> Resolver<'a> {
                     "type parameters cannot use `Self` in their defaults"
                 );
                 err.span_label(span, "`Self` in type parameter default".to_string());
+                err
+            }
+            ResolutionError::UnreachableLabel { name, definition_span, suggestion } => {
+                let mut err = struct_span_err!(
+                    self.session,
+                    span,
+                    E0767,
+                    "use of unreachable label `{}`",
+                    name,
+                );
+
+                err.span_label(definition_span, "unreachable label defined here");
+                err.span_label(span, format!("unreachable label `{}`", name));
+                err.note(
+                    "labels are unreachable through functions, closures, async blocks and modules",
+                );
+
+                match suggestion {
+                    // A reachable label with a similar name exists.
+                    Some((ident, true)) => {
+                        err.span_label(ident.span, "a label with a similar name is reachable");
+                        err.span_suggestion(
+                            span,
+                            "try using similarly named label",
+                            ident.name.to_string(),
+                            Applicability::MaybeIncorrect,
+                        );
+                    }
+                    // An unreachable label with a similar name exists.
+                    Some((ident, false)) => {
+                        err.span_label(
+                            ident.span,
+                            "a label with a similar name exists but is also unreachable",
+                        );
+                    }
+                    // No similarly-named labels exist.
+                    None => (),
+                }
+
                 err
             }
         }
@@ -840,44 +898,42 @@ impl<'a> Resolver<'a> {
         suggestion: Option<TypoSuggestion>,
         span: Span,
     ) -> bool {
-        if let Some(suggestion) = suggestion {
+        let suggestion = match suggestion {
+            None => return false,
             // We shouldn't suggest underscore.
-            if suggestion.candidate == kw::Underscore {
-                return false;
-            }
-
-            let msg = format!(
-                "{} {} with a similar name exists",
-                suggestion.res.article(),
-                suggestion.res.descr()
-            );
-            err.span_suggestion(
-                span,
-                &msg,
-                suggestion.candidate.to_string(),
-                Applicability::MaybeIncorrect,
-            );
-            let def_span = suggestion.res.opt_def_id().and_then(|def_id| match def_id.krate {
-                LOCAL_CRATE => self.opt_span(def_id),
-                _ => Some(
-                    self.session
-                        .source_map()
-                        .guess_head_span(self.cstore().get_span_untracked(def_id, self.session)),
+            Some(suggestion) if suggestion.candidate == kw::Underscore => return false,
+            Some(suggestion) => suggestion,
+        };
+        let msg = format!(
+            "{} {} with a similar name exists",
+            suggestion.res.article(),
+            suggestion.res.descr()
+        );
+        err.span_suggestion(
+            span,
+            &msg,
+            suggestion.candidate.to_string(),
+            Applicability::MaybeIncorrect,
+        );
+        let def_span = suggestion.res.opt_def_id().and_then(|def_id| match def_id.krate {
+            LOCAL_CRATE => self.opt_span(def_id),
+            _ => Some(
+                self.session
+                    .source_map()
+                    .guess_head_span(self.cstore().get_span_untracked(def_id, self.session)),
+            ),
+        });
+        if let Some(span) = def_span {
+            err.span_label(
+                self.session.source_map().guess_head_span(span),
+                &format!(
+                    "similarly named {} `{}` defined here",
+                    suggestion.res.descr(),
+                    suggestion.candidate.as_str(),
                 ),
-            });
-            if let Some(span) = def_span {
-                err.span_label(
-                    self.session.source_map().guess_head_span(span),
-                    &format!(
-                        "similarly named {} `{}` defined here",
-                        suggestion.res.descr(),
-                        suggestion.candidate.as_str(),
-                    ),
-                );
-            }
-            return true;
+            );
         }
-        false
+        true
     }
 
     fn binding_description(&self, b: &NameBinding<'_>, ident: Ident, from_prelude: bool) -> String {

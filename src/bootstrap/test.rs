@@ -397,8 +397,6 @@ impl Step for Miri {
             cargo.env("MIRI", &miri);
             // Debug things.
             cargo.env("RUST_BACKTRACE", "1");
-            // Overwrite bootstrap's `rustc` wrapper overwriting our flags.
-            cargo.env("RUSTC_DEBUG_ASSERTIONS", "true");
             // Let cargo-miri know where xargo ended up.
             cargo.env("XARGO_CHECK", builder.out.join("bin").join("xargo-check"));
 
@@ -1564,7 +1562,7 @@ impl Step for CrateLibrustc {
         let compiler = builder.compiler(builder.top_stage, run.host);
 
         for krate in builder.in_tree_crates("rustc-main") {
-            if run.path.ends_with(&krate.path) {
+            if krate.path.ends_with(&run.path) {
                 let test_kind = builder.kind.into();
 
                 builder.ensure(CrateLibrustc {
@@ -1671,7 +1669,7 @@ impl Step for Crate {
         };
 
         for krate in builder.in_tree_crates("test") {
-            if run.path.ends_with(&krate.local_path(&builder)) {
+            if krate.path.ends_with(&run.path) {
                 make(Mode::Std, krate);
             }
         }

@@ -225,6 +225,7 @@ pub struct Build {
     rust_info: channel::GitInfo,
     cargo_info: channel::GitInfo,
     rls_info: channel::GitInfo,
+    rust_analyzer_info: channel::GitInfo,
     clippy_info: channel::GitInfo,
     miri_info: channel::GitInfo,
     rustfmt_info: channel::GitInfo,
@@ -349,6 +350,8 @@ impl Build {
         let rust_info = channel::GitInfo::new(ignore_git, &src);
         let cargo_info = channel::GitInfo::new(ignore_git, &src.join("src/tools/cargo"));
         let rls_info = channel::GitInfo::new(ignore_git, &src.join("src/tools/rls"));
+        let rust_analyzer_info =
+            channel::GitInfo::new(ignore_git, &src.join("src/tools/rust-analyzer"));
         let clippy_info = channel::GitInfo::new(ignore_git, &src.join("src/tools/clippy"));
         let miri_info = channel::GitInfo::new(ignore_git, &src.join("src/tools/miri"));
         let rustfmt_info = channel::GitInfo::new(ignore_git, &src.join("src/tools/rustfmt"));
@@ -405,6 +408,7 @@ impl Build {
             rust_info,
             cargo_info,
             rls_info,
+            rust_analyzer_info,
             clippy_info,
             miri_info,
             rustfmt_info,
@@ -432,10 +436,9 @@ impl Build {
             output(Command::new(&build.initial_rustc).arg("--version").arg("--verbose"));
         let local_release = local_version_verbose
             .lines()
-            .filter(|x| x.starts_with("release:"))
+            .filter_map(|x| x.strip_prefix("release:"))
             .next()
             .unwrap()
-            .trim_start_matches("release:")
             .trim();
         let my_version = channel::CFG_RELEASE_NUM;
         if local_release.split('.').take(2).eq(my_version.split('.').take(2)) {
@@ -1034,6 +1037,11 @@ impl Build {
         self.package_vers(&self.release_num("rls"))
     }
 
+    /// Returns the value of `package_vers` above for rust-analyzer
+    fn rust_analyzer_package_vers(&self) -> String {
+        self.package_vers(&self.release_num("rust-analyzer/crates/rust-analyzer"))
+    }
+
     /// Returns the value of `package_vers` above for clippy
     fn clippy_package_vers(&self) -> String {
         self.package_vers(&self.release_num("clippy"))
@@ -1080,10 +1088,10 @@ impl Build {
         let toml_file_name = self.src.join(&format!("src/tools/{}/Cargo.toml", package));
         let toml = t!(fs::read_to_string(&toml_file_name));
         for line in toml.lines() {
-            let prefix = "version = \"";
-            let suffix = "\"";
-            if line.starts_with(prefix) && line.ends_with(suffix) {
-                return line[prefix.len()..line.len() - suffix.len()].to_string();
+            if let Some(stripped) =
+                line.strip_prefix("version = \"").and_then(|s| s.strip_suffix("\""))
+            {
+                return stripped.to_owned();
             }
         }
 

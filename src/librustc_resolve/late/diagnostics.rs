@@ -1,4 +1,4 @@
-use crate::diagnostics::{ImportSuggestion, TypoSuggestion};
+use crate::diagnostics::{ImportSuggestion, LabelSuggestion, TypoSuggestion};
 use crate::late::lifetimes::{ElisionFailureInfo, LifetimeContext};
 use crate::late::{LateResolutionVisitor, RibKind};
 use crate::path_names_to_string;
@@ -100,9 +100,7 @@ impl<'a> LateResolutionVisitor<'a, '_, '_> {
         let ident_span = path.last().map_or(span, |ident| ident.ident.span);
         let ns = source.namespace();
         let is_expected = &|res| source.is_expected(res);
-        let is_enum_variant = &|res| {
-            if let Res::Def(DefKind::Variant, _) = res { true } else { false }
-        };
+        let is_enum_variant = &|res| matches!(res, Res::Def(DefKind::Variant, _));
 
         // Make the base error.
         let expected = source.descr_expected();
@@ -168,9 +166,9 @@ impl<'a> LateResolutionVisitor<'a, '_, '_> {
         if ["this", "my"].contains(&&*item_str.as_str())
             && self.self_value_is_available(path[0].ident.span, span)
         {
-            err.span_suggestion(
+            err.span_suggestion_short(
                 span,
-                "did you mean",
+                "you might have meant to use `self` here instead",
                 "self".to_string(),
                 Applicability::MaybeIncorrect,
             );
@@ -992,6 +990,32 @@ impl<'a> LateResolutionVisitor<'a, '_, '_> {
         }
         None
     }
+
+    /// Given the target `label`, search the `rib_index`th label rib for similarly named labels,
+    /// optionally returning the closest match and whether it is reachable.
+    crate fn suggestion_for_label_in_rib(
+        &self,
+        rib_index: usize,
+        label: Ident,
+    ) -> Option<LabelSuggestion> {
+        // Are ribs from this `rib_index` within scope?
+        let within_scope = self.is_label_valid_from_rib(rib_index);
+
+        let rib = &self.label_ribs[rib_index];
+        let names = rib
+            .bindings
+            .iter()
+            .filter(|(id, _)| id.span.ctxt() == label.span.ctxt())
+            .map(|(id, _)| &id.name);
+
+        find_best_match_for_name(names, &label.as_str(), None).map(|symbol| {
+            // Upon finding a similar name, get the ident that it was from - the span
+            // contained within helps make a useful diagnostic. In addition, determine
+            // whether this candidate is within scope.
+            let (ident, _) = rib.bindings.iter().find(|(ident, _)| ident.name == symbol).unwrap();
+            (*ident, within_scope)
+        })
+    }
 }
 
 impl<'tcx> LifetimeContext<'_, 'tcx> {
@@ -1018,6 +1042,7 @@ impl<'tcx> LifetimeContext<'_, 'tcx> {
             lifetime_ref
         );
         err.span_label(lifetime_ref.span, "undeclared lifetime");
+        let mut suggests_in_band = false;
         for missing in &self.missing_named_lifetime_spots {
             match missing {
                 MissingLifetimeSpot::Generics(generics) => {
@@ -1031,6 +1056,7 @@ impl<'tcx> LifetimeContext<'_, 'tcx> {
                         }) {
                         (param.span.shrink_to_lo(), format!("{}, ", lifetime_ref))
                     } else {
+                        suggests_in_band = true;
                         (generics.span, format!("<{}>", lifetime_ref))
                     };
                     err.span_suggestion(
@@ -1057,6 +1083,15 @@ impl<'tcx> LifetimeContext<'_, 'tcx> {
                     );
                 }
             }
+        }
+        if nightly_options::is_nightly_build()
+            && !self.tcx.features().in_band_lifetimes
+            && suggests_in_band
+        {
+            err.help(
+                "if you want to experiment with in-band lifetime bindings, \
+                    add `#![feature(in_band_lifetimes)]` to the crate attributes",
+            );
         }
         err.emit();
     }

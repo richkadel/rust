@@ -278,7 +278,7 @@ type ScopeRef<'a> = &'a Scope<'a>;
 
 const ROOT_SCOPE: ScopeRef<'static> = &Scope::Root;
 
-pub fn provide(providers: &mut ty::query::Providers<'_>) {
+pub fn provide(providers: &mut ty::query::Providers) {
     *providers = ty::query::Providers {
         resolve_lifetimes,
 
@@ -2122,7 +2122,7 @@ impl<'a, 'tcx> LifetimeContext<'a, 'tcx> {
                         self.impl_self
                     {
                         match path.res {
-                            // Whitelist the types that unambiguously always
+                            // Permit the types that unambiguously always
                             // result in the same type constructor being used
                             // (it can't differ between `Self` and `self`).
                             Res::Def(DefKind::Struct | DefKind::Union | DefKind::Enum, _)

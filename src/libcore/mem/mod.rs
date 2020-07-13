@@ -142,7 +142,7 @@ pub use crate::intrinsics::transmute;
 /// [ub]: ../../reference/behavior-considered-undefined.html
 /// [`ManuallyDrop`]: struct.ManuallyDrop.html
 #[inline]
-#[rustc_const_unstable(feature = "const_forget", issue = "69616")]
+#[rustc_const_stable(feature = "const_forget", since = "1.46.0")]
 #[stable(feature = "rust1", since = "1.0.0")]
 pub const fn forget<T>(t: T) {
     ManuallyDrop::new(t);
@@ -1037,6 +1037,7 @@ pub const fn discriminant<T>(v: &T) -> Discriminant<T> {
 /// assert_eq!(mem::variant_count::<Result<!, !>>(), 2);
 /// ```
 #[inline(always)]
+#[cfg(not(bootstrap))]
 #[unstable(feature = "variant_count", issue = "73662")]
 #[rustc_const_unstable(feature = "variant_count", issue = "73662")]
 pub const fn variant_count<T>() -> usize {

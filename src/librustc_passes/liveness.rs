@@ -179,7 +179,7 @@ fn check_mod_liveness(tcx: TyCtxt<'_>, module_def_id: LocalDefId) {
     );
 }
 
-pub fn provide(providers: &mut Providers<'_>) {
+pub fn provide(providers: &mut Providers) {
     *providers = Providers { check_mod_liveness, ..*providers };
 }
 
@@ -1123,16 +1123,7 @@ impl<'a, 'tcx> Liveness<'a, 'tcx> {
 
                 match target {
                     Some(b) => self.propagate_through_opt_expr(opt_expr.as_ref().map(|e| &**e), b),
-                    None => {
-                        // FIXME: This should have been checked earlier. Once this is fixed,
-                        // replace with `delay_span_bug`. (#62480)
-                        self.ir
-                            .tcx
-                            .sess
-                            .struct_span_err(expr.span, "`break` to unknown label")
-                            .emit();
-                        rustc_errors::FatalError.raise()
-                    }
+                    None => span_bug!(expr.span, "`break` to unknown label"),
                 }
             }
 

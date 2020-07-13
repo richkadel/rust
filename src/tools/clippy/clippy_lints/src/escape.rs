@@ -49,17 +49,17 @@ fn is_non_trait_box(ty: Ty<'_>) -> bool {
 }
 
 struct EscapeDelegate<'a, 'tcx> {
-    cx: &'a LateContext<'a, 'tcx>,
+    cx: &'a LateContext<'tcx>,
     set: HirIdSet,
     too_large_for_stack: u64,
 }
 
 impl_lint_pass!(BoxedLocal => [BOXED_LOCAL]);
 
-impl<'a, 'tcx> LateLintPass<'a, 'tcx> for BoxedLocal {
+impl<'tcx> LateLintPass<'tcx> for BoxedLocal {
     fn check_fn(
         &mut self,
-        cx: &LateContext<'a, 'tcx>,
+        cx: &LateContext<'tcx>,
         _: intravisit::FnKind<'tcx>,
         _: &'tcx FnDecl<'_>,
         body: &'tcx Body<'_>,
@@ -150,7 +150,7 @@ impl<'a, 'tcx> Delegate<'tcx> for EscapeDelegate<'a, 'tcx> {
                     return;
                 }
 
-                if is_non_trait_box(cmt.place.ty) && !self.is_large_box(cmt.place.ty) {
+                if is_non_trait_box(cmt.place.ty()) && !self.is_large_box(cmt.place.ty()) {
                     self.set.insert(cmt.hir_id);
                 }
                 return;

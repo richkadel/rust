@@ -1407,7 +1407,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
         );
         let query_tables;
         let tables: &TypeckTables<'tcx> = match &in_progress_tables {
-            Some(t) if t.hir_owner.map(|owner| owner.to_def_id()) == Some(generator_did_root) => t,
+            Some(t) if t.hir_owner.to_def_id() == generator_did_root => t,
             _ => {
                 query_tables = self.tcx.typeck_tables_of(generator_did.expect_local());
                 &query_tables
@@ -2139,7 +2139,7 @@ pub trait NextTypeParamName {
 
 impl NextTypeParamName for &[hir::GenericParam<'_>] {
     fn next_type_param_name(&self, name: Option<&str>) -> String {
-        // This is the whitelist of possible parameter names that we might suggest.
+        // This is the list of possible parameter names that we might suggest.
         let name = name.and_then(|n| n.chars().next()).map(|c| c.to_string().to_uppercase());
         let name = name.as_deref();
         let possible_names = [name.unwrap_or("T"), "T", "U", "V", "X", "Y", "Z", "A", "B", "C"];

@@ -1,6 +1,7 @@
 #![doc(html_root_url = "https://doc.rust-lang.org/nightly/")]
 #![feature(nll)]
 #![feature(or_patterns)]
+#![cfg_attr(bootstrap, feature(track_caller))]
 #![recursion_limit = "256"]
 
 mod dump_visitor;
@@ -47,13 +48,10 @@ use rls_data::{
 
 use log::{debug, error, info};
 
-pub struct SaveContext<'l, 'tcx> {
+pub struct SaveContext<'tcx> {
     tcx: TyCtxt<'tcx>,
-    tables: &'l ty::TypeckTables<'tcx>,
-    /// Used as a fallback when nesting the typeck tables during item processing
-    /// (if these are not available for that item, e.g. don't own a body)
-    empty_tables: &'l ty::TypeckTables<'tcx>,
-    access_levels: &'l AccessLevels,
+    maybe_typeck_tables: Option<&'tcx ty::TypeckTables<'tcx>>,
+    access_levels: &'tcx AccessLevels,
     span_utils: SpanUtils<'tcx>,
     config: Config,
     impl_counter: Cell<u32>,
@@ -66,7 +64,15 @@ pub enum Data {
     RelationData(Relation, Impl),
 }
 
-impl<'l, 'tcx> SaveContext<'l, 'tcx> {
+impl<'tcx> SaveContext<'tcx> {
+    /// Gets the type-checking side-tables for the current body.
+    /// As this will ICE if called outside bodies, only call when working with
+    /// `Expr` or `Pat` nodes (they are guaranteed to be found only in bodies).
+    #[track_caller]
+    fn tables(&self) -> &'tcx ty::TypeckTables<'tcx> {
+        self.maybe_typeck_tables.expect("`SaveContext::tables` called outside of body")
+    }
+
     fn span_from_span(&self, span: Span) -> SpanData {
         use rls_span::{Column, Row};
 
@@ -518,13 +524,13 @@ impl<'l, 'tcx> SaveContext<'l, 'tcx> {
     }
 
     pub fn get_expr_data(&self, expr: &hir::Expr<'_>) -> Option<Data> {
-        let ty = self.tables.expr_ty_adjusted_opt(expr)?;
+        let ty = self.tables().expr_ty_adjusted_opt(expr)?;
         if matches!(ty.kind, ty::Error(_)) {
             return None;
         }
         match expr.kind {
             hir::ExprKind::Field(ref sub_ex, ident) => {
-                match self.tables.expr_ty_adjusted(&sub_ex).kind {
+                match self.tables().expr_ty_adjusted(&sub_ex).kind {
                     ty::Adt(def, _) if !def.is_enum() => {
                         let variant = &def.non_enum_variant();
                         filter!(self.span_utils, ident.span);
@@ -569,7 +575,7 @@ impl<'l, 'tcx> SaveContext<'l, 'tcx> {
                 }
             }
             hir::ExprKind::MethodCall(ref seg, ..) => {
-                let method_id = match self.tables.type_dependent_def_id(expr.hir_id) {
+                let method_id = match self.tables().type_dependent_def_id(expr.hir_id) {
                     Some(id) => id,
                     None => {
                         debug!("could not resolve method id for {:?}", expr);
@@ -618,7 +624,7 @@ impl<'l, 'tcx> SaveContext<'l, 'tcx> {
             },
 
             Node::Expr(&hir::Expr { kind: hir::ExprKind::Struct(ref qpath, ..), .. }) => {
-                self.tables.qpath_res(qpath, hir_id)
+                self.tables().qpath_res(qpath, hir_id)
             }
 
             Node::Expr(&hir::Expr { kind: hir::ExprKind::Path(ref qpath), .. })
@@ -629,9 +635,12 @@ impl<'l, 'tcx> SaveContext<'l, 'tcx> {
                     | hir::PatKind::TupleStruct(ref qpath, ..),
                 ..
             })
-            | Node::Ty(&hir::Ty { kind: hir::TyKind::Path(ref qpath), .. }) => {
-                self.tables.qpath_res(qpath, hir_id)
-            }
+            | Node::Ty(&hir::Ty { kind: hir::TyKind::Path(ref qpath), .. }) => match qpath {
+                hir::QPath::Resolved(_, path) => path.res,
+                hir::QPath::TypeRelative(..) => self
+                    .maybe_typeck_tables
+                    .map_or(Res::Err, |tables| tables.qpath_res(qpath, hir_id)),
+            },
 
             Node::Binding(&hir::Pat {
                 kind: hir::PatKind::Binding(_, canonical_id, ..), ..
@@ -908,7 +917,7 @@ impl<'l> Visitor<'l> for PathCollector<'l> {
 
 /// Defines what to do with the results of saving the analysis.
 pub trait SaveHandler {
-    fn save(&mut self, save_ctxt: &SaveContext<'_, '_>, analysis: &Analysis);
+    fn save(&mut self, save_ctxt: &SaveContext<'_>, analysis: &Analysis);
 }
 
 /// Dump the save-analysis results to a file.
@@ -922,7 +931,7 @@ impl<'a> DumpHandler<'a> {
         DumpHandler { odir, cratename: cratename.to_owned() }
     }
 
-    fn output_file(&self, ctx: &SaveContext<'_, '_>) -> (BufWriter<File>, PathBuf) {
+    fn output_file(&self, ctx: &SaveContext<'_>) -> (BufWriter<File>, PathBuf) {
         let sess = &ctx.tcx.sess;
         let file_name = match ctx.config.output_file {
             Some(ref s) => PathBuf::from(s),
@@ -958,7 +967,7 @@ impl<'a> DumpHandler<'a> {
 }
 
 impl SaveHandler for DumpHandler<'_> {
-    fn save(&mut self, save_ctxt: &SaveContext<'_, '_>, analysis: &Analysis) {
+    fn save(&mut self, save_ctxt: &SaveContext<'_>, analysis: &Analysis) {
         let sess = &save_ctxt.tcx.sess;
         let (output, file_name) = self.output_file(&save_ctxt);
         if let Err(e) = serde_json::to_writer(output, &analysis) {
@@ -977,7 +986,7 @@ pub struct CallbackHandler<'b> {
 }
 
 impl SaveHandler for CallbackHandler<'_> {
-    fn save(&mut self, _: &SaveContext<'_, '_>, analysis: &Analysis) {
+    fn save(&mut self, _: &SaveContext<'_>, analysis: &Analysis) {
         (self.callback)(analysis)
     }
 }
@@ -1001,8 +1010,7 @@ pub fn process_crate<'l, 'tcx, H: SaveHandler>(
 
         let save_ctxt = SaveContext {
             tcx,
-            tables: &ty::TypeckTables::empty(None),
-            empty_tables: &ty::TypeckTables::empty(None),
+            maybe_typeck_tables: None,
             access_levels: &access_levels,
             span_utils: SpanUtils::new(&tcx.sess),
             config: find_config(config),
@@ -1057,7 +1065,7 @@ fn id_from_def_id(id: DefId) -> rls_data::Id {
     rls_data::Id { krate: id.krate.as_u32(), index: id.index.as_u32() }
 }
 
-fn id_from_hir_id(id: hir::HirId, scx: &SaveContext<'_, '_>) -> rls_data::Id {
+fn id_from_hir_id(id: hir::HirId, scx: &SaveContext<'_>) -> rls_data::Id {
     let def_id = scx.tcx.hir().opt_local_def_id(id);
     def_id.map(|id| id_from_def_id(id.to_def_id())).unwrap_or_else(|| {
         // Create a *fake* `DefId` out of a `HirId` by combining the owner
@@ -1075,10 +1083,7 @@ fn null_id() -> rls_data::Id {
     rls_data::Id { krate: u32::MAX, index: u32::MAX }
 }
 
-fn lower_attributes(
-    attrs: Vec<ast::Attribute>,
-    scx: &SaveContext<'_, '_>,
-) -> Vec<rls_data::Attribute> {
+fn lower_attributes(attrs: Vec<ast::Attribute>, scx: &SaveContext<'_>) -> Vec<rls_data::Attribute> {
     attrs
         .into_iter()
         // Only retain real attributes. Doc comments are lowered separately.

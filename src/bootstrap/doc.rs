@@ -156,7 +156,7 @@ impl Step for RustbookSrc {
         let index = out.join("index.html");
         let rustbook = builder.tool_exe(Tool::Rustbook);
         let mut rustbook_cmd = builder.tool_cmd(Tool::Rustbook);
-        if up_to_date(&src, &index) && up_to_date(&rustbook, &index) {
+        if builder.config.dry_run || up_to_date(&src, &index) && up_to_date(&rustbook, &index) {
             return;
         }
         builder.info(&format!("Rustbook ({}) - {}", target, name));
@@ -439,8 +439,6 @@ impl Step for Std {
                 builder.cargo(compiler, Mode::Std, SourceType::InTree, target, "rustdoc");
             compile::std_cargo(builder, target, compiler.stage, &mut cargo);
 
-            // Keep a whitelist so we do not build internal stdlib crates, these will be
-            // build by the rustc step later if enabled.
             cargo.arg("-p").arg(package);
             // Create all crate output directories first to make sure rustdoc uses
             // relative links.
@@ -451,7 +449,6 @@ impl Step for Std {
                 .arg("--markdown-css")
                 .arg("rust.css")
                 .arg("--markdown-no-toc")
-                .arg("--generate-redirect-pages")
                 .arg("-Z")
                 .arg("unstable-options")
                 .arg("--resource-suffix")
@@ -461,6 +458,10 @@ impl Step for Std {
 
             builder.run(&mut cargo.into());
         };
+        // Only build the following crates. While we could just iterate over the
+        // folder structure, that would also build internal crates that we do
+        // not want to show in documentation. These crates will later be visited
+        // by the rustc step, so internal documentation will show them.
         let krates = ["alloc", "core", "std", "proc_macro", "test"];
         for krate in &krates {
             run_cargo_rustdoc_for(krate);

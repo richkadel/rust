@@ -210,7 +210,7 @@ fn layout_raw<'tcx>(
     })
 }
 
-pub fn provide(providers: &mut ty::query::Providers<'_>) {
+pub fn provide(providers: &mut ty::query::Providers) {
     *providers = ty::query::Providers { layout_raw, ..*providers };
 }
 
@@ -527,7 +527,7 @@ impl<'tcx> LayoutCx<'tcx, TyCtxt<'tcx>> {
                 size: Size::ZERO,
             }),
 
-            // Potentially-fat pointers.
+            // Potentially-wide pointers.
             ty::Ref(_, pointee, _) | ty::RawPtr(ty::TypeAndMut { ty: pointee, .. }) => {
                 let mut data_ptr = scalar_unit(Pointer);
                 if !ty.is_unsafe_ptr() {
@@ -1588,7 +1588,7 @@ impl<'tcx> LayoutCx<'tcx, TyCtxt<'tcx>> {
         // Ignore layouts that are done with non-empty environments or
         // non-monomorphic layouts, as the user only wants to see the stuff
         // resulting from the final codegen session.
-        if layout.ty.has_param_types_or_consts() || !self.param_env.caller_bounds.is_empty() {
+        if layout.ty.has_param_types_or_consts() || !self.param_env.caller_bounds().is_empty() {
             return;
         }
 

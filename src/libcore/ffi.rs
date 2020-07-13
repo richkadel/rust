@@ -1,7 +1,7 @@
 #![stable(feature = "", since = "1.30.0")]
 #![allow(non_camel_case_types)]
 
-//! Utilities related to FFI bindings.
+//! Utilities related to foreign function interface (FFI) bindings.
 
 use crate::fmt;
 use crate::marker::PhantomData;
@@ -280,7 +280,7 @@ impl<'a, 'f: 'a> DerefMut for VaList<'a, 'f> {
 // within a private module. Once RFC 2145 has been implemented look into
 // improving this.
 mod sealed_trait {
-    /// Trait which whitelists the allowed types to be used with [VaList::arg]
+    /// Trait which permits the allowed types to be used with [VaList::arg].
     ///
     /// [VaList::arg]: ../struct.VaList.html#method.arg
     #[unstable(

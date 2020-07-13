@@ -292,6 +292,8 @@ impl CheckAttrVisitor<'tcx> {
                 | sym::u32
                 | sym::i64
                 | sym::u64
+                | sym::i128
+                | sym::u128
                 | sym::isize
                 | sym::usize => {
                     int_reprs += 1;
@@ -469,6 +471,6 @@ fn check_mod_attrs(tcx: TyCtxt<'_>, module_def_id: LocalDefId) {
         .visit_item_likes_in_module(module_def_id, &mut CheckAttrVisitor { tcx }.as_deep_visitor());
 }
 
-pub(crate) fn provide(providers: &mut Providers<'_>) {
+pub(crate) fn provide(providers: &mut Providers) {
     *providers = Providers { check_mod_attrs, ..*providers };
 }
