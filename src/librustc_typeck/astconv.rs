@@ -170,7 +170,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
         def: Option<&ty::GenericParamDef>,
     ) -> ty::Region<'tcx> {
         let tcx = self.tcx();
-        let lifetime_name = |def_id| tcx.hir().name(tcx.hir().as_local_hir_id(def_id));
+        let lifetime_name = |def_id| tcx.hir().name(tcx.hir().local_def_id_to_hir_id(def_id));
 
         let r = match tcx.named_region(lifetime.hir_id) {
             Some(rl::Region::Static) => tcx.lifetimes.re_static,
@@ -1623,6 +1623,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
         span: Span,
         trait_bounds: &[hir::PolyTraitRef<'_>],
         lifetime: &hir::Lifetime,
+        borrowed: bool,
     ) -> Ty<'tcx> {
         let tcx = self.tcx();
 
@@ -1837,15 +1838,20 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                     self.ast_region_to_region(lifetime, None)
                 } else {
                     self.re_infer(None, span).unwrap_or_else(|| {
-                        // FIXME: these can be redundant with E0106, but not always.
-                        struct_span_err!(
+                        let mut err = struct_span_err!(
                             tcx.sess,
                             span,
                             E0228,
                             "the lifetime bound for this object type cannot be deduced \
                              from context; please supply an explicit bound"
-                        )
-                        .emit();
+                        );
+                        if borrowed {
+                            // We will have already emitted an error E0106 complaining about a
+                            // missing named lifetime in `&dyn Trait`, so we elide this one.
+                            err.delay_as_bug();
+                        } else {
+                            err.emit();
+                        }
                         tcx.lifetimes.re_static
                     })
                 }
@@ -2099,7 +2105,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
 
         debug!("find_bound_for_assoc_item: predicates={:#?}", predicates);
 
-        let param_hir_id = tcx.hir().as_local_hir_id(ty_param_def_id);
+        let param_hir_id = tcx.hir().local_def_id_to_hir_id(ty_param_def_id);
         let param_name = tcx.hir().ty_param_name(param_hir_id);
         self.one_bound_for_assoc_type(
             || {
@@ -2483,7 +2489,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
 
             let parent_def_id = def_id
                 .and_then(|def_id| {
-                    def_id.as_local().map(|def_id| tcx.hir().as_local_hir_id(def_id))
+                    def_id.as_local().map(|def_id| tcx.hir().local_def_id_to_hir_id(def_id))
                 })
                 .map(|hir_id| tcx.hir().get_parent_did(hir_id).to_def_id());
 
@@ -2819,7 +2825,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                 assert_eq!(opt_self_ty, None);
                 self.prohibit_generics(path.segments);
 
-                let hir_id = tcx.hir().as_local_hir_id(def_id.expect_local());
+                let hir_id = tcx.hir().local_def_id_to_hir_id(def_id.expect_local());
                 let item_id = tcx.hir().get_parent_node(hir_id);
                 let item_def_id = tcx.hir().local_def_id(item_id);
                 let generics = tcx.generics_of(item_def_id);
@@ -2873,6 +2879,12 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
     /// Parses the programmer's textual representation of a type into our
     /// internal notion of a type.
     pub fn ast_ty_to_ty(&self, ast_ty: &hir::Ty<'_>) -> Ty<'tcx> {
+        self.ast_ty_to_ty_inner(ast_ty, false)
+    }
+
+    /// Turns a `hir::Ty` into a `Ty`. For diagnostics' purposes we keep track of whether trait
+    /// objects are borrowed like `&dyn Trait` to avoid emitting redundant errors.
+    fn ast_ty_to_ty_inner(&self, ast_ty: &hir::Ty<'_>, borrowed: bool) -> Ty<'tcx> {
         debug!("ast_ty_to_ty(id={:?}, ast_ty={:?} ty_ty={:?})", ast_ty.hir_id, ast_ty, ast_ty.kind);
 
         let tcx = self.tcx();
@@ -2885,7 +2897,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             hir::TyKind::Rptr(ref region, ref mt) => {
                 let r = self.ast_region_to_region(region, None);
                 debug!("ast_ty_to_ty: r={:?}", r);
-                let t = self.ast_ty_to_ty(&mt.ty);
+                let t = self.ast_ty_to_ty_inner(&mt.ty, true);
                 tcx.mk_ref(r, ty::TypeAndMut { ty: t, mutbl: mt.mutbl })
             }
             hir::TyKind::Never => tcx.types.never,
@@ -2903,7 +2915,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                 ))
             }
             hir::TyKind::TraitObject(ref bounds, ref lifetime) => {
-                self.conv_object_ty_poly_trait_ref(ast_ty.span, bounds, lifetime)
+                self.conv_object_ty_poly_trait_ref(ast_ty.span, bounds, lifetime, borrowed)
             }
             hir::TyKind::Path(hir::QPath::Resolved(ref maybe_qself, ref path)) => {
                 debug!("ast_ty_to_ty: maybe_qself={:?} path={:?}", maybe_qself, path);

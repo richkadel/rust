@@ -57,6 +57,12 @@ fn eval_body_using_ecx<'mir, 'tcx>(
     ecx.run()?;
 
     // Intern the result
+    // FIXME: since the DefId of a promoted is the DefId of its owner, this
+    // means that promoteds in statics are actually interned like statics!
+    // However, this is also currently crucial because we promote mutable
+    // non-empty slices in statics to extend their lifetime, and this
+    // ensures that they are put into a mutable allocation.
+    // For other kinds of promoteds in statics (like array initializers), this is rather silly.
     let intern_kind = match tcx.static_mutability(cid.instance.def_id()) {
         Some(m) => InternKind::Static(m),
         None if cid.promoted.is_some() => InternKind::Promoted,
@@ -347,7 +353,7 @@ pub fn const_eval_raw_provider<'tcx>(
                     // validation thus preventing such a hard error from being a backwards
                     // compatibility hazard
                     DefKind::Const | DefKind::AssocConst => {
-                        let hir_id = tcx.hir().as_local_hir_id(def.did);
+                        let hir_id = tcx.hir().local_def_id_to_hir_id(def.did);
                         err.report_as_lint(
                             tcx.at(tcx.def_span(def.did)),
                             "any use of this value will cause an error",
@@ -370,7 +376,7 @@ pub fn const_eval_raw_provider<'tcx>(
                                 err.report_as_lint(
                                     tcx.at(span),
                                     "reaching this expression at runtime will panic or abort",
-                                    tcx.hir().as_local_hir_id(def.did),
+                                    tcx.hir().local_def_id_to_hir_id(def.did),
                                     Some(err.span),
                                 )
                             }
