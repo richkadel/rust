@@ -7,8 +7,6 @@
 //! like `cdylib`s and `staticlib`s are guaranteed to use the [`System`] by
 //! default.
 //!
-//! [`System`]: struct.System.html
-//!
 //! # The `#[global_allocator]` attribute
 //!
 //! This attribute allows configuring the choice of global allocator.
@@ -42,8 +40,6 @@
 //!
 //! The attribute is used on a `static` item whose type implements the
 //! [`GlobalAlloc`] trait. This type can be provided by an external library:
-//!
-//! [`GlobalAlloc`]: ../../core/alloc/trait.GlobalAlloc.html
 //!
 //! ```rust,ignore (demonstrates crates.io usage)
 //! extern crate jemallocator;
@@ -185,16 +181,14 @@ unsafe impl AllocRef for System {
         );
 
         // SAFETY: `new_size` must be non-zero, which is checked in the match expression.
+        // If `new_size` is zero, then `old_size` has to be zero as well.
         // Other conditions must be upheld by the caller
         unsafe {
             match layout.size() {
-                old_size if old_size == new_size => {
-                    Ok(NonNull::slice_from_raw_parts(ptr, new_size))
-                }
                 0 => self.alloc(Layout::from_size_align_unchecked(new_size, layout.align())),
                 old_size => {
-                    // `realloc` probably checks for `new_size > size` or something similar.
-                    intrinsics::assume(new_size > old_size);
+                    // `realloc` probably checks for `new_size >= size` or something similar.
+                    intrinsics::assume(new_size >= old_size);
                     let raw_ptr = GlobalAlloc::realloc(&System, ptr.as_ptr(), layout, new_size);
                     let ptr = NonNull::new(raw_ptr).ok_or(AllocErr)?;
                     Ok(NonNull::slice_from_raw_parts(ptr, new_size))
@@ -216,16 +210,14 @@ unsafe impl AllocRef for System {
         );
 
         // SAFETY: `new_size` must be non-zero, which is checked in the match expression.
+        // If `new_size` is zero, then `old_size` has to be zero as well.
         // Other conditions must be upheld by the caller
         unsafe {
             match layout.size() {
-                old_size if old_size == new_size => {
-                    Ok(NonNull::slice_from_raw_parts(ptr, new_size))
-                }
                 0 => self.alloc_zeroed(Layout::from_size_align_unchecked(new_size, layout.align())),
                 old_size => {
-                    // `realloc` probably checks for `new_size > size` or something similar.
-                    intrinsics::assume(new_size > old_size);
+                    // `realloc` probably checks for `new_size >= size` or something similar.
+                    intrinsics::assume(new_size >= old_size);
                     let raw_ptr = GlobalAlloc::realloc(&System, ptr.as_ptr(), layout, new_size);
                     raw_ptr.add(old_size).write_bytes(0, new_size - old_size);
                     let ptr = NonNull::new(raw_ptr).ok_or(AllocErr)?;
@@ -248,11 +240,8 @@ unsafe impl AllocRef for System {
             "`new_size` must be smaller than or equal to `layout.size()`"
         );
 
-        let ptr = if new_size == old_size {
-            ptr
-        } else if new_size == 0 {
-            // SAFETY: `layout` is non-zero in size as `old_size` != `new_size`
-            // Other conditions must be upheld by the caller
+        let ptr = if new_size == 0 {
+            // SAFETY: conditions must be upheld by the caller
             unsafe {
                 self.dealloc(ptr, layout);
             }
@@ -261,8 +250,8 @@ unsafe impl AllocRef for System {
             // SAFETY: new_size is not zero,
             // Other conditions must be upheld by the caller
             let raw_ptr = unsafe {
-                // `realloc` probably checks for `new_size < old_size` or something similar.
-                intrinsics::assume(new_size < old_size);
+                // `realloc` probably checks for `new_size <= old_size` or something similar.
+                intrinsics::assume(new_size <= old_size);
                 GlobalAlloc::realloc(&System, ptr.as_ptr(), layout, new_size)
             };
             NonNull::new(raw_ptr).ok_or(AllocErr)?
@@ -284,9 +273,6 @@ static HOOK: AtomicPtr<()> = AtomicPtr::new(ptr::null_mut());
 /// about the allocation that failed.
 ///
 /// The allocation error hook is a global resource.
-///
-/// [`set_alloc_error_hook`]: fn.set_alloc_error_hook.html
-/// [`take_alloc_error_hook`]: fn.take_alloc_error_hook.html
 #[unstable(feature = "alloc_error_hook", issue = "51245")]
 pub fn set_alloc_error_hook(hook: fn(Layout)) {
     HOOK.store(hook as *mut (), Ordering::SeqCst);
@@ -297,8 +283,6 @@ pub fn set_alloc_error_hook(hook: fn(Layout)) {
 /// *See also the function [`set_alloc_error_hook`].*
 ///
 /// If no custom hook is registered, the default hook will be returned.
-///
-/// [`set_alloc_error_hook`]: fn.set_alloc_error_hook.html
 #[unstable(feature = "alloc_error_hook", issue = "51245")]
 pub fn take_alloc_error_hook() -> fn(Layout) {
     let hook = HOOK.swap(ptr::null_mut(), Ordering::SeqCst);
