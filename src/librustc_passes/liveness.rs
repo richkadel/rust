@@ -84,7 +84,7 @@
 use self::LiveNodeKind::*;
 use self::VarKind::*;
 
-use rustc_ast::ast::InlineAsmOptions;
+use rustc_ast::InlineAsmOptions;
 use rustc_data_structures::fx::FxIndexMap;
 use rustc_errors::Applicability;
 use rustc_hir as hir;
@@ -526,7 +526,8 @@ fn visit_expr<'tcx>(ir: &mut IrMaps<'tcx>, expr: &'tcx Expr<'tcx>) {
         | hir::ExprKind::Yield(..)
         | hir::ExprKind::Type(..)
         | hir::ExprKind::Err
-        | hir::ExprKind::Path(hir::QPath::TypeRelative(..)) => {
+        | hir::ExprKind::Path(hir::QPath::TypeRelative(..))
+        | hir::ExprKind::Path(hir::QPath::LangItem(..)) => {
             intravisit::walk_expr(ir, expr);
         }
     }
@@ -1310,7 +1311,8 @@ impl<'a, 'tcx> Liveness<'a, 'tcx> {
 
             hir::ExprKind::Lit(..)
             | hir::ExprKind::Err
-            | hir::ExprKind::Path(hir::QPath::TypeRelative(..)) => succ,
+            | hir::ExprKind::Path(hir::QPath::TypeRelative(..))
+            | hir::ExprKind::Path(hir::QPath::LangItem(..)) => succ,
 
             // Note that labels have been resolved, so we don't need to look
             // at the label ident

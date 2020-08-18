@@ -24,7 +24,7 @@ use crate::ty::{
     ProjectionTy, Region, RegionKind, ReprOptions, TraitObjectVisitor, Ty, TyKind, TyS, TyVar,
     TyVid, TypeAndMut,
 };
-use rustc_ast::ast;
+use rustc_ast as ast;
 use rustc_ast::expand::allocator::AllocatorKind;
 use rustc_attr as attr;
 use rustc_data_structures::fx::{FxHashMap, FxHashSet};
@@ -452,7 +452,7 @@ impl<'tcx> TypeckResults<'tcx> {
     pub fn qpath_res(&self, qpath: &hir::QPath<'_>, id: hir::HirId) -> Res {
         match *qpath {
             hir::QPath::Resolved(_, ref path) => path.res,
-            hir::QPath::TypeRelative(..) => self
+            hir::QPath::TypeRelative(..) | hir::QPath::LangItem(..) => self
                 .type_dependent_def(id)
                 .map_or(Res::Err, |(kind, def_id)| Res::Def(kind, def_id)),
         }

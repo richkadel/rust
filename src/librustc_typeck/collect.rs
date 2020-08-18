@@ -18,8 +18,8 @@ use crate::astconv::{AstConv, Bounds, SizedByDefault};
 use crate::check::intrinsic::intrinsic_operation_unsafety;
 use crate::constrained_generic_params as cgp;
 use crate::middle::resolve_lifetime as rl;
-use rustc_ast::ast;
-use rustc_ast::ast::MetaItemKind;
+use rustc_ast as ast;
+use rustc_ast::MetaItemKind;
 use rustc_attr::{list_contains_name, InlineAttr, OptimizeAttr};
 use rustc_data_structures::captures::Captures;
 use rustc_data_structures::fx::{FxHashMap, FxHashSet, FxIndexSet};
@@ -1959,6 +1959,20 @@ fn explicit_predicates_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::GenericPredicat
                             predicates.extend(bounds.predicates(tcx, ty));
                         }
 
+                        &hir::GenericBound::LangItemTrait(lang_item, span, hir_id, args) => {
+                            let mut bounds = Bounds::default();
+                            AstConv::instantiate_lang_item_trait_ref(
+                                &icx,
+                                lang_item,
+                                span,
+                                hir_id,
+                                args,
+                                ty,
+                                &mut bounds,
+                            );
+                            predicates.extend(bounds.predicates(tcx, ty));
+                        }
+
                         &hir::GenericBound::Outlives(ref lifetime) => {
                             let region = AstConv::ast_region_to_region(&icx, lifetime, None);
                             predicates.push((
@@ -2106,6 +2120,18 @@ fn predicates_from_bound<'tcx>(
 
             let mut bounds = Bounds::default();
             let _ = astconv.instantiate_poly_trait_ref(tr, constness, param_ty, &mut bounds);
+            bounds.predicates(astconv.tcx(), param_ty)
+        }
+        hir::GenericBound::LangItemTrait(lang_item, span, hir_id, args) => {
+            let mut bounds = Bounds::default();
+            astconv.instantiate_lang_item_trait_ref(
+                lang_item,
+                span,
+                hir_id,
+                args,
+                param_ty,
+                &mut bounds,
+            );
             bounds.predicates(astconv.tcx(), param_ty)
         }
         hir::GenericBound::Outlives(ref lifetime) => {
@@ -2657,7 +2683,7 @@ fn should_inherit_track_caller(tcx: TyCtxt<'_>, def_id: DefId) -> bool {
 }
 
 fn check_link_ordinal(tcx: TyCtxt<'_>, attr: &ast::Attribute) -> Option<usize> {
-    use rustc_ast::ast::{Lit, LitIntType, LitKind};
+    use rustc_ast::{Lit, LitIntType, LitKind};
     let meta_item_list = attr.meta_item_list();
     let meta_item_list: Option<&[ast::NestedMetaItem]> = meta_item_list.as_ref().map(Vec::as_ref);
     let sole_meta_list = match meta_item_list {

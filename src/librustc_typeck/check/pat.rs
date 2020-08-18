@@ -1,5 +1,5 @@
 use crate::check::FnCtxt;
-use rustc_ast::ast;
+use rustc_ast as ast;
 use rustc_ast::util::lev_distance::find_best_match_for_name;
 use rustc_data_structures::fx::FxHashMap;
 use rustc_errors::{pluralize, struct_span_err, Applicability, DiagnosticBuilder};
@@ -947,13 +947,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 //   |
                 // L |     let A(()) = A(());
                 //   |          ^  ^
-                [] => {
-                    let qpath_span = match qpath {
-                        hir::QPath::Resolved(_, path) => path.span,
-                        hir::QPath::TypeRelative(_, ps) => ps.ident.span,
-                    };
-                    (qpath_span.shrink_to_hi(), pat_span)
-                }
+                [] => (qpath.span().shrink_to_hi(), pat_span),
                 // Easy case. Just take the "lo" of the first sub-pattern and the "hi" of the
                 // last sub-pattern. In the case of `A(x)` the first and last may coincide.
                 // This looks like:
