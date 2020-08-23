@@ -16,6 +16,7 @@ use rustc_span::hygiene::MacroKind;
 use rustc_span::symbol::Ident;
 use rustc_span::symbol::Symbol;
 use rustc_span::DUMMY_SP;
+use smallvec::SmallVec;
 
 use std::cell::Cell;
 use std::ops::Range;
@@ -222,11 +223,11 @@ impl<'a, 'tcx> LinkCollector<'a, 'tcx> {
                             disambiguator,
                             None | Some(Disambiguator::Namespace(Namespace::TypeNS))
                         ) {
-                            if let Some(prim) = is_primitive(path_str, ns) {
+                            if let Some((path, prim)) = is_primitive(path_str, ns) {
                                 if extra_fragment.is_some() {
                                     return Err(ErrorKind::AnchorFailure(AnchorFailure::Primitive));
                                 }
-                                return Ok((prim, Some(path_str.to_owned())));
+                                return Ok((prim, Some(path.to_owned())));
                             }
                         }
                         return Ok((res, extra_fragment.clone()));
@@ -239,11 +240,11 @@ impl<'a, 'tcx> LinkCollector<'a, 'tcx> {
                 if value != (ns == ValueNS) {
                     return Err(ErrorKind::ResolutionFailure);
                 }
-            } else if let Some(prim) = is_primitive(path_str, ns) {
+            } else if let Some((path, prim)) = is_primitive(path_str, ns) {
                 if extra_fragment.is_some() {
                     return Err(ErrorKind::AnchorFailure(AnchorFailure::Primitive));
                 }
-                return Ok((prim, Some(path_str.to_owned())));
+                return Ok((prim, Some(path.to_owned())));
             } else {
                 // If resolution failed, it may still be a method
                 // because methods are not handled by the resolver
@@ -269,19 +270,27 @@ impl<'a, 'tcx> LinkCollector<'a, 'tcx> {
                 })
                 .ok_or(ErrorKind::ResolutionFailure)?;
 
-            if let Some(prim) = is_primitive(&path, TypeNS) {
-                let did = primitive_impl(cx, &path).ok_or(ErrorKind::ResolutionFailure)?;
-                return cx
-                    .tcx
-                    .associated_items(did)
-                    .filter_by_name_unhygienic(item_name)
-                    .next()
-                    .and_then(|item| match item.kind {
-                        ty::AssocKind::Fn => Some("method"),
-                        _ => None,
-                    })
-                    .map(|out| (prim, Some(format!("{}#{}.{}", path, out, item_name))))
-                    .ok_or(ErrorKind::ResolutionFailure);
+            if let Some((path, prim)) = is_primitive(&path, TypeNS) {
+                for &impl_ in primitive_impl(cx, &path).ok_or(ErrorKind::ResolutionFailure)? {
+                    let link = cx
+                        .tcx
+                        .associated_items(impl_)
+                        .find_by_name_and_namespace(
+                            cx.tcx,
+                            Ident::with_dummy_span(item_name),
+                            ns,
+                            impl_,
+                        )
+                        .and_then(|item| match item.kind {
+                            ty::AssocKind::Fn => Some("method"),
+                            _ => None,
+                        })
+                        .map(|out| (prim, Some(format!("{}#{}.{}", path, out, item_name))));
+                    if let Some(link) = link {
+                        return Ok(link);
+                    }
+                }
+                return Err(ErrorKind::ResolutionFailure);
             }
 
             let (_, ty_res) = cx
@@ -627,7 +636,7 @@ impl<'a, 'tcx> DocFolder for LinkCollector<'a, 'tcx> {
                 }
 
                 match disambiguator.map(Disambiguator::ns) {
-                    Some(ns @ ValueNS) => {
+                    Some(ns @ (ValueNS | TypeNS)) => {
                         match self.resolve(
                             path_str,
                             disambiguator,
@@ -643,28 +652,6 @@ impl<'a, 'tcx> DocFolder for LinkCollector<'a, 'tcx> {
                                 // This could just be a normal link or a broken link
                                 // we could potentially check if something is
                                 // "intra-doc-link-like" and warn in that case.
-                                continue;
-                            }
-                            Err(ErrorKind::AnchorFailure(msg)) => {
-                                anchor_failure(cx, &item, &ori_link, &dox, link_range, msg);
-                                continue;
-                            }
-                        }
-                    }
-                    Some(ns @ TypeNS) => {
-                        match self.resolve(
-                            path_str,
-                            disambiguator,
-                            ns,
-                            &current_item,
-                            base_node,
-                            &extra_fragment,
-                            Some(&item),
-                        ) {
-                            Ok(res) => res,
-                            Err(ErrorKind::ResolutionFailure) => {
-                                resolution_failure(cx, &item, path_str, &dox, link_range);
-                                // This could just be a normal link.
                                 continue;
                             }
                             Err(ErrorKind::AnchorFailure(msg)) => {
@@ -1220,33 +1207,24 @@ const PRIMITIVES: &[(&str, Res)] = &[
     ("f64", Res::PrimTy(hir::PrimTy::Float(rustc_ast::FloatTy::F64))),
     ("str", Res::PrimTy(hir::PrimTy::Str)),
     ("bool", Res::PrimTy(hir::PrimTy::Bool)),
+    ("true", Res::PrimTy(hir::PrimTy::Bool)),
+    ("false", Res::PrimTy(hir::PrimTy::Bool)),
     ("char", Res::PrimTy(hir::PrimTy::Char)),
 ];
 
-fn is_primitive(path_str: &str, ns: Namespace) -> Option<Res> {
-    if ns == TypeNS { PRIMITIVES.iter().find(|x| x.0 == path_str).map(|x| x.1) } else { None }
+fn is_primitive(path_str: &str, ns: Namespace) -> Option<(&'static str, Res)> {
+    if ns == TypeNS {
+        PRIMITIVES
+            .iter()
+            .filter(|x| x.0 == path_str)
+            .copied()
+            .map(|x| if x.0 == "true" || x.0 == "false" { ("bool", x.1) } else { x })
+            .next()
+    } else {
+        None
+    }
 }
 
-fn primitive_impl(cx: &DocContext<'_>, path_str: &str) -> Option<DefId> {
-    let tcx = cx.tcx;
-    match path_str {
-        "u8" => tcx.lang_items().u8_impl(),
-        "u16" => tcx.lang_items().u16_impl(),
-        "u32" => tcx.lang_items().u32_impl(),
-        "u64" => tcx.lang_items().u64_impl(),
-        "u128" => tcx.lang_items().u128_impl(),
-        "usize" => tcx.lang_items().usize_impl(),
-        "i8" => tcx.lang_items().i8_impl(),
-        "i16" => tcx.lang_items().i16_impl(),
-        "i32" => tcx.lang_items().i32_impl(),
-        "i64" => tcx.lang_items().i64_impl(),
-        "i128" => tcx.lang_items().i128_impl(),
-        "isize" => tcx.lang_items().isize_impl(),
-        "f32" => tcx.lang_items().f32_impl(),
-        "f64" => tcx.lang_items().f64_impl(),
-        "str" => tcx.lang_items().str_impl(),
-        "bool" => tcx.lang_items().bool_impl(),
-        "char" => tcx.lang_items().char_impl(),
-        _ => None,
-    }
+fn primitive_impl(cx: &DocContext<'_>, path_str: &str) -> Option<&'static SmallVec<[DefId; 4]>> {
+    Some(PrimitiveType::from_symbol(Symbol::intern(path_str))?.impls(cx.tcx))
 }
