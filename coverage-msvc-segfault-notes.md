@@ -1,6 +1,38 @@
-## Rust binaries compiled with -Zinstrument-coverage fail only when compiled using MSVC
+# Rust binaries compiled with -Zinstrument-coverage fail only when compiled using MSVC
 
-_Summary, notes, and screenshots		Aug 10-16, 2020_
+## _Current status as of Aug 24, 2020_
+
+These notes document my investigation of a bug causing Rust binaries compiled with `-Z instrument-coverage` to fail if compiled under MSVC.
+
+The program fails during the post-exit process of writing the LLVM `*.profraw` file that captures the `llvm.instrprof.increment` intrinsic counter values from the program's execution. Typically the program crashes with a segmentation fault, or in some cases it just exits, writing an empty `*.profraw` file.
+
+As of August 24, I did find a workaround that allows me to enable `-Z instrument-coverage` on MSVC, but it does not resolve the issue without this workaround.
+
+I am able to successfully run coverage-instrumented programs as long as I ensure the Rust option `-C link-dead-code` is disabled.
+
+Prior to discovering this, I was automatically enabling `-C link-dead-code` by default, when `-Z instrument-coverage` was enabled. This ensured that code that might otherwise be optimized out would still get a counter, and would show up in the final coverage reports (with `0` executions).
+
+It appears that this error may be the result of the bug documented in the `rust-lang` issue [#64685 (_Linker error because `-wL as-needed` conflicts with `-C link-dead-code`_)](https://github.com/rust-lang/rust/issues/64685).
+
+I've linked these notes to that bug in case the investigation results may help someone debug the original issue.
+
+Whatever the cause, it appears that the code compiled into Rust's `profiler-builtins` library does not get linked correctly. Some key discoveries include:
+
+* The problem described above does not manifest in coverage-enabled Clang C++ binaries, despite the fact that the process and included LLVM coverage libraries are nearly identical. I was able to compare LLVM IR output, Visual Studio debugger steps, and disassembled views of the binary in both Visual Studio and "IDA Pro", to get a sense of the similarities and differences.
+* I was able to apply the same MSVC compiler flags used by Clang to build Rust's `profiler-builtins` library, and the same MSVC linker flags when linking the Rust program. None of these compiler or linker options resolved the issue. 
+* The LLVM IR was largely the same for Rust and Clang (in particular, the Coverage Map's were nearly identical); but some Function Attributes were different, and I was not able to understand how or if I should normalize these.
+* The Visual Studio debugger shows that some variables in the `profiler-builtins` library sources _appear to be_ "optimized out" (in fact, disassembly views seem to show that some statements were indeed not generated).
+* The "IDA Pro" tool appears to show that, in the Rust executables, some function calls to LLVM' profiler runtime libraries were jumping to an address that was 4 bytes _*offset*_ from the address of the function it should have been jumping to.
+
+That last point, and the optimized out instructions, _seem to indicate_ that the linker first assigns a bad function address (either in the function's placement, or in the call's jump statement), and then the linker (perhaps) recognizes (by cross reference?) that some functions are not called (because nothing is jumping to their actual, correct location), so the linker (perhaps) decides it can aggressively optimize out some unused variables and statements affecting those variables.
+
+This may be the wrong conclusion, but it is my best guess.
+
+Hopefully someone that understands this better can figure out if and how the Rust `-C link-dead-code` option seemed to trigger this behavior.
+
+## Summary, notes, and screenshots - Aug 10-16, 2020
+
+_Note: Most of the notes below were compiled while building with Rust's fork of LLVM 10. As of Aug 23, 2020, Rust now includes LLVM 11, and the workaround (disabling `-C link-dead-code`) was tested under LLVM 11 as well (both with and without the workaround, confirming that LLVM 11 did not, in itself at least, resolve the problem)._
 
 *   Problem:
     *   When running a rustc-compiled “*.exe” binary compiled with -Zinstrument-coverage, the program typically crashes during program exit, with a “Segmentation fault”. Some programs don’t crash, but generate an empty “*.profraw” file.
@@ -34,6 +66,14 @@ _Summary, notes, and screenshots		Aug 10-16, 2020_
 
 
 ## About Rust’s profiler-builtins library (because the missing/optimized-out symbols come from this library)
+
+> Update (Aug 24, 2020): Clang compiles its own Clang-specific version of this library, just as Rust does, using the same LLVM sources. We inspected Clang's `ninja` build files for the compiler options used to build Clang's library, and applied the same flags to Rust's compilation of `profiler-builtins`, confirming that this change still did not resolve the main issue. Note that Clang uses the following compiler flags:
+
+```
+build projects\compiler-rt\lib\profile\CMakeFiles\clang_rt.profile-x86_64.dir\InstrProfilingBuffer.c.obj: C_COMPILER__clang_rt.2eprofile-x86_64 C$:\src\clang-llvm\llvm-project\compiler-rt\lib\profile\InstrProfilingBuffer.c || cmake_object_order_depends_target_clang_rt.profile-x86_64
+  DEFINES = -DUNICODE -D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_SECURE_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_DEPRECATE -D_SCL_SECURE_NO_WARNINGS -D_UNICODE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
+  FLAGS = /DWIN32 /D_WINDOWS /Zc:inline /Zc:strictStrings /Oi -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd4324 -w14062 -we4238 /Gw /W4 /MT /O2 /Ob2    -DCOMPILER_RT_HAS_ATOMICS=1 /wd4221 -UNDEBUG
+```
 
 The sources debugged below, with missing symbols, come from `llvm-project/compiler-rt` but are compiled for Rust in this Rust-specific library of C code.
 
