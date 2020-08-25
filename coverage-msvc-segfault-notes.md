@@ -30,6 +30,39 @@ This may be the wrong conclusion, but it is my best guess.
 
 Hopefully someone that understands this better can figure out if and how the Rust `-C link-dead-code` option seemed to trigger this behavior.
 
+> _Update: @petrhosek has suggested a potential cause could be the `--gc-sections` linker flag, or the MSVC linker's equivalent. (In fact, Clang documentation for source code coverage also discusses some known limitations with `--gc-sections` enabled.) As it turns out, rustc translates its `-Clink-dead-code` option into a call to the `Linker`-specific wrapper function `gc_sections()`. But the `gc_sections()` function is not necessarily translated to the `--gc-sections` flag. It depends on which linker is used, and on the value of `keep_metadata`._
+> 
+> _Also note that there are only about 3 or 4 places that the link-dead-code option affects `rustc`. I'm not sure what would happen if we bypassed the `gc-sections()` call, without also bypassing the other code affected by the `-Clink-dead-code` flag._
+> 
+> https://github.com/rust-lang/rust/blob/2da73717d70ee8583d619dfa12ad8b8306eedab5/src/librustc_codegen_ssa/back/link.rs#L1667-L1675
+> ```rust
+>  // OBJECT-FILES-NO, AUDIT-ORDER 
+>  // FIXME: Order dependent, applies to the following objects. Where should it be placed? 
+>  // Try to strip as much out of the generated object by removing unused 
+>  // sections if possible. See more comments in linker.rs 
+>  if !sess.link_dead_code() { 
+>      let keep_metadata = crate_type == CrateType::Dylib; 
+>      cmd.gc_sections(keep_metadata); 
+>  }
+> ```
+> 
+> Here's the MSVC implementation of `gc_sections()`:
+> 
+> https://github.com/rust-lang/rust/blob/1627ba19643c18fe9a80e65c8df8bbd2f3ed8432/src/librustc_codegen_ssa/back/linker.rs#L678-L690
+> ```rust
+>  fn gc_sections(&mut self, _keep_metadata: bool) { 
+>      // MSVC's ICF (Identical COMDAT Folding) link optimization is 
+>      // slow for Rust and thus we disable it by default when not in 
+>      // optimization build. 
+>      if self.sess.opts.optimize != config::OptLevel::No { 
+>          self.cmd.arg("/OPT:REF,ICF"); 
+>      } else { 
+>          // It is necessary to specify NOICF here, because /OPT:REF 
+>          // implies ICF by default. 
+>          self.cmd.arg("/OPT:REF,NOICF"); 
+>      } 
+> }
+
 ## Summary, notes, and screenshots - Aug 10-16, 2020
 
 _Note: Most of the notes below were compiled while building with Rust's fork of LLVM 10. As of Aug 23, 2020, Rust now includes LLVM 11, and the workaround (disabling `-C link-dead-code`) was tested under LLVM 11 as well (both with and without the workaround, confirming that LLVM 11 did not, in itself at least, resolve the problem)._
