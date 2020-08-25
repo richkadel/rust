@@ -30,7 +30,7 @@ This may be the wrong conclusion, but it is my best guess.
 
 Hopefully someone that understands this better can figure out if and how the Rust `-C link-dead-code` option seemed to trigger this behavior.
 
-> _Update: @petrhosek has suggested a potential cause could be the `--gc-sections` linker flag, or the MSVC linker's equivalent. (In fact, Clang documentation for source code coverage also discusses some known limitations with `--gc-sections` enabled.) As it turns out, rustc translates its `-Clink-dead-code` option into a call to the `Linker`-specific wrapper function `gc_sections()`. But the `gc_sections()` function is not necessarily translated to the `--gc-sections` flag. It depends on which linker is used, and on the value of `keep_metadata`._
+> _Update: @petrhosek has suggested a potential cause could have something to do with the `--gc-sections` linker flag, or the MSVC linker's equivalent. (In fact, Clang documentation for source code coverage also discusses some known limitations with `--gc-sections` enabled.) As it turns out, if `-Clink-dead-code` is **disabled**, rustc calls a `Linker`-specific wrapper function `gc_sections()`. But the `gc_sections()` function is not necessarily translated to the `--gc-sections` flag. It depends on which linker is used, and on the value of `keep_metadata`._
 > 
 > _Also note that there are only about 3 or 4 places that the link-dead-code option affects `rustc`. I'm not sure what would happen if we bypassed the `gc-sections()` call, without also bypassing the other code affected by the `-Clink-dead-code` flag._
 > 
