@@ -40,7 +40,7 @@ use rustc_hir::def::{DefKind, Res};
 use rustc_hir::def_id::{CrateNum, DefId, DefIdMap, LocalDefId, LOCAL_CRATE};
 use rustc_hir::definitions::{DefPathHash, Definitions};
 use rustc_hir::intravisit::Visitor;
-use rustc_hir::lang_items::{self, PanicLocationLangItem};
+use rustc_hir::lang_items::LangItem;
 use rustc_hir::{HirId, ItemKind, ItemLocalId, ItemLocalMap, ItemLocalSet, Node, TraitCandidate};
 use rustc_index::vec::{Idx, IndexVec};
 use rustc_macros::HashStable;
@@ -1102,20 +1102,13 @@ impl<'tcx> TyCtxt<'tcx> {
         providers[LOCAL_CRATE] = local_providers;
 
         let def_path_hash_to_def_id = if s.opts.build_dep_graph() {
-            let def_path_tables = crates
-                .iter()
-                .map(|&cnum| (cnum, cstore.def_path_table(cnum)))
-                .chain(iter::once((LOCAL_CRATE, definitions.def_path_table())));
+            let capacity = definitions.def_path_table().num_def_ids()
+                + crates.iter().map(|cnum| cstore.num_def_ids(*cnum)).sum::<usize>();
+            let mut map = FxHashMap::with_capacity_and_hasher(capacity, Default::default());
 
-            // Precompute the capacity of the hashmap so we don't have to
-            // re-allocate when populating it.
-            let capacity = def_path_tables.clone().map(|(_, t)| t.size()).sum::<usize>();
-
-            let mut map: FxHashMap<_, _> =
-                FxHashMap::with_capacity_and_hasher(capacity, ::std::default::Default::default());
-
-            for (cnum, def_path_table) in def_path_tables {
-                def_path_table.add_def_path_hashes_to(cnum, &mut map);
+            map.extend(definitions.def_path_table().all_def_path_hashes_and_def_ids(LOCAL_CRATE));
+            for cnum in &crates {
+                map.extend(cstore.all_def_path_hashes_and_def_ids(*cnum).into_iter());
             }
 
             Some(map)
@@ -1545,7 +1538,7 @@ impl<'tcx> TyCtxt<'tcx> {
     pub fn caller_location_ty(&self) -> Ty<'tcx> {
         self.mk_imm_ref(
             self.lifetimes.re_static,
-            self.type_of(self.require_lang_item(PanicLocationLangItem, None))
+            self.type_of(self.require_lang_item(LangItem::PanicLocation, None))
                 .subst(*self, self.mk_substs([self.lifetimes.re_static.into()].iter())),
         )
     }
@@ -2192,12 +2185,12 @@ impl<'tcx> TyCtxt<'tcx> {
 
     #[inline]
     pub fn mk_box(self, ty: Ty<'tcx>) -> Ty<'tcx> {
-        let def_id = self.require_lang_item(lang_items::OwnedBoxLangItem, None);
+        let def_id = self.require_lang_item(LangItem::OwnedBox, None);
         self.mk_generic_adt(def_id, ty)
     }
 
     #[inline]
-    pub fn mk_lang_item(self, ty: Ty<'tcx>, item: lang_items::LangItem) -> Option<Ty<'tcx>> {
+    pub fn mk_lang_item(self, ty: Ty<'tcx>, item: LangItem) -> Option<Ty<'tcx>> {
         let def_id = self.lang_items().require(item).ok()?;
         Some(self.mk_generic_adt(def_id, ty))
     }
@@ -2210,7 +2203,7 @@ impl<'tcx> TyCtxt<'tcx> {
 
     #[inline]
     pub fn mk_maybe_uninit(self, ty: Ty<'tcx>) -> Ty<'tcx> {
-        let def_id = self.require_lang_item(lang_items::MaybeUninitLangItem, None);
+        let def_id = self.require_lang_item(LangItem::MaybeUninit, None);
         self.mk_generic_adt(def_id, ty)
     }
 

@@ -9,7 +9,6 @@
 #![feature(nll)]
 #![feature(or_patterns)]
 #![feature(test)]
-#![feature(ptr_offset_from)]
 #![feature(crate_visibility_modifier)]
 #![feature(never_type)]
 #![feature(once_cell)]
@@ -502,7 +501,7 @@ fn main_options(options: config::Options) -> MainResult {
     let crate_name = options.crate_name.clone();
     let crate_version = options.crate_version.clone();
     let output_format = options.output_format;
-    let (mut krate, renderinfo, renderopts) = core::run_core(options);
+    let (mut krate, renderinfo, renderopts, sess) = core::run_core(options);
 
     info!("finished with rustc");
 
@@ -525,11 +524,11 @@ fn main_options(options: config::Options) -> MainResult {
     let (error_format, edition, debugging_options) = diag_opts;
     let diag = core::new_handler(error_format, None, &debugging_options);
     match output_format {
-        None | Some(config::OutputFormat::Html) => {
+        None | Some(config::OutputFormat::Html) => sess.time("render_html", || {
             run_renderer::<html::render::Context>(krate, renderopts, renderinfo, &diag, edition)
-        }
-        Some(config::OutputFormat::Json) => {
+        }),
+        Some(config::OutputFormat::Json) => sess.time("render_json", || {
             run_renderer::<json::JsonRenderer>(krate, renderopts, renderinfo, &diag, edition)
-        }
+        }),
     }
 }
