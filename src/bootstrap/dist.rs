@@ -647,6 +647,7 @@ impl Step for DebuggerScripts {
 
             cp_debugger_script("lldb_lookup.py");
             cp_debugger_script("lldb_providers.py");
+            cp_debugger_script("lldb_commands")
         }
     }
 }
@@ -1096,7 +1097,7 @@ impl Step for PlainSourceTarball {
             "Cargo.toml",
             "Cargo.lock",
         ];
-        let src_dirs = ["src", "library"];
+        let src_dirs = ["src", "compiler", "library"];
 
         copy_src_dirs(builder, &builder.src, &src_dirs, &[], &plain_dst_src);
 

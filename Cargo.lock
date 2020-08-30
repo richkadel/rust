@@ -342,7 +342,7 @@ dependencies = [
 name = "cargo-miri"
 version = "0.1.0"
 dependencies = [
- "cargo_metadata 0.9.1",
+ "cargo_metadata 0.11.1",
  "directories",
  "rustc-workspace-hack",
  "rustc_version",
@@ -384,18 +384,6 @@ name = "cargo_metadata"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "700b3731fd7d357223d0000f4dbf1808401b694609035c3c411fbc0cd375c426"
-dependencies = [
- "semver 0.9.0",
- "serde",
- "serde_derive",
- "serde_json",
-]
-
-[[package]]
-name = "cargo_metadata"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46e3374c604fb39d1a2f35ed5e4a4e30e60d01fab49446e08f1b3e9a90aef202"
 dependencies = [
  "semver 0.9.0",
  "serde",
@@ -518,7 +506,7 @@ dependencies = [
 name = "clippy"
 version = "0.0.212"
 dependencies = [
- "cargo_metadata 0.9.1",
+ "cargo_metadata 0.11.1",
  "clippy-mini-macro-test",
  "clippy_lints",
  "compiletest_rs",
@@ -526,7 +514,7 @@ dependencies = [
  "lazy_static",
  "rustc-workspace-hack",
  "rustc_tools_util 0.2.0",
- "semver 0.9.0",
+ "semver 0.10.0",
  "serde",
  "tempfile",
  "tester",
@@ -540,7 +528,7 @@ version = "0.2.0"
 name = "clippy_lints"
 version = "0.0.212"
 dependencies = [
- "cargo_metadata 0.9.1",
+ "cargo_metadata 0.11.1",
  "if_chain",
  "itertools 0.9.0",
  "lazy_static",
@@ -548,7 +536,7 @@ dependencies = [
  "quine-mc_cluskey",
  "quote",
  "regex-syntax",
- "semver 0.9.0",
+ "semver 0.10.0",
  "serde",
  "smallvec 1.4.2",
  "syn",
@@ -615,9 +603,9 @@ dependencies = [
 
 [[package]]
 name = "compiler_builtins"
-version = "0.1.32"
+version = "0.1.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bc4ac2c824d2bfc612cba57708198547e9a26943af0632aff033e0693074d5c"
+checksum = "e3fcd8aba10d17504c87ef12d4f62ef404c6a4703d16682a9eb5543e6cf24455"
 dependencies = [
  "cc",
  "rustc-std-workspace-core",
@@ -1991,7 +1979,6 @@ dependencies = [
 name = "miri"
 version = "0.1.0"
 dependencies = [
- "byteorder",
  "colored",
  "compiletest_rs",
  "env_logger 0.7.1",
@@ -3365,7 +3352,6 @@ name = "rustc_codegen_llvm"
 version = "0.0.0"
 dependencies = [
  "bitflags",
- "flate2",
  "libc",
  "measureme",
  "rustc-demangle",
@@ -3386,6 +3372,7 @@ dependencies = [
  "rustc_span",
  "rustc_target",
  "smallvec 1.4.2",
+ "snap",
  "tracing",
 ]
 
@@ -3711,7 +3698,6 @@ dependencies = [
 name = "rustc_metadata"
 version = "0.0.0"
 dependencies = [
- "flate2",
  "libc",
  "memmap",
  "rustc_ast",
@@ -3729,6 +3715,7 @@ dependencies = [
  "rustc_span",
  "rustc_target",
  "smallvec 1.4.2",
+ "snap",
  "stable_deref_trait",
  "tracing",
  "winapi 0.3.9",
@@ -3940,8 +3927,8 @@ dependencies = [
  "rustc_data_structures",
  "rustc_hir",
  "rustc_hir_pretty",
+ "rustc_lexer",
  "rustc_middle",
- "rustc_parse",
  "rustc_session",
  "rustc_span",
  "serde_json",
@@ -4122,6 +4109,7 @@ dependencies = [
 name = "rustdoc"
 version = "0.0.0"
 dependencies = [
+ "expect-test",
  "itertools 0.8.2",
  "minifier",
  "pulldown-cmark",
@@ -4398,6 +4386,12 @@ name = "smallvec"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbee7696b84bbf3d89a1c2eccff0850e3047ed46bfcd2e92c29a2d074d57e252"
+
+[[package]]
+name = "snap"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da73c8f77aebc0e40c300b93f0a5f1bece7a248a36eee287d4e095f35c7b7d6e"
 
 [[package]]
 name = "socket2"
