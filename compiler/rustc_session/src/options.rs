@@ -885,9 +885,9 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
         "instrument the generated code to support LLVM source-based code coverage \
         reports (note, the compiler build config must include `profiler = true`, \
         and is mutually exclusive with `-C profile-generate`/`-C profile-use`); \
-        implies `-C link-dead-code` (unless explicitly disabled)` and \
-        `-Z symbol-mangling-version=v0`; and disables/overrides some optimization \
-        options (default: no)"),
+        implies `-C link-dead-code` (unless targeting MSVC, or explicitly disabled) \
+        and `-Z symbol-mangling-version=v0`; disables/overrides some Rust \
+        optimizations (default: no)"),
     instrument_mcount: bool = (false, parse_bool, [TRACKED],
         "insert function instrument code for mcount-based tracing (default: no)"),
     keep_hygiene_data: bool = (false, parse_bool, [UNTRACKED],
@@ -967,6 +967,8 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
         "print the result of the monomorphization collection pass"),
     print_type_sizes: bool = (false, parse_bool, [UNTRACKED],
         "print layout information for each type encountered (default: no)"),
+    proc_macro_backtrace: bool = (false, parse_bool, [UNTRACKED],
+         "show backtraces for panics during proc-macro execution (default: no)"),
     profile: bool = (false, parse_bool, [TRACKED],
         "insert profiling code (default: no)"),
     profile_emit: Option<PathBuf> = (None, parse_opt_pathbuf, [TRACKED],

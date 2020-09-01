@@ -27,7 +27,7 @@ pub struct UnmatchedBrace {
     pub candidate_span: Option<Span>,
 }
 
-pub struct StringReader<'a> {
+crate struct StringReader<'a> {
     sess: &'a ParseSess,
     /// Initial position, read-only.
     start_pos: BytePos,
@@ -41,7 +41,7 @@ pub struct StringReader<'a> {
 }
 
 impl<'a> StringReader<'a> {
-    pub fn new(
+    crate fn new(
         sess: &'a ParseSess,
         source_file: Lrc<rustc_span::SourceFile>,
         override_span: Option<Span>,
@@ -66,7 +66,7 @@ impl<'a> StringReader<'a> {
     }
 
     /// Returns the next token, including trivia like whitespace or comments.
-    pub fn next_token(&mut self) -> Token {
+    fn next_token(&mut self) -> Token {
         let start_src_index = self.src_index(self.pos);
         let text: &str = &self.src[start_src_index..self.end_src_index];
 
@@ -437,10 +437,6 @@ impl<'a> StringReader<'a> {
         let id = self.symbol_from_to(content_start, content_end);
         self.validate_literal_escape(mode, content_start, content_end);
         (lit_kind, id)
-    }
-
-    pub fn pos(&self) -> BytePos {
-        self.pos
     }
 
     #[inline]
