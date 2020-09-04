@@ -125,6 +125,9 @@ top_level_options!(
         // try to not rely on this too much.
         actually_rustdoc: bool [TRACKED],
 
+        // Control path trimming.
+        trimmed_def_paths: TrimmedDefPaths [TRACKED],
+
         // Specifications of codegen units / ThinLTO which are forced as a
         // result of parsing command line options. These are not necessarily
         // what rustc was invoked with, but massaged a bit to agree with
@@ -890,6 +893,11 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
         all statements)."),
     emit_stack_sizes: bool = (false, parse_bool, [UNTRACKED],
         "emit a section containing stack size metadata (default: no)"),
+    experimental_coverage: bool = (false, parse_bool, [TRACKED],
+        "enable and extend the `-Z instrument-coverage` function-level coverage \
+        feature, adding additional experimental (likely inaccurate) counters and \
+        code regions (used by `rustc` compiler developers to test new coverage \
+        counter placements) (default: no)"),
     fewer_names: bool = (false, parse_bool, [TRACKED],
         "reduce memory use by retaining fewer names within compilation artifacts (LLVM-IR) \
         (default: no)"),
@@ -1084,6 +1092,8 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
         "for every macro invocation, print its name and arguments (default: no)"),
     treat_err_as_bug: Option<usize> = (None, parse_treat_err_as_bug, [TRACKED],
         "treat error number `val` that occurs as bug"),
+    trim_diagnostic_paths: bool = (true, parse_bool, [UNTRACKED],
+        "in diagnostics, use heuristics to shorten paths referring to items"),
     ui_testing: bool = (false, parse_bool, [UNTRACKED],
         "emit compiler diagnostics in a form suitable for UI testing (default: no)"),
     unleash_the_miri_inside_of_you: bool = (false, parse_bool, [TRACKED],

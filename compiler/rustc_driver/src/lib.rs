@@ -11,8 +11,6 @@
 
 #[macro_use]
 extern crate tracing;
-#[macro_use]
-extern crate lazy_static;
 
 pub extern crate rustc_plugin_impl as plugin;
 
@@ -34,7 +32,7 @@ use rustc_save_analysis as save;
 use rustc_save_analysis::DumpHandler;
 use rustc_serialize::json::{self, ToJson};
 use rustc_session::config::nightly_options;
-use rustc_session::config::{ErrorOutputType, Input, OutputType, PrintRequest};
+use rustc_session::config::{ErrorOutputType, Input, OutputType, PrintRequest, TrimmedDefPaths};
 use rustc_session::getopts;
 use rustc_session::lint::{Lint, LintId};
 use rustc_session::{config, DiagnosticOutput, Session};
@@ -49,6 +47,7 @@ use std::env;
 use std::ffi::OsString;
 use std::fs;
 use std::io::{self, Read, Write};
+use std::lazy::SyncLazy;
 use std::mem;
 use std::panic::{self, catch_unwind};
 use std::path::PathBuf;
@@ -127,6 +126,7 @@ impl Callbacks for TimePassesCallbacks {
         // time because it will mess up the --prints output. See #64339.
         self.time_passes = config.opts.prints.is_empty()
             && (config.opts.debugging_opts.time_passes || config.opts.debugging_opts.time);
+        config.opts.trimmed_def_paths = TrimmedDefPaths::GoodPath;
     }
 }
 
@@ -1142,13 +1142,12 @@ pub fn catch_with_exit_code(f: impl FnOnce() -> interface::Result<()>) -> i32 {
     }
 }
 
-lazy_static! {
-    static ref DEFAULT_HOOK: Box<dyn Fn(&panic::PanicInfo<'_>) + Sync + Send + 'static> = {
+static DEFAULT_HOOK: SyncLazy<Box<dyn Fn(&panic::PanicInfo<'_>) + Sync + Send + 'static>> =
+    SyncLazy::new(|| {
         let hook = panic::take_hook();
         panic::set_hook(Box::new(|info| report_ice(info, BUG_REPORT_URL)));
         hook
-    };
-}
+    });
 
 /// Prints the ICE message, including backtrace and query stack.
 ///
@@ -1223,7 +1222,7 @@ pub fn report_ice(info: &panic::PanicInfo<'_>, bug_report_url: &str) {
 ///
 /// A custom rustc driver can skip calling this to set up a custom ICE hook.
 pub fn install_ice_hook() {
-    lazy_static::initialize(&DEFAULT_HOOK);
+    SyncLazy::force(&DEFAULT_HOOK);
 }
 
 /// This allows tools to enable rust logging without having to magically match rustc's
