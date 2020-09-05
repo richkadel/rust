@@ -63,8 +63,7 @@ use core::iter::{
 };
 use core::marker::PhantomData;
 use core::mem::{self, ManuallyDrop, MaybeUninit};
-use core::ops::Bound::{Excluded, Included, Unbounded};
-use core::ops::{self, Index, IndexMut, RangeBounds};
+use core::ops::{self, Index, IndexMut, Range, RangeBounds};
 use core::ptr::{self, NonNull};
 use core::slice::{self, SliceIndex};
 
@@ -160,7 +159,7 @@ use crate::raw_vec::RawVec;
 /// # Slicing
 ///
 /// A `Vec` can be mutable. Slices, on the other hand, are read-only objects.
-/// To get a slice, use `&`. Example:
+/// To get a [slice], use [`&`]. Example:
 ///
 /// ```
 /// fn read_slice(slice: &[usize]) {
@@ -288,6 +287,8 @@ use crate::raw_vec::RawVec;
 /// [`insert`]: Vec::insert
 /// [`reserve`]: Vec::reserve
 /// [owned slice]: Box
+/// [slice]: ../../std/primitive.slice.html
+/// [`&`]: ../../std/primitive.reference.html
 #[stable(feature = "rust1", since = "1.0.0")]
 #[cfg_attr(not(test), rustc_diagnostic_item = "vec_type")]
 pub struct Vec<T> {
@@ -1306,35 +1307,7 @@ impl<T> Vec<T> {
         // the hole, and the vector length is restored to the new length.
         //
         let len = self.len();
-        let start = match range.start_bound() {
-            Included(&n) => n,
-            Excluded(&n) => n + 1,
-            Unbounded => 0,
-        };
-        let end = match range.end_bound() {
-            Included(&n) => n + 1,
-            Excluded(&n) => n,
-            Unbounded => len,
-        };
-
-        #[cold]
-        #[inline(never)]
-        fn start_assert_failed(start: usize, end: usize) -> ! {
-            panic!("start drain index (is {}) should be <= end drain index (is {})", start, end);
-        }
-
-        #[cold]
-        #[inline(never)]
-        fn end_assert_failed(end: usize, len: usize) -> ! {
-            panic!("end drain index (is {}) should be <= len (is {})", end, len);
-        }
-
-        if start > end {
-            start_assert_failed(start, end);
-        }
-        if end > len {
-            end_assert_failed(end, len);
-        }
+        let Range { start, end } = self.check_range(range);
 
         unsafe {
             // set self.vec length's to start, to be safe in case Drain is leaked
