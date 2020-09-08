@@ -66,7 +66,6 @@ impl<T> [T] {
     #[rustc_const_stable(feature = "const_slice_len", since = "1.32.0")]
     #[inline]
     // SAFETY: const sound because we transmute out the length field as a usize (which it must be)
-    #[allow(unused_attributes)]
     #[allow_internal_unstable(const_fn_union)]
     pub const fn len(&self) -> usize {
         // SAFETY: this is safe because `&[T]` and `FatPtr<T>` have the same layout.
@@ -399,7 +398,7 @@ impl<T> [T] {
     ///
     /// [`Index::index`]: ops::Index::index
     #[track_caller]
-    #[unstable(feature = "slice_check_range", issue = "none")]
+    #[unstable(feature = "slice_check_range", issue = "76393")]
     pub fn check_range<R: RangeBounds<usize>>(&self, range: R) -> Range<usize> {
         let start = match range.start_bound() {
             Bound::Included(&start) => start,
@@ -3358,8 +3357,9 @@ mod private_slice_index {
     on(T = "str", label = "string indices are ranges of `usize`",),
     on(
         all(any(T = "str", T = "&str", T = "std::string::String"), _Self = "{integer}"),
-        note = "you can use `.chars().nth()` or `.bytes().nth()`
-see chapter in The Book <https://doc.rust-lang.org/book/ch08-02-strings.html#indexing-into-strings>"
+        note = "you can use `.chars().nth()` or `.bytes().nth()`\n\
+                for more information, see chapter 8 in The Book: \
+                <https://doc.rust-lang.org/book/ch08-02-strings.html#indexing-into-strings>"
     ),
     message = "the type `{T}` cannot be indexed by `{Self}`",
     label = "slice indices are of type `usize` or ranges of `usize`"
