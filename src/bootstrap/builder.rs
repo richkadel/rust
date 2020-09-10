@@ -797,7 +797,7 @@ impl<'a> Builder<'a> {
         if cmd == "doc" || cmd == "rustdoc" {
             let my_out = match mode {
                 // This is the intended out directory for compiler documentation.
-                Mode::Rustc | Mode::ToolRustc | Mode::Codegen => self.compiler_doc_out(target),
+                Mode::Rustc | Mode::ToolRustc => self.compiler_doc_out(target),
                 Mode::Std => out_dir.join(target.triple).join("doc"),
                 _ => panic!("doc mode {:?} not expected", mode),
             };
@@ -812,7 +812,7 @@ impl<'a> Builder<'a> {
             format!("CARGO_PROFILE_{}_{}", profile, name)
         };
 
-        // See comment in librustc_llvm/build.rs for why this is necessary, largely llvm-config
+        // See comment in rustc_llvm/build.rs for why this is necessary, largely llvm-config
         // needs to not accidentally link to libLLVM in stage0/lib.
         cargo.env("REAL_LIBRARY_PATH_VAR", &util::dylib_path_var());
         if let Some(e) = env::var_os(util::dylib_path_var()) {
@@ -829,9 +829,9 @@ impl<'a> Builder<'a> {
         // scripts can do less work (i.e. not building/requiring LLVM).
         if cmd == "check" || cmd == "clippy" || cmd == "fix" {
             // If we've not yet built LLVM, or it's stale, then bust
-            // the librustc_llvm cache. That will always work, even though it
+            // the rustc_llvm cache. That will always work, even though it
             // may mean that on the next non-check build we'll need to rebuild
-            // librustc_llvm. But if LLVM is stale, that'll be a tiny amount
+            // rustc_llvm. But if LLVM is stale, that'll be a tiny amount
             // of work comparitively, and we'd likely need to rebuild it anyway,
             // so that's okay.
             if crate::native::prebuilt_llvm_config(self, target).is_err() {
@@ -875,7 +875,7 @@ impl<'a> Builder<'a> {
 
         match mode {
             Mode::Std | Mode::ToolBootstrap | Mode::ToolStd => {}
-            Mode::Rustc | Mode::Codegen | Mode::ToolRustc => {
+            Mode::Rustc | Mode::ToolRustc => {
                 // Build proc macros both for the host and the target
                 if target != compiler.host && cmd != "check" {
                     cargo.arg("-Zdual-proc-macros");
@@ -1060,7 +1060,7 @@ impl<'a> Builder<'a> {
         }
 
         let debuginfo_level = match mode {
-            Mode::Rustc | Mode::Codegen => self.config.rust_debuginfo_level_rustc,
+            Mode::Rustc => self.config.rust_debuginfo_level_rustc,
             Mode::Std => self.config.rust_debuginfo_level_std,
             Mode::ToolBootstrap | Mode::ToolStd | Mode::ToolRustc => {
                 self.config.rust_debuginfo_level_tools
@@ -1197,7 +1197,7 @@ impl<'a> Builder<'a> {
             rustdocflags.arg("-Winvalid_codeblock_attributes");
         }
 
-        if let Mode::Rustc | Mode::Codegen = mode {
+        if mode == Mode::Rustc {
             rustflags.arg("-Zunstable-options");
             rustflags.arg("-Wrustc::internal");
         }
@@ -1360,7 +1360,7 @@ impl<'a> Builder<'a> {
         // When we build Rust dylibs they're all intended for intermediate
         // usage, so make sure we pass the -Cprefer-dynamic flag instead of
         // linking all deps statically into the dylib.
-        if let Mode::Std | Mode::Rustc | Mode::Codegen = mode {
+        if matches!(mode, Mode::Std | Mode::Rustc) {
             rustflags.arg("-Cprefer-dynamic");
         }
 
