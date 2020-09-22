@@ -45,7 +45,7 @@ impl Step for Std {
 
     fn make_run(run: RunConfig<'_>) {
         run.builder.ensure(Std {
-            compiler: run.builder.compiler(run.builder.top_stage, run.host),
+            compiler: run.builder.compiler(run.builder.top_stage, run.build_triple()),
             target: run.target,
         });
     }
@@ -385,7 +385,7 @@ impl Step for StartupObjects {
 
     fn make_run(run: RunConfig<'_>) {
         run.builder.ensure(StartupObjects {
-            compiler: run.builder.compiler(run.builder.top_stage, run.host),
+            compiler: run.builder.compiler(run.builder.top_stage, run.build_triple()),
             target: run.target,
         });
     }
@@ -454,7 +454,7 @@ impl Step for Rustc {
 
     fn make_run(run: RunConfig<'_>) {
         run.builder.ensure(Rustc {
-            compiler: run.builder.compiler(run.builder.top_stage, run.host),
+            compiler: run.builder.compiler(run.builder.top_stage, run.build_triple()),
             target: run.target,
         });
     }
@@ -593,7 +593,7 @@ pub fn rustc_cargo_env(builder: &Builder<'_>, cargo: &mut Cargo, target: TargetS
             let file = compiler_file(builder, builder.cxx(target).unwrap(), target, "libstdc++.a");
             cargo.env("LLVM_STATIC_STDCPP", file);
         }
-        if builder.config.llvm_link_shared || builder.config.llvm_thin_lto {
+        if builder.config.llvm_link_shared {
             cargo.env("LLVM_LINK_SHARED", "1");
         }
         if builder.config.llvm_use_libcxx {

@@ -581,9 +581,9 @@ impl OutputFilenames {
 
         if !ext.is_empty() {
             if !extension.is_empty() {
-                extension.push_str(".");
+                extension.push('.');
                 extension.push_str(RUST_CGU_EXT);
-                extension.push_str(".");
+                extension.push('.');
             }
 
             extension.push_str(ext);
@@ -818,10 +818,11 @@ pub fn build_configuration(sess: &Session, mut user_cfg: CrateConfig) -> CrateCo
     user_cfg
 }
 
-pub fn build_target_config(opts: &Options, error_format: ErrorOutputType) -> Config {
-    let target = Target::search(&opts.target_triple).unwrap_or_else(|e| {
+pub fn build_target_config(opts: &Options, target_override: Option<Target>) -> Config {
+    let target_result = target_override.map_or_else(|| Target::search(&opts.target_triple), Ok);
+    let target = target_result.unwrap_or_else(|e| {
         early_error(
-            error_format,
+            opts.error_format,
             &format!(
                 "Error loading target specification: {}. \
             Use `--print target-list` for a list of built-in targets",
@@ -835,7 +836,7 @@ pub fn build_target_config(opts: &Options, error_format: ErrorOutputType) -> Con
         "32" => 32,
         "64" => 64,
         w => early_error(
-            error_format,
+            opts.error_format,
             &format!(
                 "target specification was invalid: \
              unrecognized target-pointer-width {}",
@@ -1760,6 +1761,10 @@ pub fn build_session_options(matches: &getopts::Matches) -> Options {
         // multiple runs, including some changes to source code; so mangled names must be consistent
         // across compilations.
         debugging_opts.symbol_mangling_version = SymbolManglingVersion::V0;
+    }
+
+    if let Ok(graphviz_font) = std::env::var("RUSTC_GRAPHVIZ_FONT") {
+        debugging_opts.graphviz_font = graphviz_font;
     }
 
     if !cg.embed_bitcode {

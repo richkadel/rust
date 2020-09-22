@@ -16,6 +16,7 @@ use std::borrow::Cow;
 pub mod add_call_guards;
 pub mod add_moves_for_packed_drops;
 pub mod add_retag;
+pub mod check_const_item_mutation;
 pub mod check_consts;
 pub mod check_packed_ref;
 pub mod check_unsafety;
@@ -23,7 +24,9 @@ pub mod cleanup_post_borrowck;
 pub mod const_prop;
 pub mod copy_prop;
 pub mod deaggregator;
+pub mod dest_prop;
 pub mod dump_mir;
+pub mod early_otherwise_branch;
 pub mod elaborate_drops;
 pub mod generator;
 pub mod inline;
@@ -307,6 +310,7 @@ fn mir_const<'tcx>(
         &[&[
             // MIR-level lints.
             &check_packed_ref::CheckPackedRef,
+            &check_const_item_mutation::CheckConstItemMutation,
             // What we need to do constant evaluation.
             &simplify::SimplifyCfg::new("initial"),
             &rustc_peek::SanityCheck,
@@ -327,7 +331,11 @@ fn mir_promoted(
     // this point, before we steal the mir-const result.
     // Also this means promotion can rely on all const checks having been done.
     let _ = tcx.mir_const_qualif_opt_const_arg(def);
-
+    let _ = if let Some(param_did) = def.const_param_did {
+        tcx.mir_abstract_const_of_const_arg((def.did, param_did))
+    } else {
+        tcx.mir_abstract_const(def.did.to_def_id())
+    };
     let mut body = tcx.mir_const(def).steal();
 
     let mut required_consts = Vec::new();
@@ -458,9 +466,11 @@ fn run_optimization_passes<'tcx>(
         &instcombine::InstCombine,
         &const_prop::ConstProp,
         &simplify_branches::SimplifyBranches::new("after-const-prop"),
+        &early_otherwise_branch::EarlyOtherwiseBranch,
         &simplify_comparison_integral::SimplifyComparisonIntegral,
         &simplify_try::SimplifyArmIdentity,
         &simplify_try::SimplifyBranchSame,
+        &dest_prop::DestinationPropagation,
         &copy_prop::CopyPropagation,
         &simplify_branches::SimplifyBranches::new("after-copy-prop"),
         &remove_noop_landing_pads::RemoveNoopLandingPads,

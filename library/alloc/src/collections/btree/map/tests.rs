@@ -88,6 +88,11 @@ impl<'a, K: 'a, V: 'a> BTreeMap<K, V> {
                     let min_len = if is_root { 1 } else { node::MIN_LEN };
                     assert!(node.len() >= min_len, "{} < {}", node.len(), min_len);
 
+                    for idx in 0..=node.len() {
+                        let edge = unsafe { node::Handle::new_edge(node, idx) };
+                        assert!(edge.descend().ascend().ok().unwrap() == edge);
+                    }
+
                     internal_length += node.len();
                 }
                 Position::InternalKV(kv) => {
@@ -1419,6 +1424,146 @@ fn test_variance() {
 }
 
 #[test]
+#[allow(dead_code)]
+fn test_sync() {
+    fn map<T: Sync>(v: &BTreeMap<T, T>) -> impl Sync + '_ {
+        v
+    }
+
+    fn into_iter<T: Sync>(v: BTreeMap<T, T>) -> impl Sync {
+        v.into_iter()
+    }
+
+    fn into_keys<T: Sync + Ord>(v: BTreeMap<T, T>) -> impl Sync {
+        v.into_keys()
+    }
+
+    fn into_values<T: Sync + Ord>(v: BTreeMap<T, T>) -> impl Sync {
+        v.into_values()
+    }
+
+    fn drain_filter<T: Sync + Ord>(v: &mut BTreeMap<T, T>) -> impl Sync + '_ {
+        v.drain_filter(|_, _| false)
+    }
+
+    fn iter<T: Sync>(v: &BTreeMap<T, T>) -> impl Sync + '_ {
+        v.iter()
+    }
+
+    fn iter_mut<T: Sync>(v: &mut BTreeMap<T, T>) -> impl Sync + '_ {
+        v.iter_mut()
+    }
+
+    fn keys<T: Sync>(v: &BTreeMap<T, T>) -> impl Sync + '_ {
+        v.keys()
+    }
+
+    fn values<T: Sync>(v: &BTreeMap<T, T>) -> impl Sync + '_ {
+        v.values()
+    }
+
+    fn values_mut<T: Sync>(v: &mut BTreeMap<T, T>) -> impl Sync + '_ {
+        v.values_mut()
+    }
+
+    fn range<T: Sync + Ord>(v: &BTreeMap<T, T>) -> impl Sync + '_ {
+        v.range(..)
+    }
+
+    fn range_mut<T: Sync + Ord>(v: &mut BTreeMap<T, T>) -> impl Sync + '_ {
+        v.range_mut(..)
+    }
+
+    fn entry<T: Sync + Ord + Default>(v: &mut BTreeMap<T, T>) -> impl Sync + '_ {
+        v.entry(Default::default())
+    }
+
+    fn occupied_entry<T: Sync + Ord + Default>(v: &mut BTreeMap<T, T>) -> impl Sync + '_ {
+        match v.entry(Default::default()) {
+            Occupied(entry) => entry,
+            _ => unreachable!(),
+        }
+    }
+
+    fn vacant_entry<T: Sync + Ord + Default>(v: &mut BTreeMap<T, T>) -> impl Sync + '_ {
+        match v.entry(Default::default()) {
+            Vacant(entry) => entry,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[test]
+#[allow(dead_code)]
+fn test_send() {
+    fn map<T: Send>(v: BTreeMap<T, T>) -> impl Send {
+        v
+    }
+
+    fn into_iter<T: Send>(v: BTreeMap<T, T>) -> impl Send {
+        v.into_iter()
+    }
+
+    fn into_keys<T: Send + Ord>(v: BTreeMap<T, T>) -> impl Send {
+        v.into_keys()
+    }
+
+    fn into_values<T: Send + Ord>(v: BTreeMap<T, T>) -> impl Send {
+        v.into_values()
+    }
+
+    fn drain_filter<T: Send + Ord>(v: &mut BTreeMap<T, T>) -> impl Send + '_ {
+        v.drain_filter(|_, _| false)
+    }
+
+    fn iter<T: Send + Sync>(v: &BTreeMap<T, T>) -> impl Send + '_ {
+        v.iter()
+    }
+
+    fn iter_mut<T: Send + Sync>(v: &mut BTreeMap<T, T>) -> impl Send + '_ {
+        v.iter_mut()
+    }
+
+    fn keys<T: Send + Sync>(v: &BTreeMap<T, T>) -> impl Send + '_ {
+        v.keys()
+    }
+
+    fn values<T: Send + Sync>(v: &BTreeMap<T, T>) -> impl Send + '_ {
+        v.values()
+    }
+
+    fn values_mut<T: Send + Sync>(v: &mut BTreeMap<T, T>) -> impl Send + '_ {
+        v.values_mut()
+    }
+
+    fn range<T: Send + Sync + Ord>(v: &BTreeMap<T, T>) -> impl Send + '_ {
+        v.range(..)
+    }
+
+    fn range_mut<T: Send + Sync + Ord>(v: &mut BTreeMap<T, T>) -> impl Send + '_ {
+        v.range_mut(..)
+    }
+
+    fn entry<T: Send + Ord + Default>(v: &mut BTreeMap<T, T>) -> impl Send + '_ {
+        v.entry(Default::default())
+    }
+
+    fn occupied_entry<T: Send + Ord + Default>(v: &mut BTreeMap<T, T>) -> impl Send + '_ {
+        match v.entry(Default::default()) {
+            Occupied(entry) => entry,
+            _ => unreachable!(),
+        }
+    }
+
+    fn vacant_entry<T: Send + Ord + Default>(v: &mut BTreeMap<T, T>) -> impl Send + '_ {
+        match v.entry(Default::default()) {
+            Vacant(entry) => entry,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[test]
 fn test_occupied_entry_key() {
     let mut a = BTreeMap::new();
     let key = "hello there";
@@ -1705,4 +1850,18 @@ fn test_into_values() {
     assert!(values.contains(&'a'));
     assert!(values.contains(&'b'));
     assert!(values.contains(&'c'));
+}
+
+#[test]
+fn test_insert_remove_intertwined() {
+    let loops = if cfg!(miri) { 100 } else { 1_000_000 };
+    let mut map = BTreeMap::new();
+    let mut i = 1;
+    for _ in 0..loops {
+        i = (i + 421) & 0xFF;
+        map.insert(i, i);
+        map.remove(&(0xFF - i));
+    }
+
+    map.check();
 }

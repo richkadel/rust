@@ -37,11 +37,12 @@ use rustc_middle::hir::map::Map;
 use rustc_middle::middle::codegen_fn_attrs::{CodegenFnAttrFlags, CodegenFnAttrs};
 use rustc_middle::mir::mono::Linkage;
 use rustc_middle::ty::query::Providers;
-use rustc_middle::ty::subst::InternalSubsts;
+use rustc_middle::ty::subst::{InternalSubsts, SubstsRef};
 use rustc_middle::ty::util::Discr;
 use rustc_middle::ty::util::IntTypeExt;
 use rustc_middle::ty::{self, AdtKind, Const, ToPolyTraitRef, Ty, TyCtxt};
 use rustc_middle::ty::{ReprOptions, ToPredicate, WithConstness};
+use rustc_middle::ty::{TypeFoldable, TypeVisitor};
 use rustc_session::config::SanitizerSet;
 use rustc_session::lint;
 use rustc_session::parse::feature_err;
@@ -49,6 +50,8 @@ use rustc_span::symbol::{kw, sym, Ident, Symbol};
 use rustc_span::{Span, DUMMY_SP};
 use rustc_target::spec::abi;
 use rustc_trait_selection::traits::error_reporting::suggestions::NextTypeParamName;
+
+use smallvec::SmallVec;
 
 mod type_of;
 
@@ -1672,8 +1675,46 @@ fn predicates_defined_on(tcx: TyCtxt<'_>, def_id: DefId) -> ty::GenericPredicate
                 .alloc_from_iter(result.predicates.iter().chain(inferred_outlives).copied());
         }
     }
+
+    if tcx.features().const_evaluatable_checked {
+        let const_evaluatable = const_evaluatable_predicates_of(tcx, def_id, &result);
+        result.predicates =
+            tcx.arena.alloc_from_iter(result.predicates.iter().copied().chain(const_evaluatable));
+    }
+
     debug!("predicates_defined_on({:?}) = {:?}", def_id, result);
     result
+}
+
+pub fn const_evaluatable_predicates_of<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    def_id: DefId,
+    predicates: &ty::GenericPredicates<'tcx>,
+) -> impl Iterator<Item = (ty::Predicate<'tcx>, Span)> {
+    #[derive(Default)]
+    struct ConstCollector<'tcx> {
+        ct: SmallVec<[(ty::WithOptConstParam<DefId>, SubstsRef<'tcx>, Span); 4]>,
+        curr_span: Span,
+    }
+
+    impl<'tcx> TypeVisitor<'tcx> for ConstCollector<'tcx> {
+        fn visit_const(&mut self, ct: &'tcx Const<'tcx>) -> bool {
+            if let ty::ConstKind::Unevaluated(def, substs, None) = ct.val {
+                self.ct.push((def, substs, self.curr_span));
+            }
+            false
+        }
+    }
+
+    let mut collector = ConstCollector::default();
+    for &(pred, span) in predicates.predicates.iter() {
+        collector.curr_span = span;
+        pred.visit_with(&mut collector);
+    }
+    warn!("const_evaluatable_predicates_of({:?}) = {:?}", def_id, collector.ct);
+    collector.ct.into_iter().map(move |(def_id, subst, span)| {
+        (ty::PredicateAtom::ConstEvaluatable(def_id, subst).to_predicate(tcx), span)
+    })
 }
 
 /// Returns a list of all type predicates (explicit and implicit) for the definition with
@@ -2302,8 +2343,8 @@ fn from_target_feature(
                         item.span(),
                         format!("`{}` is not valid for this target", feature),
                     );
-                    if feature.starts_with('+') {
-                        let valid = supported_target_features.contains_key(&feature[1..]);
+                    if let Some(stripped) = feature.strip_prefix('+') {
+                        let valid = supported_target_features.contains_key(stripped);
                         if valid {
                             err.help("consider removing the leading `+` in the feature name");
                         }
@@ -2322,7 +2363,6 @@ fn from_target_feature(
                 Some(sym::mips_target_feature) => rust_features.mips_target_feature,
                 Some(sym::riscv_target_feature) => rust_features.riscv_target_feature,
                 Some(sym::avx512_target_feature) => rust_features.avx512_target_feature,
-                Some(sym::mmx_target_feature) => rust_features.mmx_target_feature,
                 Some(sym::sse4a_target_feature) => rust_features.sse4a_target_feature,
                 Some(sym::tbm_target_feature) => rust_features.tbm_target_feature,
                 Some(sym::wasm_target_feature) => rust_features.wasm_target_feature,
@@ -2486,10 +2526,17 @@ fn codegen_fn_attrs(tcx: TyCtxt<'_>, id: DefId) -> CodegenFnAttrs {
                 codegen_fn_attrs.export_name = Some(s);
             }
         } else if tcx.sess.check_name(attr, sym::target_feature) {
-            if !tcx.features().target_feature_11 {
-                check_target_feature_safe_fn(tcx, id, attr.span);
-            } else if let Some(local_id) = id.as_local() {
-                if tcx.fn_sig(id).unsafety() == hir::Unsafety::Normal {
+            if !tcx.is_closure(id) && tcx.fn_sig(id).unsafety() == hir::Unsafety::Normal {
+                if !tcx.features().target_feature_11 {
+                    let mut err = feature_err(
+                        &tcx.sess.parse_sess,
+                        sym::target_feature_11,
+                        attr.span,
+                        "`#[target_feature(..)]` can only be applied to `unsafe` functions",
+                    );
+                    err.span_label(tcx.def_span(id), "not an `unsafe` function");
+                    err.emit();
+                } else if let Some(local_id) = id.as_local() {
                     check_target_feature_trait_unsafe(tcx, local_id, attr.span);
                 }
             }
@@ -2743,21 +2790,6 @@ fn check_link_name_xor_ordinal(
         tcx.sess.span_err(span, msg);
     } else {
         tcx.sess.err(msg);
-    }
-}
-
-/// Checks the function annotated with `#[target_feature]` is unsafe,
-/// reporting an error if it isn't.
-fn check_target_feature_safe_fn(tcx: TyCtxt<'_>, id: DefId, attr_span: Span) {
-    if tcx.is_closure(id) || tcx.fn_sig(id).unsafety() == hir::Unsafety::Normal {
-        let mut err = feature_err(
-            &tcx.sess.parse_sess,
-            sym::target_feature_11,
-            attr_span,
-            "`#[target_feature(..)]` can only be applied to `unsafe` functions",
-        );
-        err.span_label(tcx.def_span(id), "not an `unsafe` function");
-        err.emit();
     }
 }
 

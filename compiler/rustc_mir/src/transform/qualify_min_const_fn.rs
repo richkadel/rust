@@ -1,4 +1,3 @@
-use rustc_attr as attr;
 use rustc_hir as hir;
 use rustc_hir::def_id::DefId;
 use rustc_middle::mir::*;
@@ -30,7 +29,8 @@ pub fn is_min_const_fn(tcx: TyCtxt<'tcx>, def_id: DefId, body: &'a Body<'tcx>) -
                 | ty::PredicateAtom::WellFormed(_)
                 | ty::PredicateAtom::Projection(_)
                 | ty::PredicateAtom::ConstEvaluatable(..)
-                | ty::PredicateAtom::ConstEquate(..) => continue,
+                | ty::PredicateAtom::ConstEquate(..)
+                | ty::PredicateAtom::TypeWellFormedFromEnv(..) => continue,
                 ty::PredicateAtom::ObjectSafe(_) => {
                     bug!("object safe predicate on function: {:#?}", predicate)
                 }
@@ -343,8 +343,7 @@ fn feature_allowed(tcx: TyCtxt<'tcx>, def_id: DefId, feature_gate: Symbol) -> bo
 
     // However, we cannot allow stable `const fn`s to use unstable features without an explicit
     // opt-in via `allow_internal_unstable`.
-    attr::allow_internal_unstable(&tcx.sess, &tcx.get_attrs(def_id))
-        .map_or(false, |mut features| features.any(|name| name == feature_gate))
+    super::check_consts::allow_internal_unstable(tcx, def_id, feature_gate)
 }
 
 /// Returns `true` if the given library feature gate is allowed within the function with the given `DefId`.
@@ -363,8 +362,7 @@ pub fn lib_feature_allowed(tcx: TyCtxt<'tcx>, def_id: DefId, feature_gate: Symbo
 
     // However, we cannot allow stable `const fn`s to use unstable features without an explicit
     // opt-in via `allow_internal_unstable`.
-    attr::allow_internal_unstable(&tcx.sess, &tcx.get_attrs(def_id))
-        .map_or(false, |mut features| features.any(|name| name == feature_gate))
+    super::check_consts::allow_internal_unstable(tcx, def_id, feature_gate)
 }
 
 fn check_terminator(

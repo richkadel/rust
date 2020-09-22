@@ -306,11 +306,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
     /// # }
     /// ```
     pub fn reserve(&mut self, len: usize, additional: usize) {
-        match self.try_reserve(len, additional) {
-            Err(CapacityOverflow) => capacity_overflow(),
-            Err(AllocError { layout, .. }) => handle_alloc_error(layout),
-            Ok(()) => { /* yay */ }
-        }
+        handle_reserve(self.try_reserve(len, additional));
     }
 
     /// The same as `reserve`, but returns on errors instead of panicking or aborting.
@@ -340,11 +336,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
     ///
     /// Aborts on OOM.
     pub fn reserve_exact(&mut self, len: usize, additional: usize) {
-        match self.try_reserve_exact(len, additional) {
-            Err(CapacityOverflow) => capacity_overflow(),
-            Err(AllocError { layout, .. }) => handle_alloc_error(layout),
-            Ok(()) => { /* yay */ }
-        }
+        handle_reserve(self.try_reserve_exact(len, additional));
     }
 
     /// The same as `reserve_exact`, but returns on errors instead of panicking or aborting.
@@ -367,11 +359,7 @@ impl<T, A: AllocRef> RawVec<T, A> {
     ///
     /// Aborts on OOM.
     pub fn shrink_to_fit(&mut self, amount: usize) {
-        match self.shrink(amount) {
-            Err(CapacityOverflow) => capacity_overflow(),
-            Err(AllocError { layout, .. }) => handle_alloc_error(layout),
-            Ok(()) => { /* yay */ }
-        }
+        handle_reserve(self.shrink(amount));
     }
 }
 
@@ -517,6 +505,16 @@ unsafe impl<#[may_dangle] T, A: AllocRef> Drop for RawVec<T, A> {
     }
 }
 
+// Central function for reserve error handling.
+#[inline]
+fn handle_reserve(result: Result<(), TryReserveError>) {
+    match result {
+        Err(CapacityOverflow) => capacity_overflow(),
+        Err(AllocError { layout, .. }) => handle_alloc_error(layout),
+        Ok(()) => { /* yay */ }
+    }
+}
+
 // We need to guarantee the following:
 // * We don't ever allocate `> isize::MAX` byte-size objects.
 // * We don't overflow `usize::MAX` and actually allocate too little.
@@ -528,7 +526,7 @@ unsafe impl<#[may_dangle] T, A: AllocRef> Drop for RawVec<T, A> {
 
 #[inline]
 fn alloc_guard(alloc_size: usize) -> Result<(), TryReserveError> {
-    if mem::size_of::<usize>() < 8 && alloc_size > isize::MAX as usize {
+    if usize::BITS < 64 && alloc_size > isize::MAX as usize {
         Err(CapacityOverflow)
     } else {
         Ok(())

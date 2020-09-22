@@ -355,6 +355,9 @@ impl<'a, 'b, 'tcx> ObligationProcessor for FulfillProcessor<'a, 'b, 'tcx> {
                         obligation.with(pred.to_predicate(self.selcx.tcx())),
                     ]))
                 }
+                ty::PredicateAtom::TypeWellFormedFromEnv(..) => {
+                    bug!("TypeWellFormedFromEnv is only used for Chalk")
+                }
             },
             &ty::PredicateKind::Atom(atom) => match atom {
                 ty::PredicateAtom::Trait(ref data, _) => {
@@ -473,6 +476,25 @@ impl<'a, 'b, 'tcx> ObligationProcessor for FulfillProcessor<'a, 'b, 'tcx> {
 
                 ty::PredicateAtom::ConstEquate(c1, c2) => {
                     debug!("equating consts: c1={:?} c2={:?}", c1, c2);
+                    if self.selcx.tcx().features().const_evaluatable_checked {
+                        // FIXME: we probably should only try to unify abstract constants
+                        // if the constants depend on generic parameters.
+                        //
+                        // Let's just see where this breaks :shrug:
+                        if let (
+                            ty::ConstKind::Unevaluated(a_def, a_substs, None),
+                            ty::ConstKind::Unevaluated(b_def, b_substs, None),
+                        ) = (c1.val, c2.val)
+                        {
+                            if self
+                                .selcx
+                                .tcx()
+                                .try_unify_abstract_consts(((a_def, a_substs), (b_def, b_substs)))
+                            {
+                                return ProcessResult::Changed(vec![]);
+                            }
+                        }
+                    }
 
                     let stalled_on = &mut pending_obligation.stalled_on;
 
@@ -535,6 +557,9 @@ impl<'a, 'b, 'tcx> ObligationProcessor for FulfillProcessor<'a, 'b, 'tcx> {
                             ProcessResult::Unchanged
                         }
                     }
+                }
+                ty::PredicateAtom::TypeWellFormedFromEnv(..) => {
+                    bug!("TypeWellFormedFromEnv is only used for Chalk")
                 }
             },
         }

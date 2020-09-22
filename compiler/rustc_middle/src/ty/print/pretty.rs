@@ -273,10 +273,10 @@ pub trait PrettyPrinter<'tcx>:
         }
 
         match self.tcx().trimmed_def_paths(LOCAL_CRATE).get(&def_id) {
-            None => return Ok((self, false)),
+            None => Ok((self, false)),
             Some(symbol) => {
                 self.write_str(&symbol.as_str())?;
-                return Ok((self, true));
+                Ok((self, true))
             }
         }
     }
@@ -1264,6 +1264,7 @@ pub struct FmtPrinterData<'a, 'tcx, F> {
     used_region_names: FxHashSet<Symbol>,
     region_index: usize,
     binder_depth: usize,
+    printed_type_count: usize,
 
     pub region_highlight_mode: RegionHighlightMode,
 
@@ -1294,6 +1295,7 @@ impl<F> FmtPrinter<'a, 'tcx, F> {
             used_region_names: Default::default(),
             region_index: 0,
             binder_depth: 0,
+            printed_type_count: 0,
             region_highlight_mode: RegionHighlightMode::default(),
             name_resolver: None,
         }))
@@ -1411,8 +1413,14 @@ impl<F: fmt::Write> Printer<'tcx> for FmtPrinter<'_, 'tcx, F> {
         self.pretty_print_region(region)
     }
 
-    fn print_type(self, ty: Ty<'tcx>) -> Result<Self::Type, Self::Error> {
-        self.pretty_print_type(ty)
+    fn print_type(mut self, ty: Ty<'tcx>) -> Result<Self::Type, Self::Error> {
+        if self.tcx.sess.type_length_limit().value_within_limit(self.printed_type_count) {
+            self.printed_type_count += 1;
+            self.pretty_print_type(ty)
+        } else {
+            write!(self, "...")?;
+            Ok(self)
+        }
     }
 
     fn print_dyn_existential(
@@ -2096,6 +2104,11 @@ define_print_and_forward_display! {
                 print(c2),
                 write("`"))
             }
+            ty::PredicateAtom::TypeWellFormedFromEnv(ty) => {
+                p!(write("the type `"),
+                print(ty),
+                write("` is found in the environment"))
+            }
         }
     }
 
@@ -2112,15 +2125,8 @@ fn for_each_def(tcx: TyCtxt<'_>, mut collect_fn: impl for<'b> FnMut(&'b Ident, N
     // Iterate all local crate items no matter where they are defined.
     let hir = tcx.hir();
     for item in hir.krate().items.values() {
-        if item.ident.name.as_str().is_empty() {
+        if item.ident.name.as_str().is_empty() || matches!(item.kind, ItemKind::Use(_, _)) {
             continue;
-        }
-
-        match item.kind {
-            ItemKind::Use(_, _) => {
-                continue;
-            }
-            _ => {}
         }
 
         if let Some(local_def_id) = hir.definitions().opt_hir_id_to_local_def_id(item.hir_id) {

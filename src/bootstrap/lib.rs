@@ -218,6 +218,9 @@ pub struct Build {
     /// User-specified configuration from `config.toml`.
     config: Config,
 
+    // Version information
+    version: String,
+
     // Properties derived from the above configuration
     src: PathBuf,
     out: PathBuf,
@@ -380,6 +383,10 @@ impl Build {
             .unwrap()
             .to_path_buf();
 
+        let version = std::fs::read_to_string(src.join("src").join("version"))
+            .expect("failed to read src/version");
+        let version = version.trim();
+
         let mut build = Build {
             initial_rustc: config.initial_rustc.clone(),
             initial_cargo: config.initial_cargo.clone(),
@@ -395,6 +402,7 @@ impl Build {
             targets: config.targets.clone(),
 
             config,
+            version: version.to_string(),
             src,
             out,
 
@@ -433,8 +441,7 @@ impl Build {
             .next()
             .unwrap()
             .trim();
-        let my_version = channel::CFG_RELEASE_NUM;
-        if local_release.split('.').take(2).eq(my_version.split('.').take(2)) {
+        if local_release.split('.').take(2).eq(version.split('.').take(2)) {
             build.verbose(&format!("auto-detected local-rebuild {}", local_release));
             build.local_rebuild = true;
         }
@@ -541,6 +548,16 @@ impl Build {
         if self.config.llvm_enabled() {
             features.push_str(" llvm");
         }
+
+        // If debug logging is on, then we want the default for tracing:
+        // https://github.com/tokio-rs/tracing/blob/3dd5c03d907afdf2c39444a29931833335171554/tracing/src/level_filters.rs#L26
+        // which is everything (including debug/trace/etc.)
+        // if its unset, if debug_assertions is on, then debug_logging will also be on
+        // as well as tracing *ignoring* this feature when debug_assertions is on
+        if !self.config.rust_debug_logging {
+            features.push_str(" max_level_info");
+        }
+
         features
     }
 
@@ -611,6 +628,10 @@ impl Build {
     ///
     /// If no custom `llvm-config` was specified then Rust's llvm will be used.
     fn is_rust_llvm(&self, target: TargetSelection) -> bool {
+        if self.config.llvm_from_ci && target == self.config.build {
+            return true;
+        }
+
         match self.config.target_config.get(&target) {
             Some(ref c) => c.llvm_config.is_none(),
             None => true,
@@ -771,7 +792,7 @@ impl Build {
 
         match which {
             GitRepo::Rustc => {
-                let sha = self.rust_sha().unwrap_or(channel::CFG_RELEASE_NUM);
+                let sha = self.rust_sha().unwrap_or(&self.version);
                 Some(format!("/rustc/{}", sha))
             }
             GitRepo::Llvm => Some(String::from("/rustc/llvm")),
@@ -844,7 +865,7 @@ impl Build {
     }
 
     /// Returns the path to the linker for the given target if it needs to be overridden.
-    fn linker(&self, target: TargetSelection, can_use_lld: bool) -> Option<&Path> {
+    fn linker(&self, target: TargetSelection) -> Option<&Path> {
         if let Some(linker) = self.config.target_config.get(&target).and_then(|c| c.linker.as_ref())
         {
             Some(linker)
@@ -857,16 +878,17 @@ impl Build {
             && !target.contains("msvc")
         {
             Some(self.cc(target))
-        } else if target.contains("msvc")
-            && can_use_lld
-            && self.config.use_lld
-            && self.build == target
-        {
-            // Currently we support using LLD directly via `rust.use_lld` option only with MSVC
+        } else if self.config.use_lld && !self.is_fuse_ld_lld(target) && self.build == target {
             Some(&self.initial_lld)
         } else {
             None
         }
+    }
+
+    // LLD is used through `-fuse-ld=lld` rather than directly.
+    // Only MSVC targets use LLD directly at the moment.
+    fn is_fuse_ld_lld(&self, target: TargetSelection) -> bool {
+        self.config.use_lld && !target.contains("msvc")
     }
 
     /// Returns if this target should statically link the C runtime, if specified
@@ -1001,7 +1023,7 @@ impl Build {
 
     /// Returns the value of `release` above for Rust itself.
     fn rust_release(&self) -> String {
-        self.release(channel::CFG_RELEASE_NUM)
+        self.release(&self.version)
     }
 
     /// Returns the "package version" for a component given the `num` release
@@ -1021,7 +1043,7 @@ impl Build {
 
     /// Returns the value of `package_vers` above for Rust itself.
     fn rust_package_vers(&self) -> String {
-        self.package_vers(channel::CFG_RELEASE_NUM)
+        self.package_vers(&self.version)
     }
 
     /// Returns the value of `package_vers` above for Cargo
@@ -1055,7 +1077,7 @@ impl Build {
     }
 
     fn llvm_tools_package_vers(&self) -> String {
-        self.package_vers(channel::CFG_RELEASE_NUM)
+        self.package_vers(&self.version)
     }
 
     fn llvm_tools_vers(&self) -> String {
@@ -1072,7 +1094,7 @@ impl Build {
     /// Note that this is a descriptive string which includes the commit date,
     /// sha, version, etc.
     fn rust_version(&self) -> String {
-        self.rust_info.version(self, channel::CFG_RELEASE_NUM)
+        self.rust_info.version(self, &self.version)
     }
 
     /// Returns the full commit hash.

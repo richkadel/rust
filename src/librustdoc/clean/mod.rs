@@ -23,7 +23,7 @@ use rustc_middle::middle::stability;
 use rustc_middle::ty::fold::TypeFolder;
 use rustc_middle::ty::subst::InternalSubsts;
 use rustc_middle::ty::{self, AdtKind, Lift, Ty, TyCtxt};
-use rustc_mir::const_eval::is_min_const_fn;
+use rustc_mir::const_eval::{is_const_fn, is_min_const_fn, is_unstable_const_fn};
 use rustc_span::hygiene::MacroKind;
 use rustc_span::symbol::{kw, sym, Ident, Symbol};
 use rustc_span::{self, Pos};
@@ -508,7 +508,8 @@ impl<'a> Clean<Option<WherePredicate>> for ty::Predicate<'a> {
             | ty::PredicateAtom::ObjectSafe(..)
             | ty::PredicateAtom::ClosureKind(..)
             | ty::PredicateAtom::ConstEvaluatable(..)
-            | ty::PredicateAtom::ConstEquate(..) => panic!("not user writable"),
+            | ty::PredicateAtom::ConstEquate(..)
+            | ty::PredicateAtom::TypeWellFormedFromEnv(..) => panic!("not user writable"),
         }
     }
 }
@@ -839,7 +840,7 @@ impl<'a, 'tcx> Clean<Generics> for (&'a ty::Generics, ty::GenericPredicates<'tcx
         let mut where_predicates =
             where_predicates.into_iter().flat_map(|p| p.clean(cx)).collect::<Vec<_>>();
 
-        // Type parameters and have a Sized bound by default unless removed with
+        // Type parameters have a Sized bound by default unless removed with
         // ?Sized. Scan through the predicates and mark any type parameter with
         // a Sized bound, removing the bounds as we find them.
         //
@@ -900,7 +901,9 @@ impl Clean<Item> for doctree::Function<'_> {
             enter_impl_trait(cx, || (self.generics.clean(cx), (self.decl, self.body).clean(cx)));
 
         let did = cx.tcx.hir().local_def_id(self.id);
-        let constness = if is_min_const_fn(cx.tcx, did.to_def_id()) {
+        let constness = if is_const_fn(cx.tcx, did.to_def_id())
+            && !is_unstable_const_fn(cx.tcx, did.to_def_id()).is_some()
+        {
             hir::Constness::Const
         } else {
             hir::Constness::NotConst
@@ -1108,7 +1111,7 @@ impl Clean<Item> for hir::TraitItem<'_> {
             hir::TraitItemKind::Fn(ref sig, hir::TraitFn::Provided(body)) => {
                 let mut m = (sig, &self.generics, body, None).clean(cx);
                 if m.header.constness == hir::Constness::Const
-                    && !is_min_const_fn(cx.tcx, local_did.to_def_id())
+                    && is_unstable_const_fn(cx.tcx, local_did.to_def_id()).is_some()
                 {
                     m.header.constness = hir::Constness::NotConst;
                 }
@@ -1121,7 +1124,7 @@ impl Clean<Item> for hir::TraitItem<'_> {
                 let (all_types, ret_types) = get_all_types(&generics, &decl, cx);
                 let mut t = TyMethod { header: sig.header, decl, generics, all_types, ret_types };
                 if t.header.constness == hir::Constness::Const
-                    && !is_min_const_fn(cx.tcx, local_did.to_def_id())
+                    && is_unstable_const_fn(cx.tcx, local_did.to_def_id()).is_some()
                 {
                     t.header.constness = hir::Constness::NotConst;
                 }
@@ -1154,7 +1157,7 @@ impl Clean<Item> for hir::ImplItem<'_> {
             hir::ImplItemKind::Fn(ref sig, body) => {
                 let mut m = (sig, &self.generics, body, Some(self.defaultness)).clean(cx);
                 if m.header.constness == hir::Constness::Const
-                    && !is_min_const_fn(cx.tcx, local_did.to_def_id())
+                    && is_unstable_const_fn(cx.tcx, local_did.to_def_id()).is_some()
                 {
                     m.header.constness = hir::Constness::NotConst;
                 }
@@ -1364,16 +1367,16 @@ impl Clean<Type> for hir::Ty<'_> {
             TyKind::Slice(ref ty) => Slice(box ty.clean(cx)),
             TyKind::Array(ref ty, ref length) => {
                 let def_id = cx.tcx.hir().local_def_id(length.hir_id);
-                let length = match cx.tcx.const_eval_poly(def_id.to_def_id()) {
-                    Ok(length) => {
-                        print_const(cx, ty::Const::from_value(cx.tcx, length, cx.tcx.types.usize))
-                    }
-                    Err(_) => cx
-                        .sess()
-                        .source_map()
-                        .span_to_snippet(cx.tcx.def_span(def_id))
-                        .unwrap_or_else(|_| "_".to_string()),
-                };
+                // NOTE(min_const_generics): We can't use `const_eval_poly` for constants
+                // as we currently do not supply the parent generics to anonymous constants
+                // but do allow `ConstKind::Param`.
+                //
+                // `const_eval_poly` tries to to first substitute generic parameters which
+                // results in an ICE while manually constructing the constant and using `eval`
+                // does nothing for `ConstKind::Param`.
+                let ct = ty::Const::from_anon_const(cx.tcx, def_id);
+                let param_env = cx.tcx.param_env(def_id);
+                let length = print_const(cx, ct.eval(cx.tcx, param_env));
                 Array(box ty.clean(cx), length)
             }
             TyKind::Tup(ref tys) => Tuple(tys.clean(cx)),

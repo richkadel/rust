@@ -26,14 +26,12 @@ use std::rc::Rc;
 
 pub use self::select::{EvaluationCache, EvaluationResult, OverflowError, SelectionCache};
 
-pub type ChalkCanonicalGoal<'tcx> = Canonical<'tcx, ChalkEnvironmentAndGoal<'tcx>>;
+pub type CanonicalChalkEnvironmentAndGoal<'tcx> = Canonical<'tcx, ChalkEnvironmentAndGoal<'tcx>>;
 
 pub use self::ImplSource::*;
 pub use self::ObligationCauseCode::*;
 
-pub use self::chalk::{
-    ChalkEnvironmentAndGoal, ChalkEnvironmentClause, RustInterner as ChalkRustInterner,
-};
+pub use self::chalk::{ChalkEnvironmentAndGoal, RustInterner as ChalkRustInterner};
 
 /// Depending on the stage of compilation, we want projection to be
 /// more or less conservative.
@@ -350,13 +348,16 @@ pub struct MatchExpressionArmCause<'tcx> {
     pub prior_arms: Vec<Span>,
     pub last_ty: Ty<'tcx>,
     pub scrut_hir_id: hir::HirId,
+    pub opt_suggest_box_span: Option<Span>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IfExpressionCause {
     pub then: Span,
+    pub else_sp: Span,
     pub outer: Option<Span>,
     pub semicolon: Option<Span>,
+    pub opt_suggest_box_span: Option<Span>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Lift)]

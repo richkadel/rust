@@ -11,8 +11,6 @@
 )]
 #![feature(nll)]
 #![feature(or_patterns)]
-#![feature(rustc_private)]
-#![feature(unicode_internals)]
 #![feature(bool_to_option)]
 
 pub use Alignment::*;
@@ -527,12 +525,9 @@ impl<'a> Parser<'a> {
 
         // fill character
         if let Some(&(_, c)) = self.cur.peek() {
-            match self.cur.clone().nth(1) {
-                Some((_, '>' | '<' | '^')) => {
-                    spec.fill = Some(c);
-                    self.cur.next();
-                }
-                _ => {}
+            if let Some((_, '>' | '<' | '^')) = self.cur.clone().nth(1) {
+                spec.fill = Some(c);
+                self.cur.next();
             }
         }
         // Alignment

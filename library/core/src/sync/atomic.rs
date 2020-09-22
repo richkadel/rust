@@ -816,8 +816,7 @@ impl<T> AtomicPtr<T> {
     #[inline]
     #[stable(feature = "atomic_access", since = "1.15.0")]
     pub fn get_mut(&mut self) -> &mut *mut T {
-        // SAFETY: the mutable reference guarantees unique ownership.
-        unsafe { &mut *self.p.get() }
+        self.p.get_mut()
     }
 
     /// Consumes the atomic and returns the contained value.
@@ -1104,6 +1103,13 @@ impl<T> From<*mut T> for AtomicPtr<T> {
     }
 }
 
+#[allow(unused_macros)] // This macro ends up being unused on some architectures.
+macro_rules! if_not_8_bit {
+    (u8, $($tt:tt)*) => { "" };
+    (i8, $($tt:tt)*) => { "" };
+    ($_:ident, $($tt:tt)*) => { $($tt)* };
+}
+
 #[cfg(target_has_atomic_load_store = "8")]
 macro_rules! atomic_int {
     ($cfg_cas:meta,
@@ -1115,7 +1121,7 @@ macro_rules! atomic_int {
      $stable_nand:meta,
      $const_stable:meta,
      $stable_init_const:meta,
-     $s_int_type:expr, $int_ref:expr,
+     $s_int_type:literal, $int_ref:expr,
      $extra_feature:expr,
      $min_fn:ident, $max_fn:ident,
      $align:expr,
@@ -1221,8 +1227,7 @@ assert_eq!(some_var.load(Ordering::SeqCst), 5);
                 #[inline]
                 #[$stable_access]
                 pub fn get_mut(&mut self) -> &mut $int_type {
-                    // SAFETY: the mutable reference guarantees unique ownership.
-                    unsafe { &mut *self.v.get() }
+                    self.v.get_mut()
                 }
             }
 

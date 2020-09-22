@@ -244,6 +244,35 @@ rustc_queries! {
             no_hash
         }
 
+        /// Try to build an abstract representation of the given constant.
+        query mir_abstract_const(
+            key: DefId
+        ) -> Option<&'tcx [mir::abstract_const::Node<'tcx>]> {
+            desc {
+                |tcx| "building an abstract representation for {}", tcx.def_path_str(key),
+            }
+        }
+        /// Try to build an abstract representation of the given constant.
+        query mir_abstract_const_of_const_arg(
+            key: (LocalDefId, DefId)
+        ) -> Option<&'tcx [mir::abstract_const::Node<'tcx>]> {
+            desc {
+                |tcx|
+                "building an abstract representation for the const argument {}",
+                tcx.def_path_str(key.0.to_def_id()),
+            }
+        }
+
+        query try_unify_abstract_consts(key: (
+            (ty::WithOptConstParam<DefId>, SubstsRef<'tcx>),
+            (ty::WithOptConstParam<DefId>, SubstsRef<'tcx>)
+        )) -> bool {
+            desc {
+                |tcx| "trying to unify the generic constants {} and {}",
+                tcx.def_path_str(key.0.0.did), tcx.def_path_str(key.1.0.did)
+            }
+        }
+
         query mir_drops_elaborated_and_const_checked(
             key: ty::WithOptConstParam<LocalDefId>
         ) -> &'tcx Steal<mir::Body<'tcx>> {
@@ -678,32 +707,27 @@ rustc_queries! {
     }
 
     Other {
-        /// Evaluates a constant without running sanity checks.
+        /// Evaluates a constant and returns the computed allocation.
         ///
-        /// **Do not use this** outside const eval. Const eval uses this to break query cycles
-        /// during validation. Please add a comment to every use site explaining why using
-        /// `const_eval_validated` isn't sufficient. The returned constant also isn't in a suitable
-        /// form to be used outside of const eval.
-        query const_eval_raw(key: ty::ParamEnvAnd<'tcx, GlobalId<'tcx>>)
-            -> ConstEvalRawResult<'tcx> {
+        /// **Do not use this** directly, use the `tcx.eval_static_initializer` wrapper.
+        query eval_to_allocation_raw(key: ty::ParamEnvAnd<'tcx, GlobalId<'tcx>>)
+            -> EvalToAllocationRawResult<'tcx> {
             desc { |tcx|
-                "const-evaluating `{}`",
+                "const-evaluating + checking `{}`",
                 key.value.display(tcx)
             }
         }
 
-        /// Results of evaluating const items or constants embedded in
-        /// other items (such as enum variant explicit discriminants).
-        ///
-        /// In contrast to `const_eval_raw` this performs some validation on the constant, and
-        /// returns a proper constant that is usable by the rest of the compiler.
+        /// Evaluates const items or anonymous constants
+        /// (such as enum variant explicit discriminants or array lengths)
+        /// into a representation suitable for the type system and const generics.
         ///
         /// **Do not use this** directly, use one of the following wrappers: `tcx.const_eval_poly`,
         /// `tcx.const_eval_resolve`, `tcx.const_eval_instance`, or `tcx.const_eval_global_id`.
-        query const_eval_validated(key: ty::ParamEnvAnd<'tcx, GlobalId<'tcx>>)
-            -> ConstEvalResult<'tcx> {
+        query eval_to_const_value_raw(key: ty::ParamEnvAnd<'tcx, GlobalId<'tcx>>)
+            -> EvalToConstValueResult<'tcx> {
             desc { |tcx|
-                "const-evaluating + checking `{}`",
+                "simplifying constant for the type system `{}`",
                 key.value.display(tcx)
             }
             cache_on_disk_if(_, opt_result) {
@@ -1399,7 +1423,7 @@ rustc_queries! {
         }
 
         query evaluate_goal(
-            goal: traits::ChalkCanonicalGoal<'tcx>
+            goal: traits::CanonicalChalkEnvironmentAndGoal<'tcx>
         ) -> Result<
             &'tcx Canonical<'tcx, canonical::QueryResponse<'tcx, ()>>,
             NoSolution
