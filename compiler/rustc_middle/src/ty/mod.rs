@@ -682,25 +682,31 @@ pub enum BorrowKind {
     /// implicit closure bindings. It is needed when the closure
     /// is borrowing or mutating a mutable referent, e.g.:
     ///
-    ///    let x: &mut isize = ...;
-    ///    let y = || *x += 5;
+    /// ```
+    /// let x: &mut isize = ...;
+    /// let y = || *x += 5;
+    /// ```
     ///
     /// If we were to try to translate this closure into a more explicit
     /// form, we'd encounter an error with the code as written:
     ///
-    ///    struct Env { x: & &mut isize }
-    ///    let x: &mut isize = ...;
-    ///    let y = (&mut Env { &x }, fn_ptr);  // Closure is pair of env and fn
-    ///    fn fn_ptr(env: &mut Env) { **env.x += 5; }
+    /// ```
+    /// struct Env { x: & &mut isize }
+    /// let x: &mut isize = ...;
+    /// let y = (&mut Env { &x }, fn_ptr);  // Closure is pair of env and fn
+    /// fn fn_ptr(env: &mut Env) { **env.x += 5; }
+    /// ```
     ///
     /// This is then illegal because you cannot mutate a `&mut` found
     /// in an aliasable location. To solve, you'd have to translate with
     /// an `&mut` borrow:
     ///
-    ///    struct Env { x: & &mut isize }
-    ///    let x: &mut isize = ...;
-    ///    let y = (&mut Env { &mut x }, fn_ptr); // changed from &x to &mut x
-    ///    fn fn_ptr(env: &mut Env) { **env.x += 5; }
+    /// ```
+    /// struct Env { x: & &mut isize }
+    /// let x: &mut isize = ...;
+    /// let y = (&mut Env { &mut x }, fn_ptr); // changed from &x to &mut x
+    /// fn fn_ptr(env: &mut Env) { **env.x += 5; }
+    /// ```
     ///
     /// Now the assignment to `**env.x` is legal, but creating a
     /// mutable pointer to `x` is not because `x` is not mutable. We
@@ -1745,9 +1751,6 @@ pub struct ParamEnv<'tcx> {
     ///
     /// Note: This is packed, use the reveal() method to access it.
     packed: CopyTaggedPtr<&'tcx List<Predicate<'tcx>>, traits::Reveal, true>,
-
-    /// FIXME: This field is not used, but removing it causes a performance degradation. See #76913.
-    unused_field: Option<DefId>,
 }
 
 unsafe impl rustc_data_structures::tagged_ptr::Tag for traits::Reveal {
@@ -1828,7 +1831,7 @@ impl<'tcx> ParamEnv<'tcx> {
     /// Construct a trait environment with the given set of predicates.
     #[inline]
     pub fn new(caller_bounds: &'tcx List<Predicate<'tcx>>, reveal: Reveal) -> Self {
-        ty::ParamEnv { packed: CopyTaggedPtr::new(caller_bounds, reveal), unused_field: None }
+        ty::ParamEnv { packed: CopyTaggedPtr::new(caller_bounds, reveal) }
     }
 
     pub fn with_user_facing(mut self) -> Self {
@@ -2675,7 +2678,7 @@ impl<'tcx> ClosureKind {
         }
     }
 
-    /// Returns `true` if this a type that impls this closure kind
+    /// Returns `true` if a type that impls this closure kind
     /// must also implement `other`.
     pub fn extends(self, other: ty::ClosureKind) -> bool {
         match (self, other) {

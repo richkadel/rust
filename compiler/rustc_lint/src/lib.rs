@@ -25,7 +25,7 @@
 //!
 //! This API is completely unstable and subject to change.
 
-#![doc(html_root_url = "https://doc.rust-lang.org/nightly/")]
+#![doc(html_root_url = "https://doc.rust-lang.org/nightly/nightly-rustc/")]
 #![cfg_attr(test, feature(test))]
 #![feature(array_windows)]
 #![feature(bool_to_option)]
@@ -305,6 +305,7 @@ fn register_builtins(store: &mut LintStore, no_interleave_lints: bool) {
     add_lint_group!(
         "rustdoc",
         BROKEN_INTRA_DOC_LINKS,
+        PRIVATE_INTRA_DOC_LINKS,
         INVALID_CODEBLOCK_ATTRIBUTES,
         MISSING_DOC_CODE_EXAMPLES,
         PRIVATE_DOC_TESTS

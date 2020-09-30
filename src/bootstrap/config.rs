@@ -66,12 +66,13 @@ pub struct Config {
     pub test_compare_mode: bool,
     pub llvm_libunwind: bool,
 
-    pub skip_only_host_steps: bool,
-
     pub on_fail: Option<String>,
     pub stage: u32,
     pub keep_stage: Vec<u32>,
+    pub keep_stage_std: Vec<u32>,
     pub src: PathBuf,
+    // defaults to `config.toml`
+    pub config: PathBuf,
     pub jobs: Option<u32>,
     pub cmd: Subcommand,
     pub incremental: bool,
@@ -512,6 +513,7 @@ impl Config {
         config.rust_codegen_backends = vec![INTERNER.intern_str("llvm")];
         config.deny_warnings = true;
         config.missing_tools = false;
+        config.config = PathBuf::from("config.toml");
 
         // set by bootstrap.py
         config.build = TargetSelection::from_user(&env!("BUILD_TRIPLE"));
@@ -539,6 +541,7 @@ impl Config {
         config.incremental = flags.incremental;
         config.dry_run = flags.dry_run;
         config.keep_stage = flags.keep_stage;
+        config.keep_stage_std = flags.keep_stage_std;
         config.bindir = "bin".into(); // default
         if let Some(value) = flags.deny_warnings {
             config.deny_warnings = value;
@@ -556,7 +559,7 @@ impl Config {
         let get_toml = |file: PathBuf| {
             use std::process;
 
-            let contents = t!(fs::read_to_string(&file), "configuration file did not exist");
+            let contents = t!(fs::read_to_string(&file), "`include` config not found");
             match toml::from_str(&contents) {
                 Ok(table) => table,
                 Err(err) => {
@@ -580,11 +583,6 @@ impl Config {
         config.changelog_seen = toml.changelog_seen;
 
         let build = toml.build.unwrap_or_default();
-
-        // If --target was specified but --host wasn't specified, don't run any host-only tests.
-        let has_hosts = build.host.is_some() || flags.host.is_some();
-        let has_targets = build.target.is_some() || flags.target.is_some();
-        config.skip_only_host_steps = !has_hosts && has_targets;
 
         config.hosts = if let Some(arg_host) = flags.host {
             arg_host
@@ -642,6 +640,7 @@ impl Config {
             | Subcommand::Clippy { .. }
             | Subcommand::Fix { .. }
             | Subcommand::Run { .. }
+            | Subcommand::Setup { .. }
             | Subcommand::Format { .. } => flags.stage.unwrap_or(0),
         };
 
@@ -666,6 +665,7 @@ impl Config {
                 | Subcommand::Clippy { .. }
                 | Subcommand::Fix { .. }
                 | Subcommand::Run { .. }
+                | Subcommand::Setup { .. }
                 | Subcommand::Format { .. } => {}
             }
         }

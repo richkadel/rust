@@ -7,6 +7,7 @@ use std::env;
 use std::path::PathBuf;
 use std::process;
 
+use build_helper::t;
 use getopts::Options;
 
 use crate::builder::Builder;
@@ -19,6 +20,7 @@ pub struct Flags {
     pub on_fail: Option<String>,
     pub stage: Option<u32>,
     pub keep_stage: Vec<u32>,
+    pub keep_stage_std: Vec<u32>,
 
     pub host: Option<Vec<TargetSelection>>,
     pub target: Option<Vec<TargetSelection>>,
@@ -88,6 +90,9 @@ pub enum Subcommand {
     Run {
         paths: Vec<PathBuf>,
     },
+    Setup {
+        path: String,
+    },
 }
 
 impl Default for Subcommand {
@@ -144,6 +149,13 @@ To learn more about a subcommand, run `./x.py <subcommand> -h`",
             (pass multiple times to keep e.g., both stages 0 and 1)",
             "N",
         );
+        opts.optmulti(
+            "",
+            "keep-stage-std",
+            "stage(s) of the standard library to keep without recompiling \
+            (pass multiple times to keep e.g., both stages 0 and 1)",
+            "N",
+        );
         opts.optopt("", "src", "path to the root of the rust checkout", "DIR");
         let j_msg = format!(
             "number of jobs to run in parallel; \
@@ -191,6 +203,7 @@ To learn more about a subcommand, run `./x.py <subcommand> -h`",
                 || (s == "install")
                 || (s == "run")
                 || (s == "r")
+                || (s == "setup")
         });
         let subcommand = match subcommand {
             Some(s) => s,
@@ -445,10 +458,21 @@ Arguments:
     At least a tool needs to be called.",
                 );
             }
+            "setup" => {
+                subcommand_help.push_str(
+                    "\n
+Arguments:
+    This subcommand accepts a 'profile' to use for builds. For example:
+
+        ./x.py setup library
+
+    The profile is optional and you will be prompted interactively if it is not given.",
+                );
+            }
             _ => {}
         };
         // Get any optional paths which occur after the subcommand
-        let paths = matches.free[1..].iter().map(|p| p.into()).collect::<Vec<PathBuf>>();
+        let mut paths = matches.free[1..].iter().map(|p| p.into()).collect::<Vec<PathBuf>>();
 
         let cfg_file = env::var_os("BOOTSTRAP_CONFIG").map(PathBuf::from);
         let verbose = matches.opt_present("verbose");
@@ -500,6 +524,20 @@ Arguments:
                 }
                 Subcommand::Run { paths }
             }
+            "setup" => {
+                let path = if paths.len() > 1 {
+                    println!("\nat most one profile can be passed to setup\n");
+                    usage(1, &opts, verbose, &subcommand_help)
+                } else if let Some(path) = paths.pop() {
+                    t!(path.into_os_string().into_string().map_err(|path| format!(
+                        "{} is not a valid UTF8 string",
+                        path.to_string_lossy()
+                    )))
+                } else {
+                    t!(crate::setup::interactive_path())
+                };
+                Subcommand::Setup { path }
+            }
             _ => {
                 usage(1, &opts, verbose, &subcommand_help);
             }
@@ -510,7 +548,9 @@ Arguments:
                 println!("--stage not supported for x.py check, always treated as stage 0");
                 process::exit(1);
             }
-            if matches.opt_str("keep-stage").is_some() {
+            if matches.opt_str("keep-stage").is_some()
+                || matches.opt_str("keep-stage-std").is_some()
+            {
                 println!("--keep-stage not supported for x.py check, only one stage available");
                 process::exit(1);
             }
@@ -527,6 +567,11 @@ Arguments:
                 .opt_strs("keep-stage")
                 .into_iter()
                 .map(|j| j.parse().expect("`keep-stage` should be a number"))
+                .collect(),
+            keep_stage_std: matches
+                .opt_strs("keep-stage-std")
+                .into_iter()
+                .map(|j| j.parse().expect("`keep-stage-std` should be a number"))
                 .collect(),
             host: if matches.opt_present("host") {
                 Some(
@@ -634,7 +679,7 @@ impl Subcommand {
 }
 
 fn split(s: &[String]) -> Vec<String> {
-    s.iter().flat_map(|s| s.split(',')).map(|s| s.to_string()).collect()
+    s.iter().flat_map(|s| s.split(',')).filter(|s| !s.is_empty()).map(|s| s.to_string()).collect()
 }
 
 fn parse_deny_warnings(matches: &getopts::Matches) -> Option<bool> {

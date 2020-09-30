@@ -584,6 +584,12 @@ declare_features! (
     /// Allows non trivial generic constants which have to be manually propageted upwards.
     (active, const_evaluatable_checked, "1.48.0", Some(76560), None),
 
+    /// Allows basic arithmetic on floating point types in a `const fn`.
+    (active, const_fn_floating_point_arithmetic, "1.48.0", Some(57241), None),
+
+    /// Allows using and casting function pointers in a `const fn`.
+    (active, const_fn_fn_ptr_basics, "1.48.0", Some(57563), None),
+
     // -------------------------------------------------------------------------
     // feature-group-end: actual feature gates
     // -------------------------------------------------------------------------

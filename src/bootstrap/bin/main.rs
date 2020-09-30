@@ -7,27 +7,40 @@
 
 use std::env;
 
-use bootstrap::{Build, Config};
+use bootstrap::{Build, Config, Subcommand};
 
 fn main() {
     let args = env::args().skip(1).collect::<Vec<_>>();
     let config = Config::parse(&args);
 
     let changelog_suggestion = check_version(&config);
-    if let Some(suggestion) = &changelog_suggestion {
+
+    // NOTE: Since `./configure` generates a `config.toml`, distro maintainers will see the
+    // changelog warning, not the `x.py setup` message.
+    let suggest_setup = !config.config.exists() && !matches!(config.cmd, Subcommand::Setup { .. });
+    if suggest_setup {
+        println!("warning: you have not made a `config.toml`");
+        println!("help: consider running `x.py setup` or copying `config.toml.example`");
+    } else if let Some(suggestion) = &changelog_suggestion {
         println!("{}", suggestion);
     }
 
     Build::new(config).build();
 
-    if let Some(suggestion) = changelog_suggestion {
+    if suggest_setup {
+        println!("warning: you have not made a `config.toml`");
+        println!("help: consider running `x.py setup` or copying `config.toml.example`");
+    } else if let Some(suggestion) = &changelog_suggestion {
         println!("{}", suggestion);
+    }
+
+    if suggest_setup || changelog_suggestion.is_some() {
         println!("note: this message was printed twice to make it more likely to be seen");
     }
 }
 
 fn check_version(config: &Config) -> Option<String> {
-    const VERSION: usize = 1;
+    const VERSION: usize = 2;
 
     let mut msg = String::new();
 
@@ -40,7 +53,7 @@ fn check_version(config: &Config) -> Option<String> {
         }
     } else {
         msg.push_str("warning: x.py has made several changes recently you may want to look at\n");
-        format!("add `changelog-seen = {}` to `config.toml`", VERSION)
+        format!("add `changelog-seen = {}` at the top of `config.toml`", VERSION)
     };
 
     msg.push_str("help: consider looking at the changes in `src/bootstrap/CHANGELOG.md`\n");

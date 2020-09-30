@@ -36,8 +36,8 @@ pub mod match_branches;
 pub mod no_landing_pads;
 pub mod nrvo;
 pub mod promote_consts;
-pub mod qualify_min_const_fn;
 pub mod remove_noop_landing_pads;
+pub mod remove_unneeded_drops;
 pub mod required_consts;
 pub mod rustc_peek;
 pub mod simplify;
@@ -461,6 +461,7 @@ fn run_optimization_passes<'tcx>(
 
     // The main optimizations that we do on MIR.
     let optimizations: &[&dyn MirPass<'tcx>] = &[
+        &remove_unneeded_drops::RemoveUnneededDrops,
         &match_branches::MatchBranchSimplification,
         // inst combine is after MatchBranchSimplification to clean up Ne(_1, false)
         &instcombine::InstCombine,
@@ -474,7 +475,6 @@ fn run_optimization_passes<'tcx>(
         &copy_prop::CopyPropagation,
         &simplify_branches::SimplifyBranches::new("after-copy-prop"),
         &remove_noop_landing_pads::RemoveNoopLandingPads,
-        &simplify::SimplifyCfg::new("after-remove-noop-landing-pads"),
         &simplify::SimplifyCfg::new("final"),
         &nrvo::RenameReturnPlace,
         &simplify::SimplifyLocals,

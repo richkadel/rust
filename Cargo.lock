@@ -231,8 +231,11 @@ dependencies = [
 name = "build-manifest"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "flate2",
  "serde",
  "serde_json",
+ "tar",
  "toml",
 ]
 
@@ -427,9 +430,9 @@ dependencies = [
 
 [[package]]
 name = "chalk-derive"
-version = "0.21.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1df0dbb57d74b4acd20f20fa66ab2acd09776b79eaeb9d8f947b2f3e01c40bf"
+checksum = "3a7f257e3bcdc56d8877ae31c012bd69fba0be66929d588e603905f2632c0c59"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -439,9 +442,9 @@ dependencies = [
 
 [[package]]
 name = "chalk-engine"
-version = "0.21.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb7c65a13f32f02aba8f1d9a37f206af615f77ac564624b81a4c593c6c1735b9"
+checksum = "c43fcc7edf4d51b42f44ed50e2337bd90ddc8e088d0cd78a71db92a6f780f782"
 dependencies = [
  "chalk-derive",
  "chalk-ir",
@@ -452,9 +455,9 @@ dependencies = [
 
 [[package]]
 name = "chalk-ir"
-version = "0.21.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44361a25dbdb1dc428f56ad7a3c21ba9ca12f3225c26a47919ff6fcb10a583d4"
+checksum = "03a4050029ecb2b5a1ff3bfc64c39279179b294821ec2e8891a4a5c6e3a08db0"
 dependencies = [
  "chalk-derive",
  "lazy_static",
@@ -462,9 +465,9 @@ dependencies = [
 
 [[package]]
 name = "chalk-solve"
-version = "0.21.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a886da37a0dc457057d86f78f026f7a09c6d8088aa13f4f4127fdb8dc80119a3"
+checksum = "828c1f80d4eaf681027cce02050c54a3c97370f81988d31bf2a56df54048746c"
 dependencies = [
  "chalk-derive",
  "chalk-ir",
@@ -534,7 +537,7 @@ dependencies = [
  "if_chain",
  "itertools 0.9.0",
  "lazy_static",
- "pulldown-cmark 0.7.2",
+ "pulldown-cmark 0.8.0",
  "quine-mc_cluskey",
  "quote",
  "regex-syntax",
@@ -1848,9 +1851,9 @@ dependencies = [
 
 [[package]]
 name = "mdbook"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b75e31ae4eaa0e45e17ee2b6b9e3ed969c3c6ff12bb4c2e352c42493f4ebb706"
+checksum = "29be448fcafb00c5a8966c4020c2a5ffbbc333e5b96d0bb5ef54b5bd0524d9ff"
 dependencies = [
  "ammonia",
  "anyhow",
@@ -3467,6 +3470,7 @@ dependencies = [
 name = "rustc_data_structures"
 version = "0.0.0"
 dependencies = [
+ "arrayvec",
  "bitflags",
  "cfg-if",
  "crossbeam-utils 0.7.2",
@@ -3637,7 +3641,6 @@ dependencies = [
 name = "rustc_infer"
 version = "0.0.0"
 dependencies = [
- "arrayvec",
  "rustc_ast",
  "rustc_data_structures",
  "rustc_errors",
@@ -3777,7 +3780,6 @@ dependencies = [
 name = "rustc_middle"
 version = "0.0.0"
 dependencies = [
- "arrayvec",
  "bitflags",
  "chalk-ir",
  "measureme",
@@ -3892,6 +3894,7 @@ dependencies = [
  "rustc_hir",
  "rustc_index",
  "rustc_middle",
+ "rustc_serialize",
  "rustc_session",
  "rustc_span",
  "rustc_target",

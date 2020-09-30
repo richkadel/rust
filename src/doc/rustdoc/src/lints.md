@@ -13,19 +13,94 @@ Here is the list of the lints provided by `rustdoc`:
 
 ## broken_intra_doc_links
 
-This lint **warns by default** and is **nightly-only**. This lint detects when
-an intra-doc link fails to get resolved. For example:
+This lint **warns by default**. This lint detects when an [intra-doc link] fails to get resolved. For example:
+
+ [intra-doc link]: linking-to-items-by-name.html
 
 ```rust
-/// I want to link to [`Inexistent`] but it doesn't exist!
+/// I want to link to [`Nonexistent`] but it doesn't exist!
 pub fn foo() {}
 ```
 
 You'll get a warning saying:
 
 ```text
-error: `[`Inexistent`]` cannot be resolved, ignoring it...
+warning: unresolved link to `Nonexistent`
+ --> test.rs:1:24
+  |
+1 | /// I want to link to [`Nonexistent`] but it doesn't exist!
+  |                        ^^^^^^^^^^^^^ no item named `Nonexistent` in `test`
 ```
+
+It will also warn when there is an ambiguity and suggest how to disambiguate:
+
+```rust
+/// [`Foo`]
+pub fn function() {}
+
+pub enum Foo {}
+
+pub fn Foo(){}
+```
+
+```text
+warning: `Foo` is both an enum and a function
+ --> test.rs:1:6
+  |
+1 | /// [`Foo`]
+  |      ^^^^^ ambiguous link
+  |
+  = note: `#[warn(broken_intra_doc_links)]` on by default
+help: to link to the enum, prefix with the item type
+  |
+1 | /// [`enum@Foo`]
+  |      ^^^^^^^^^^
+help: to link to the function, add parentheses
+  |
+1 | /// [`Foo()`]
+  |      ^^^^^^^
+
+```
+
+## private_intra_doc_links
+
+This lint **warns by default**. This lint detects when [intra-doc links] from public to private items.
+For example:
+
+```rust
+/// [private]
+pub fn public() {}
+fn private() {}
+```
+
+This gives a warning that the link will be broken when it appears in your documentation:
+
+```text
+warning: public documentation for `public` links to private item `private`
+ --> priv.rs:1:6
+  |
+1 | /// [private]
+  |      ^^^^^^^ this item is private
+  |
+  = note: `#[warn(private_intra_doc_links)]` on by default
+  = note: this link will resolve properly if you pass `--document-private-items`
+```
+
+Note that this has different behavior depending on whether you pass `--document-private-items` or not!
+If you document private items, then it will still generate a link, despite the warning:
+
+```text
+warning: public documentation for `public` links to private item `private`
+ --> priv.rs:1:6
+  |
+1 | /// [private]
+  |      ^^^^^^^ this item is private
+  |
+  = note: `#[warn(private_intra_doc_links)]` on by default
+  = note: this link resolves only because you passed `--document-private-items`, but will break without
+```
+
+[intra-doc links]: linking-to-items-by-name.html
 
 ## missing_docs
 

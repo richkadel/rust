@@ -1976,6 +1976,8 @@ pub trait Iterator {
     /// // they're the same
     /// assert_eq!(result, result2);
     /// ```
+    #[doc(alias = "reduce")]
+    #[doc(alias = "inject")]
     #[inline]
     #[stable(feature = "rust1", since = "1.0.0")]
     fn fold<B, F>(mut self, init: B, mut f: F) -> B
@@ -3241,10 +3243,12 @@ pub trait Iterator {
     }
 
     /// See [TrustedRandomAccess]
+    // The unusual name is to avoid name collisions in method resolution
+    // see #76479.
     #[inline]
     #[doc(hidden)]
     #[unstable(feature = "trusted_random_access", issue = "none")]
-    unsafe fn get_unchecked(&mut self, _idx: usize) -> Self::Item
+    unsafe fn __iterator_get_unchecked(&mut self, _idx: usize) -> Self::Item
     where
         Self: TrustedRandomAccess,
     {
