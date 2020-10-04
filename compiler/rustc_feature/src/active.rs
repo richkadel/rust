@@ -1,6 +1,6 @@
 //! List of the active feature gates.
 
-use super::{Feature, State};
+use super::{to_nonzero, Feature, State};
 
 use rustc_span::edition::Edition;
 use rustc_span::symbol::{sym, Symbol};
@@ -29,7 +29,7 @@ macro_rules! declare_features {
                     state: State::Active { set: set!($feature) },
                     name: sym::$feature,
                     since: $ver,
-                    issue: $issue,
+                    issue: to_nonzero($issue),
                     edition: $edition,
                     description: concat!($($doc,)*),
                 }
@@ -589,6 +589,12 @@ declare_features! (
 
     /// Allows using and casting function pointers in a `const fn`.
     (active, const_fn_fn_ptr_basics, "1.48.0", Some(57563), None),
+
+    /// Allows to use the `#[cmse_nonsecure_entry]` attribute.
+    (active, cmse_nonsecure_entry, "1.48.0", Some(75835), None),
+
+    /// Allows rustc to inject a default alloc_error_handler
+    (active, default_alloc_error_handler, "1.48.0", Some(66741), None),
 
     // -------------------------------------------------------------------------
     // feature-group-end: actual feature gates

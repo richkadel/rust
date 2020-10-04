@@ -67,7 +67,7 @@ impl Command {
                     // pipe I/O up to PIPE_BUF bytes should be atomic, and then
                     // we want to be sure we *don't* run at_exit destructors as
                     // we're being torn down regardless
-                    assert!(output.write(&bytes).is_ok());
+                    rtassert!(output.write(&bytes).is_ok());
                     libc::_exit(1)
                 }
                 n => n,
@@ -245,14 +245,15 @@ impl Command {
             *sys::os::environ() = envp.as_ptr();
         }
 
-        libc::execvp(self.get_program().as_ptr(), self.get_argv().as_ptr());
+        libc::execvp(self.get_program_cstr().as_ptr(), self.get_argv().as_ptr());
         Err(io::Error::last_os_error())
     }
 
     #[cfg(not(any(
         target_os = "macos",
         target_os = "freebsd",
-        all(target_os = "linux", target_env = "gnu")
+        all(target_os = "linux", target_env = "gnu"),
+        all(target_os = "linux", target_env = "musl"),
     )))]
     fn posix_spawn(
         &mut self,
@@ -267,7 +268,8 @@ impl Command {
     #[cfg(any(
         target_os = "macos",
         target_os = "freebsd",
-        all(target_os = "linux", target_env = "gnu")
+        all(target_os = "linux", target_env = "gnu"),
+        all(target_os = "linux", target_env = "musl"),
     ))]
     fn posix_spawn(
         &mut self,
@@ -297,10 +299,10 @@ impl Command {
             }
         }
 
-        // Solaris and glibc 2.29+ can set a new working directory, and maybe
-        // others will gain this non-POSIX function too. We'll check for this
-        // weak symbol as soon as it's needed, so we can return early otherwise
-        // to do a manual chdir before exec.
+        // Solaris, glibc 2.29+, and musl 1.24+ can set a new working directory,
+        // and maybe others will gain this non-POSIX function too. We'll check
+        // for this weak symbol as soon as it's needed, so we can return early
+        // otherwise to do a manual chdir before exec.
         weak! {
             fn posix_spawn_file_actions_addchdir_np(
                 *mut libc::posix_spawn_file_actions_t,
@@ -383,7 +385,7 @@ impl Command {
             let envp = envp.map(|c| c.as_ptr()).unwrap_or_else(|| *sys::os::environ() as *const _);
             let ret = libc::posix_spawnp(
                 &mut p.pid,
-                self.get_program().as_ptr(),
+                self.get_program_cstr().as_ptr(),
                 file_actions.0.as_ptr(),
                 attrs.0.as_ptr(),
                 self.get_argv().as_ptr() as *const _,
