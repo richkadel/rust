@@ -3,7 +3,7 @@
 //! [rustc dev guide]: https://rustc-dev-guide.rust-lang.org/mir/index.html
 
 use crate::mir::coverage::{CodeRegion, CoverageKind};
-use crate::mir::interpret::{Allocation, ConstValue, GlobalAlloc, Scalar};
+use crate::mir::interpret::{Allocation, GlobalAlloc, Scalar};
 use crate::mir::visit::MirVisitable;
 use crate::ty::adjustment::PointerCast;
 use crate::ty::codec::{TyDecoder, TyEncoder};
@@ -460,17 +460,6 @@ impl<'tcx> Body<'tcx> {
         }
     }
 
-    /// Checks if `sub` is a sub scope of `sup`
-    pub fn is_sub_scope(&self, mut sub: SourceScope, sup: SourceScope) -> bool {
-        while sub != sup {
-            match self.source_scopes[sub].parent_scope {
-                None => return false,
-                Some(p) => sub = p,
-            }
-        }
-        true
-    }
-
     /// Returns the return type; it always return first element from `local_decls` array.
     #[inline]
     pub fn return_ty(&self) -> Ty<'tcx> {
@@ -775,7 +764,7 @@ mod binding_form_impl {
     impl<'a, 'tcx> HashStable<StableHashingContext<'a>> for super::BindingForm<'tcx> {
         fn hash_stable(&self, hcx: &mut StableHashingContext<'a>, hasher: &mut StableHasher) {
             use super::BindingForm::*;
-            ::std::mem::discriminant(self).hash_stable(hcx, hasher);
+            std::mem::discriminant(self).hash_stable(hcx, hasher);
 
             match self {
                 Var(binding) => binding.hash_stable(hcx, hasher),
@@ -813,7 +802,7 @@ pub struct BlockTailInfo {
 /// argument, or the return place.
 #[derive(Clone, Debug, TyEncodable, TyDecodable, HashStable, TypeFoldable)]
 pub struct LocalDecl<'tcx> {
-    /// Whether this is a mutable minding (i.e., `let x` or `let mut x`).
+    /// Whether this is a mutable binding (i.e., `let x` or `let mut x`).
     ///
     /// Temporaries and the return place are always mutable.
     pub mutability: Mutability,
@@ -971,67 +960,59 @@ impl<'tcx> LocalDecl<'tcx> {
     /// - `let x = ...`,
     /// - or `match ... { C(x) => ... }`
     pub fn can_be_made_mutable(&self) -> bool {
-        match self.local_info {
-            Some(box LocalInfo::User(ClearCrossCrate::Set(BindingForm::Var(VarBindingForm {
-                binding_mode: ty::BindingMode::BindByValue(_),
-                opt_ty_info: _,
-                opt_match_place: _,
-                pat_span: _,
-            })))) => true,
-
-            Some(box LocalInfo::User(ClearCrossCrate::Set(BindingForm::ImplicitSelf(
-                ImplicitSelfKind::Imm,
-            )))) => true,
-
-            _ => false,
-        }
+        matches!(
+            self.local_info,
+            Some(box LocalInfo::User(ClearCrossCrate::Set(
+                BindingForm::Var(VarBindingForm {
+                    binding_mode: ty::BindingMode::BindByValue(_),
+                    opt_ty_info: _,
+                    opt_match_place: _,
+                    pat_span: _,
+                })
+                | BindingForm::ImplicitSelf(ImplicitSelfKind::Imm),
+            )))
+        )
     }
 
     /// Returns `true` if local is definitely not a `ref ident` or
     /// `ref mut ident` binding. (Such bindings cannot be made into
     /// mutable bindings, but the inverse does not necessarily hold).
     pub fn is_nonref_binding(&self) -> bool {
-        match self.local_info {
-            Some(box LocalInfo::User(ClearCrossCrate::Set(BindingForm::Var(VarBindingForm {
-                binding_mode: ty::BindingMode::BindByValue(_),
-                opt_ty_info: _,
-                opt_match_place: _,
-                pat_span: _,
-            })))) => true,
-
-            Some(box LocalInfo::User(ClearCrossCrate::Set(BindingForm::ImplicitSelf(_)))) => true,
-
-            _ => false,
-        }
+        matches!(
+            self.local_info,
+            Some(box LocalInfo::User(ClearCrossCrate::Set(
+                BindingForm::Var(VarBindingForm {
+                    binding_mode: ty::BindingMode::BindByValue(_),
+                    opt_ty_info: _,
+                    opt_match_place: _,
+                    pat_span: _,
+                })
+                | BindingForm::ImplicitSelf(_),
+            )))
+        )
     }
 
     /// Returns `true` if this variable is a named variable or function
     /// parameter declared by the user.
     #[inline]
     pub fn is_user_variable(&self) -> bool {
-        match self.local_info {
-            Some(box LocalInfo::User(_)) => true,
-            _ => false,
-        }
+        matches!(self.local_info, Some(box LocalInfo::User(_)))
     }
 
     /// Returns `true` if this is a reference to a variable bound in a `match`
     /// expression that is used to access said variable for the guard of the
     /// match arm.
     pub fn is_ref_for_guard(&self) -> bool {
-        match self.local_info {
-            Some(box LocalInfo::User(ClearCrossCrate::Set(BindingForm::RefForGuard))) => true,
-            _ => false,
-        }
+        matches!(
+            self.local_info,
+            Some(box LocalInfo::User(ClearCrossCrate::Set(BindingForm::RefForGuard)))
+        )
     }
 
     /// Returns `Some` if this is a reference to a static item that is used to
     /// access that static
     pub fn is_ref_to_static(&self) -> bool {
-        match self.local_info {
-            Some(box LocalInfo::StaticRef { .. }) => true,
-            _ => false,
-        }
+        matches!(self.local_info, Some(box LocalInfo::StaticRef { .. }))
     }
 
     /// Returns `Some` if this is a reference to a static item that is used to
@@ -1986,45 +1967,6 @@ impl<'tcx> Operand<'tcx> {
         })
     }
 
-    /// Convenience helper to make a `Scalar` from the given `Operand`, assuming that `Operand`
-    /// wraps a constant literal value. Panics if this is not the case.
-    pub fn scalar_from_const(operand: &Operand<'tcx>) -> Scalar {
-        match operand {
-            Operand::Constant(constant) => match constant.literal.val.try_to_scalar() {
-                Some(scalar) => scalar,
-                _ => panic!("{:?}: Scalar value expected", constant.literal.val),
-            },
-            _ => panic!("{:?}: Constant expected", operand),
-        }
-    }
-
-    /// Convenience helper to make a literal-like constant from a given `&str` slice.
-    /// Since this is used to synthesize MIR, assumes `user_ty` is None.
-    pub fn const_from_str(tcx: TyCtxt<'tcx>, val: &str, span: Span) -> Operand<'tcx> {
-        let tcx = tcx;
-        let allocation = Allocation::from_byte_aligned_bytes(val.as_bytes());
-        let allocation = tcx.intern_const_alloc(allocation);
-        let const_val = ConstValue::Slice { data: allocation, start: 0, end: val.len() };
-        let ty = tcx.mk_imm_ref(tcx.lifetimes.re_erased, tcx.types.str_);
-        Operand::Constant(box Constant {
-            span,
-            user_ty: None,
-            literal: ty::Const::from_value(tcx, const_val, ty),
-        })
-    }
-
-    /// Convenience helper to make a `ConstValue` from the given `Operand`, assuming that `Operand`
-    /// wraps a constant value (such as a `&str` slice). Panics if this is not the case.
-    pub fn value_from_const(operand: &Operand<'tcx>) -> ConstValue<'tcx> {
-        match operand {
-            Operand::Constant(constant) => match constant.literal.val.try_to_value() {
-                Some(const_value) => const_value,
-                _ => panic!("{:?}: ConstValue expected", constant.literal.val),
-            },
-            _ => panic!("{:?}: Constant expected", operand),
-        }
-    }
-
     pub fn to_copy(&self) -> Self {
         match *self {
             Operand::Copy(_) | Operand::Constant(_) => self.clone(),
@@ -2164,10 +2106,7 @@ pub enum BinOp {
 impl BinOp {
     pub fn is_checkable(self) -> bool {
         use self::BinOp::*;
-        match self {
-            Add | Sub | Mul | Shl | Shr => true,
-            _ => false,
-        }
+        matches!(self, Add | Sub | Mul | Shl | Shr)
     }
 }
 
@@ -2422,10 +2361,6 @@ impl<'tcx> UserTypeProjections {
 
     pub fn is_empty(&self) -> bool {
         self.contents.is_empty()
-    }
-
-    pub fn from_projections(projs: impl Iterator<Item = (UserTypeProjection, Span)>) -> Self {
-        UserTypeProjections { contents: projs.collect() }
     }
 
     pub fn projections_and_spans(

@@ -895,11 +895,6 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
         all statements)."),
     emit_stack_sizes: bool = (false, parse_bool, [UNTRACKED],
         "emit a section containing stack size metadata (default: no)"),
-    experimental_coverage: bool = (false, parse_bool, [TRACKED],
-        "enable and extend the `-Z instrument-coverage` function-level coverage \
-        feature, adding additional experimental (likely inaccurate) counters and \
-        code regions (used by `rustc` compiler developers to test new coverage \
-        counter placements) (default: no)"),
     fewer_names: bool = (false, parse_bool, [TRACKED],
         "reduce memory use by retaining fewer names within compilation artifacts (LLVM-IR) \
         (default: no)"),
@@ -1083,6 +1078,8 @@ options! {DebuggingOptions, DebuggingSetter, basic_debugging_options,
         "show extended diagnostic help (default: no)"),
     terminal_width: Option<usize> = (None, parse_opt_uint, [UNTRACKED],
         "set the current terminal width"),
+    tune_cpu: Option<String> = (None, parse_opt_string, [TRACKED],
+        "select processor to schedule for (`rustc --print target-cpus` for details)"),
     thinlto: Option<bool> = (None, parse_opt_bool, [TRACKED],
         "enable ThinLTO when possible"),
     // We default to 1 here since we want to behave like

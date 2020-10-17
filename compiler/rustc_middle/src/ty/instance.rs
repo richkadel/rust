@@ -184,10 +184,10 @@ impl<'tcx> InstanceDef<'tcx> {
             ty::InstanceDef::DropGlue(_, Some(_)) => return false,
             _ => return true,
         };
-        match tcx.def_key(def_id).disambiguated_data.data {
-            DefPathData::Ctor | DefPathData::ClosureExpr => true,
-            _ => false,
-        }
+        matches!(
+            tcx.def_key(def_id).disambiguated_data.data,
+            DefPathData::Ctor | DefPathData::ClosureExpr
+        )
     }
 
     /// Returns `true` if the machine code for this instance is instantiated in
@@ -291,7 +291,17 @@ impl<'tcx> Instance<'tcx> {
     }
 
     pub fn mono(tcx: TyCtxt<'tcx>, def_id: DefId) -> Instance<'tcx> {
-        Instance::new(def_id, tcx.empty_substs_for_def_id(def_id))
+        let substs = InternalSubsts::for_item(tcx, def_id, |param, _| match param.kind {
+            ty::GenericParamDefKind::Lifetime => tcx.lifetimes.re_erased.into(),
+            ty::GenericParamDefKind::Type { .. } => {
+                bug!("Instance::mono: {:?} has type parameters", def_id)
+            }
+            ty::GenericParamDefKind::Const { .. } => {
+                bug!("Instance::mono: {:?} has const parameters", def_id)
+            }
+        });
+
+        Instance::new(def_id, substs)
     }
 
     #[inline]

@@ -576,15 +576,13 @@ impl<'a, 'tcx> SimplifyBranchSameOptimizationFinder<'a, 'tcx> {
             .iter_enumerated()
             .filter_map(|(bb_idx, bb)| {
                 let (discr_switched_on, targets_and_values) = match &bb.terminator().kind {
-                    TerminatorKind::SwitchInt { targets, discr, values, .. } => {
-                        // if values.len() == targets.len() - 1, we need to include None where no value is present
-                        // such that the zip does not throw away targets. If no `otherwise` case is in targets, the zip will simply throw away the added None
-                        let values_extended = values.iter().map(|x|Some(*x)).chain(once(None));
-                        let targets_and_values:Vec<_> = targets.iter().zip(values_extended)
-                            .map(|(target, value)| SwitchTargetAndValue{target:*target, value})
+                    TerminatorKind::SwitchInt { targets, discr, .. } => {
+                        let targets_and_values: Vec<_> = targets.iter()
+                            .map(|(val, target)| SwitchTargetAndValue { target, value: Some(val) })
+                            .chain(once(SwitchTargetAndValue { target: targets.otherwise(), value: None }))
                             .collect();
-                        assert_eq!(targets.len(), targets_and_values.len());
-                        (discr, targets_and_values)},
+                        (discr, targets_and_values)
+                    },
                     _ => return None,
                 };
 
@@ -630,7 +628,8 @@ impl<'a, 'tcx> SimplifyBranchSameOptimizationFinder<'a, 'tcx> {
                 // All successor basic blocks must be equal or contain statements that are pairwise considered equal.
                 for ((target_and_value_l,bb_l), (target_and_value_r,bb_r)) in iter_bbs_reachable.tuple_windows() {
                     let trivial_checks = bb_l.is_cleanup == bb_r.is_cleanup
-                    && bb_l.terminator().kind == bb_r.terminator().kind;
+                                            && bb_l.terminator().kind == bb_r.terminator().kind
+                                            && bb_l.statements.len() == bb_r.statements.len();
                     let statement_check = || {
                         bb_l.statements.iter().zip(&bb_r.statements).try_fold(StatementEquality::TrivialEqual, |acc,(l,r)| {
                             let stmt_equality = self.statement_equality(*adt_matched_on, &l, target_and_value_l, &r, target_and_value_r);

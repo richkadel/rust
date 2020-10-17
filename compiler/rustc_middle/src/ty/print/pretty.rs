@@ -607,12 +607,13 @@ pub trait PrettyPrinter<'tcx>:
                     }
                     // Grab the "TraitA + TraitB" from `impl TraitA + TraitB`,
                     // by looking up the projections associated with the def_id.
-                    let bounds = self.tcx().predicates_of(def_id).instantiate(self.tcx(), substs);
+                    let bounds = self.tcx().explicit_item_bounds(def_id);
 
                     let mut first = true;
                     let mut is_sized = false;
                     p!("impl");
-                    for predicate in bounds.predicates {
+                    for (predicate, _) in bounds {
+                        let predicate = predicate.subst(self.tcx(), substs);
                         // Note: We can't use `to_opt_poly_trait_ref` here as `predicate`
                         // may contain unbound variables. We therefore do this manually.
                         //
@@ -662,18 +663,13 @@ pub trait PrettyPrinter<'tcx>:
                     }
                 } else {
                     p!(print_def_path(did, substs));
-                    if substs.as_generator().is_valid() {
-                        // Search for the first inference variable
-                        p!(" upvar_tys=(");
-                        let mut uninferred_ty =
-                            substs.as_generator().upvar_tys().filter(|ty| ty.is_ty_infer());
-                        if uninferred_ty.next().is_some() {
-                            p!(write("unavailable"));
-                        } else {
-                            self = self.comma_sep(substs.as_generator().upvar_tys())?;
-                        }
-                        p!(")");
+                    p!(" upvar_tys=(");
+                    if !substs.as_generator().is_valid() {
+                        p!("unavailable");
+                    } else {
+                        self = self.comma_sep(substs.as_generator().upvar_tys())?;
                     }
+                    p!(")");
                 }
 
                 if substs.as_generator().is_valid() {
@@ -703,24 +699,17 @@ pub trait PrettyPrinter<'tcx>:
                     }
                 } else {
                     p!(print_def_path(did, substs));
-                    if substs.as_closure().is_valid() {
-                        // Search for the first inference variable
-                        let mut uninferred_ty =
-                            substs.as_closure().upvar_tys().filter(|ty| ty.is_ty_infer());
-                        if uninferred_ty.next().is_some() {
-                            // If the upvar substs contain an inference variable we haven't
-                            // finished capture analysis.
-                            p!(" closure_substs=(unavailable)");
-                        } else {
-                            p!(" closure_kind_ty=", print(substs.as_closure().kind_ty()));
-                            p!(
-                                " closure_sig_as_fn_ptr_ty=",
-                                print(substs.as_closure().sig_as_fn_ptr_ty())
-                            );
-                            p!(" upvar_tys=(");
-                            self = self.comma_sep(substs.as_closure().upvar_tys())?;
-                            p!(")");
-                        }
+                    if !substs.as_closure().is_valid() {
+                        p!(" closure_substs=(unavailable)");
+                    } else {
+                        p!(" closure_kind_ty=", print(substs.as_closure().kind_ty()));
+                        p!(
+                            " closure_sig_as_fn_ptr_ty=",
+                            print(substs.as_closure().sig_as_fn_ptr_ty())
+                        );
+                        p!(" upvar_tys=(");
+                        self = self.comma_sep(substs.as_closure().upvar_tys())?;
+                        p!(")");
                     }
                 }
                 p!("]");
@@ -1141,7 +1130,7 @@ pub trait PrettyPrinter<'tcx>:
                 // relocations (we have an active `str` reference here). We don't use this
                 // result to affect interpreter execution.
                 let slice = data.inspect_with_uninit_and_ptr_outside_interpreter(start..end);
-                let s = ::std::str::from_utf8(slice).expect("non utf8 str from miri");
+                let s = std::str::from_utf8(slice).expect("non utf8 str from miri");
                 p!(write("{:?}", s));
                 Ok(self)
             }

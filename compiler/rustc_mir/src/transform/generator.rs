@@ -61,7 +61,6 @@ use crate::util::expand_aggregate;
 use crate::util::storage;
 use rustc_data_structures::fx::FxHashMap;
 use rustc_hir as hir;
-use rustc_hir::def_id::DefId;
 use rustc_hir::lang_items::LangItem;
 use rustc_index::bit_set::{BitMatrix, BitSet};
 use rustc_index::vec::{Idx, IndexVec};
@@ -72,7 +71,6 @@ use rustc_middle::ty::GeneratorSubsts;
 use rustc_middle::ty::{self, AdtDef, Ty, TyCtxt};
 use rustc_target::abi::VariantIdx;
 use rustc_target::spec::PanicStrategy;
-use std::borrow::Cow;
 use std::{iter, ops};
 
 pub struct StateTransform;
@@ -454,20 +452,19 @@ fn locals_live_across_suspend_points(
     always_live_locals: &storage::AlwaysLiveLocals,
     movable: bool,
 ) -> LivenessInfo {
-    let def_id = body.source.def_id();
     let body_ref: &Body<'_> = &body;
 
     // Calculate when MIR locals have live storage. This gives us an upper bound of their
     // lifetimes.
     let mut storage_live = MaybeStorageLive::new(always_live_locals.clone())
-        .into_engine(tcx, body_ref, def_id)
+        .into_engine(tcx, body_ref)
         .iterate_to_fixpoint()
         .into_results_cursor(body_ref);
 
     // Calculate the MIR locals which have been previously
     // borrowed (even if they are still active).
     let borrowed_locals_results = MaybeBorrowedLocals::all_borrows()
-        .into_engine(tcx, body_ref, def_id)
+        .into_engine(tcx, body_ref)
         .pass_name("generator")
         .iterate_to_fixpoint();
 
@@ -477,14 +474,14 @@ fn locals_live_across_suspend_points(
     // Calculate the MIR locals that we actually need to keep storage around
     // for.
     let requires_storage_results = MaybeRequiresStorage::new(body, &borrowed_locals_results)
-        .into_engine(tcx, body_ref, def_id)
+        .into_engine(tcx, body_ref)
         .iterate_to_fixpoint();
     let mut requires_storage_cursor =
         dataflow::ResultsCursor::new(body_ref, &requires_storage_results);
 
     // Calculate the liveness of MIR locals ignoring borrows.
     let mut liveness = MaybeLiveLocals
-        .into_engine(tcx, body_ref, def_id)
+        .into_engine(tcx, body_ref)
         .pass_name("generator")
         .iterate_to_fixpoint()
         .into_results_cursor(body_ref);
@@ -722,11 +719,11 @@ impl<'body, 'tcx, 's> StorageConflictVisitor<'body, 'tcx, 's> {
 fn sanitize_witness<'tcx>(
     tcx: TyCtxt<'tcx>,
     body: &Body<'tcx>,
-    did: DefId,
     witness: Ty<'tcx>,
     upvars: &Vec<Ty<'tcx>>,
     saved_locals: &GeneratorSavedLocals,
 ) {
+    let did = body.source.def_id();
     let allowed_upvars = tcx.erase_regions(upvars);
     let allowed = match witness.kind() {
         ty::GeneratorWitness(s) => tcx.erase_late_bound_regions(&s),
@@ -841,11 +838,12 @@ fn insert_switch<'tcx>(
 ) {
     let default_block = insert_term_block(body, default);
     let (assign, discr) = transform.get_discr(body);
+    let switch_targets =
+        SwitchTargets::new(cases.iter().map(|(i, bb)| ((*i) as u128, *bb)), default_block);
     let switch = TerminatorKind::SwitchInt {
         discr: Operand::Move(discr),
         switch_ty: transform.discr_ty,
-        values: Cow::from(cases.iter().map(|&(i, _)| i as u128).collect::<Vec<_>>()),
-        targets: cases.iter().map(|&(_, d)| d).chain(iter::once(default_block)).collect(),
+        targets: switch_targets,
     };
 
     let source_info = SourceInfo::outermost(body.span);
@@ -865,7 +863,7 @@ fn insert_switch<'tcx>(
     }
 }
 
-fn elaborate_generator_drops<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId, body: &mut Body<'tcx>) {
+fn elaborate_generator_drops<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
     use crate::shim::DropShimElaborator;
     use crate::util::elaborate_drops::{elaborate_drop, Unwind};
     use crate::util::patch::MirPatch;
@@ -874,6 +872,7 @@ fn elaborate_generator_drops<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId, body: &mut 
     // this is ok because `open_drop` can only be reached within that own
     // generator's resume function.
 
+    let def_id = body.source.def_id();
     let param_env = tcx.param_env(def_id);
 
     let mut elaborator = DropShimElaborator { body, patch: MirPatch::new(body), tcx, param_env };
@@ -1246,8 +1245,6 @@ impl<'tcx> MirPass<'tcx> for StateTransform {
 
         assert!(body.generator_drop.is_none());
 
-        let def_id = body.source.def_id();
-
         // The first argument is the generator type passed by value
         let gen_ty = body.local_decls.raw[1].ty;
 
@@ -1306,7 +1303,7 @@ impl<'tcx> MirPass<'tcx> for StateTransform {
         let liveness_info =
             locals_live_across_suspend_points(tcx, body, &always_live_locals, movable);
 
-        sanitize_witness(tcx, body, def_id, interior, &upvars, &liveness_info.saved_locals);
+        sanitize_witness(tcx, body, interior, &upvars, &liveness_info.saved_locals);
 
         if tcx.sess.opts.debugging_opts.validate_mir {
             let mut vis = EnsureGeneratorFieldAssignmentsNeverAlias {
@@ -1358,7 +1355,7 @@ impl<'tcx> MirPass<'tcx> for StateTransform {
         // Expand `drop(generator_struct)` to a drop ladder which destroys upvars.
         // If any upvars are moved out of, drop elaboration will handle upvar destruction.
         // However we need to also elaborate the code generated by `insert_clean_drop`.
-        elaborate_generator_drops(tcx, def_id, body);
+        elaborate_generator_drops(tcx, body);
 
         dump_mir(tcx, None, "generator_post-transform", &0, body, |_, _| Ok(()));
 
