@@ -278,6 +278,7 @@ rustc_index::newtype_index! {
     /// A node in the [control-flow graph][CFG] of CoverageGraph.
     pub(super) struct BasicCoverageBlock {
         DEBUG_FORMAT = "bcb{}",
+        const START_BCB = 0,
     }
 }
 

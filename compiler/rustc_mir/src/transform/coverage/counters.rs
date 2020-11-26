@@ -148,7 +148,9 @@ impl<'a> BcbCounters<'a> {
 
         let mut bcbs_with_coverage = BitSet::new_empty(num_bcbs);
         for covspan in coverage_spans {
-            bcbs_with_coverage.insert(covspan.bcb);
+            if let Some(bcb) = covspan.bcb {
+                bcbs_with_coverage.insert(bcb);
+            }
         }
 
         // Walk the `CoverageGraph`. For each `BasicCoverageBlock` node with an associated

@@ -141,14 +141,36 @@ impl CoverageMapGenerator {
                 virtual_file_mapping.push(filenames_index as u32);
             }
             debug!("Adding counter {:?} to map for {:?}", counter, region);
-            mapping_regions.push(CounterMappingRegion::code_region(
-                counter,
-                current_file_id,
-                start_line,
-                start_col,
-                end_line,
-                end_col,
-            ));
+            match counter.kind {
+                rustc_codegen_ssa::coverageinfo::map::CounterKind::Zero => {
+                    // Assume `Zero` counters are either from `Unreachable` code regions, or they
+                    // should at least be handled similarly, the `gap_region` signifies a code span
+                    // that should be marked as known, but uncovered (counted as zero executions)
+                    // _except_ where other code regions overlap. For example, a closure that is
+                    // defined but never used will probably not get codegenned, and therefore would
+                    // not have any coverage, but the MIR in which the closure is defined can at
+                    // least inject the span for the closure as a `gap_region`, ensuring the code
+                    // region is at least known about, and can be flagged as uncovered if necessary.
+                    mapping_regions.push(CounterMappingRegion::gap_region(
+                        counter,
+                        current_file_id,
+                        start_line,
+                        start_col,
+                        end_line,
+                        end_col,
+                    ));
+                }
+                _ => {
+                    mapping_regions.push(CounterMappingRegion::code_region(
+                        counter,
+                        current_file_id,
+                        start_line,
+                        start_col,
+                        end_line,
+                        end_col,
+                    ));
+                }
+            }
         }
 
         // Encode and append the current function's coverage mapping data

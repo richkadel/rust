@@ -69,7 +69,7 @@ For revisions in Pull Requests (PR):
 </style>
 </head>
 <body>
-<div class="code" style="counter-reset: line 3"><span class="line"><span class="code" style="--layer: 0">fn might_overflow(to_add: u32) -&gt; u32 {</span></span>
+<div class="code" style="counter-reset: line 3"><span class="line"><span><span class="code even" style="--layer: 1"><span class="annotation">@0⦊</span>fn might_overflow(to_add: u32) -&gt; u32 <span class="annotation">⦉@0</span></span></span><span class="code" style="--layer: 0">{</span></span>
 <span class="line"><span class="code" style="--layer: 0">    if </span><span><span class="code even" style="--layer: 1" title="5:8-5:14: @0[3]: _4 = _1
 5:8-5:18: @0[4]: _3 = Gt(move _4, const 5_u32)
 5:8-5:18: @0[6]: FakeRead(ForMatchedPlace, _3)"><span class="annotation">@0⦊</span>to_add &gt; 5<span class="annotation">⦉@0</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="6:18-6:47: @3[6]: _61 = const might_overflow::promoted[4]

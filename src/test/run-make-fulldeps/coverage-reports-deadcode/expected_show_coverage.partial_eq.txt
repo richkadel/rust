@@ -16,11 +16,21 @@
     5|       |pub struct Version {
     6|       |    major: usize,
     7|      1|    minor: usize,
+  ------------------
+  | Unexecuted instantiation: <partial_eq::Version as core::cmp::PartialOrd>::gt::{closure#0}
+  ------------------
+  | Unexecuted instantiation: <partial_eq::Version as core::cmp::PartialOrd>::ge::{closure#0}
+  ------------------
+  | <partial_eq::Version as core::cmp::PartialOrd>::lt::{closure#0}:
+  |    7|      1|    minor: usize,
+  ------------------
+  | Unexecuted instantiation: <partial_eq::Version as core::cmp::PartialOrd>::le::{closure#0}
+  ------------------
     8|       |    patch: usize,
     9|       |}
    10|       |
    11|       |impl Version {
-   12|       |    pub fn new(major: usize, minor: usize, patch: usize) -> Self {
+   12|      2|    pub fn new(major: usize, minor: usize, patch: usize) -> Self {
    13|      2|        Self {
    14|      2|            major,
    15|      2|            minor,

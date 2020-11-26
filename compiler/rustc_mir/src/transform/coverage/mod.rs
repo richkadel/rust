@@ -88,6 +88,7 @@ struct Instrumentor<'a, 'tcx> {
     pass_name: &'a str,
     tcx: TyCtxt<'tcx>,
     mir_body: &'a mut mir::Body<'tcx>,
+    fn_sig_span: Span,
     body_span: Span,
     basic_coverage_blocks: CoverageGraph,
     coverage_counters: CoverageCounters,
@@ -95,14 +96,19 @@ struct Instrumentor<'a, 'tcx> {
 
 impl<'a, 'tcx> Instrumentor<'a, 'tcx> {
     fn new(pass_name: &'a str, tcx: TyCtxt<'tcx>, mir_body: &'a mut mir::Body<'tcx>) -> Self {
-        let hir_body = hir_body(tcx, mir_body.source.def_id());
+        let (some_fn_sig, hir_body) = fn_sig_and_body(tcx, mir_body.source.def_id());
         let body_span = hir_body.value.span;
+        let fn_sig_span = match some_fn_sig {
+            Some(fn_sig) => fn_sig.span.with_hi(body_span.lo()),
+            None => body_span.shrink_to_lo(),
+        };
         let function_source_hash = hash_mir_source(tcx, hir_body);
         let basic_coverage_blocks = CoverageGraph::from_mir(mir_body);
         Self {
             pass_name,
             tcx,
             mir_body,
+            fn_sig_span,
             body_span,
             basic_coverage_blocks,
             coverage_counters: CoverageCounters::new(function_source_hash),
@@ -114,9 +120,15 @@ impl<'a, 'tcx> Instrumentor<'a, 'tcx> {
         let source_map = tcx.sess.source_map();
         let mir_source = self.mir_body.source;
         let def_id = mir_source.def_id();
+        let fn_sig_span = self.fn_sig_span;
         let body_span = self.body_span;
 
-        debug!("instrumenting {:?}, span: {}", def_id, source_map.span_to_string(body_span));
+        debug!(
+            "instrumenting {:?}, fn sig span: {}, body span: {}",
+            def_id,
+            source_map.span_to_string(fn_sig_span),
+            source_map.span_to_string(body_span)
+        );
 
         let mut graphviz_data = debug::GraphvizData::new();
         let mut debug_used_expressions = debug::UsedExpressions::new();
@@ -138,6 +150,7 @@ impl<'a, 'tcx> Instrumentor<'a, 'tcx> {
         // Compute `CoverageSpan`s from the `CoverageGraph`.
         let coverage_spans = CoverageSpans::generate_coverage_spans(
             &self.mir_body,
+            fn_sig_span,
             body_span,
             &self.basic_coverage_blocks,
         );
@@ -260,26 +273,47 @@ impl<'a, 'tcx> Instrumentor<'a, 'tcx> {
 
         let mut bcb_counters = IndexVec::from_elem_n(None, self.basic_coverage_blocks.num_nodes());
         for covspan in coverage_spans {
-            let bcb = covspan.bcb;
             let span = covspan.span;
-            let counter_kind = if let Some(&counter_operand) = bcb_counters[bcb].as_ref() {
-                self.coverage_counters.make_identity_counter(counter_operand)
-            } else if let Some(counter_kind) = self.bcb_data_mut(bcb).take_counter() {
-                bcb_counters[bcb] = Some(counter_kind.as_operand_id());
-                debug_used_expressions.add_expression_operands(&counter_kind);
-                counter_kind
+            if let Some(bcb) = covspan.bcb {
+                let counter_kind = if let Some(&counter_operand) = bcb_counters[bcb].as_ref() {
+                    self.coverage_counters.make_identity_counter(counter_operand)
+                } else if let Some(counter_kind) = self.bcb_data_mut(bcb).take_counter() {
+                    bcb_counters[bcb] = Some(counter_kind.as_operand_id());
+                    debug_used_expressions.add_expression_operands(&counter_kind);
+                    counter_kind
+                } else {
+                    bug!("Every BasicCoverageBlock should have a Counter or Expression");
+                };
+                graphviz_data.add_bcb_coverage_span_with_counter(bcb, &covspan, &counter_kind);
+                // FIXME(#78542): Can spans for `TerminatorKind::Goto` be improved to avoid special
+                // cases?
+                let some_code_region = if self.is_code_region_redundant(bcb, span, body_span) {
+                    None
+                } else {
+                    Some(make_code_region(file_name, &source_file, span, body_span))
+                };
+                inject_statement(
+                    self.mir_body,
+                    counter_kind,
+                    self.bcb_last_bb(bcb),
+                    some_code_region,
+                );
             } else {
-                bug!("Every BasicCoverageBlock should have a Counter or Expression");
-            };
-            graphviz_data.add_bcb_coverage_span_with_counter(bcb, &covspan, &counter_kind);
-            // FIXME(#78542): Can spans for `TerminatorKind::Goto` be improved to avoid special
-            // cases?
-            let some_code_region = if self.is_code_region_redundant(bcb, span, body_span) {
-                None
-            } else {
-                Some(make_code_region(file_name, &source_file, span, body_span))
-            };
-            inject_statement(self.mir_body, counter_kind, self.bcb_last_bb(bcb), some_code_region);
+                // A closure body has its own, separate MIR, but the code span for the closure body
+                // is known to the enclosing function's MIR. Since it is possible for a closure to
+                // be "unused", that closure's MIR would not get codegenned and would not have any
+                // known coverage. Adding an `Unreachable` code region for the closure ensures the
+                // closure's region is known to coverage and can be marked "uncovered" if needed.
+                // Note, the `Unreachable` region will generate a `Zero` counter, which is
+                // subsequently turned into a `gap_region` in the Coverage Map. The `gap_region`
+                // ensures code is only marked uncovered if there is no other defined coverage.
+                inject_statement(
+                    self.mir_body,
+                    CoverageKind::Unreachable,
+                    mir::START_BLOCK,
+                    Some(make_code_region(file_name, &source_file, span, body_span)),
+                );
+            }
         }
     }
 
@@ -521,10 +555,13 @@ fn make_code_region(
     }
 }
 
-fn hir_body<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId) -> &'tcx rustc_hir::Body<'tcx> {
+fn fn_sig_and_body<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    def_id: DefId,
+) -> (Option<&'tcx rustc_hir::FnSig<'tcx>>, &'tcx rustc_hir::Body<'tcx>) {
     let hir_node = tcx.hir().get_if_local(def_id).expect("expected DefId is local");
     let fn_body_id = hir::map::associated_body(hir_node).expect("HIR node is a function with body");
-    tcx.hir().body(fn_body_id)
+    (hir::map::fn_sig(hir_node), tcx.hir().body(fn_body_id))
 }
 
 fn hash_mir_source<'tcx>(tcx: TyCtxt<'tcx>, hir_body: &'tcx rustc_hir::Body<'tcx>) -> u64 {

@@ -10,14 +10,19 @@ fn might_panic(should_panic: bool) {
     }
 }
 
-fn main() -> Result<(),u8> {
+fn main() -> Result<(), u8> {
     let mut countdown = 10;
     while countdown > 0 {
         if countdown == 1 {
             might_panic(true);
         } else if countdown < 5 {
             might_panic(false);
-        }
+        } // TODO(richkadel): I don't yet have a rational explanation for the `else if` block's
+        // closing brace getting a count of 15, when the loop only iterates 10 times!
+        // I can see there is a BCB from a Goto terminator that computes its count from an
+        // Expression adding counts from two incoming edges, one probably with a count of 10,
+        // and the other 5. But why?
+        // Note the "implicit else" here, after an `else if` (if that's important).
         countdown -= 1;
     }
     Ok(())
@@ -42,8 +47,8 @@ fn main() -> Result<(),u8> {
 //   5. The reason the coverage results actually show `panic!()` was called is most likely because
 //      `panic!()` is a macro, not a simple function call, and there are other `Statement`s and/or
 //      `Terminator`s that execute with a coverage counter before the panic and unwind occur.
-//   6. By best practice, programs should not panic. By design, the coverage implementation will not
-//      incur additional cost (in program size and execution time) to improve coverage results for
-//      an event that is not supposted to happen.
+//   6. Since the common practice is not to use `panic!()` for error handling, the coverage
+//      implementation avoids incurring an additional cost (in program size and execution time) to
+//      improve coverage results for an event that is generally not "supposed" to happen.
 //   7. FIXME(#78544): This issue describes a feature request for a proposed option to enable
 //      more accurate coverage results for tests that intentionally panic.

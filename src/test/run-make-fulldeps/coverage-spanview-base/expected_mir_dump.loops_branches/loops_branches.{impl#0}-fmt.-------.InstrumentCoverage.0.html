@@ -69,9 +69,10 @@ For revisions in Pull Requests (PR):
 </style>
 </head>
 <body>
-<div class="code" style="counter-reset: line 8"><span class="line">    <span class="code" style="--layer: 0">fn fmt(&amp;self, f: &amp;mut std::fmt::Formatter) -&gt; std::fmt::Result {</span></span>
-<span class="line"><span class="code" style="--layer: 0">        if </span><span><span class="code even" style="--layer: 1" title="10:12-10:16: @0[2]: _4 = const true
-10:12-10:16: @0[3]: FakeRead(ForMatchedPlace, _4)"><span class="annotation">@0⦊</span>true<span class="annotation">⦉@0</span></span></span><span class="code" style="--layer: 0"> {</span></span>
+<div class="code" style="counter-reset: line 8"><span class="line">    <span><span class="code even" style="--layer: 1" title="10:12-10:16: @0[2]: _4 = const true
+10:12-10:16: @0[3]: FakeRead(ForMatchedPlace, _4)"><span class="annotation">@0⦊</span>fn fmt(&amp;self, f: &amp;mut std::fmt::Formatter) -&gt; std::fmt::Result {</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="10:12-10:16: @0[2]: _4 = const true
+10:12-10:16: @0[3]: FakeRead(ForMatchedPlace, _4)">        if true<span class="annotation">⦉@0</span></span></span><span class="code" style="--layer: 0"> {</span></span>
 <span class="line"><span class="code" style="--layer: 0">            if </span><span><span class="code odd" style="--layer: 1" title="11:16-11:21: @3[2]: _6 = const false
 11:16-11:21: @3[3]: FakeRead(ForMatchedPlace, _6)"><span class="annotation">@1,3⦊</span>false<span class="annotation">⦉@1,3</span></span></span><span class="code" style="--layer: 0"> {</span></span>
 <span class="line"><span class="code" style="--layer: 0">                while </span><span><span class="code even" style="--layer: 1" title="12:23-12:27: @7[1]: _8 = const true

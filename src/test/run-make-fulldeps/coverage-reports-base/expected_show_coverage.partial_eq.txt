@@ -10,7 +10,7 @@
     9|       |}
    10|       |
    11|       |impl Version {
-   12|       |    pub fn new(major: usize, minor: usize, patch: usize) -> Self {
+   12|      2|    pub fn new(major: usize, minor: usize, patch: usize) -> Self {
    13|      2|        Self {
    14|      2|            major,
    15|      2|            minor,

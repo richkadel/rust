@@ -657,10 +657,19 @@ fn span_viewables(
     for coverage_span in coverage_spans {
         let tooltip = coverage_span.format_coverage_statements(tcx, mir_body);
         let CoverageSpan { span, bcb, .. } = coverage_span;
-        let bcb_data = &basic_coverage_blocks[*bcb];
-        let id = bcb_data.id();
-        let leader_bb = bcb_data.leader_bb();
-        span_viewables.push(SpanViewable { bb: leader_bb, span: *span, id, tooltip });
+        if let Some(bcb) = *bcb {
+            let bcb_data = &basic_coverage_blocks[bcb];
+            let id = bcb_data.id();
+            let leader_bb = bcb_data.leader_bb();
+            span_viewables.push(SpanViewable { bb: leader_bb, span: *span, id, tooltip });
+        } else {
+            span_viewables.push(SpanViewable {
+                bb: mir::START_BLOCK,
+                span: *span,
+                id: String::from("Unreachable"),
+                tooltip,
+            });
+        }
     }
     span_viewables
 }

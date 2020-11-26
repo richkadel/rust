@@ -69,7 +69,7 @@ For revisions in Pull Requests (PR):
 </style>
 </head>
 <body>
-<div class="code" style="counter-reset: line 2"><span class="line"><span class="code" style="--layer: 0">fn main() {</span></span>
+<div class="code" style="counter-reset: line 2"><span class="line"><span><span class="code even" style="--layer: 1"><span class="annotation">@0⦊</span>fn main() <span class="annotation">⦉@0</span></span></span><span class="code" style="--layer: 0">{</span></span>
 <span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code even" style="--layer: 1" title="4:25-4:26: @0[1]: _1 = const 0_u32
 4:9-4:22: @0[2]: FakeRead(ForLet, _1)"><span class="annotation">@0⦊</span>mut countdown = 0<span class="annotation">⦉@0</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0">    if </span><span><span class="code even" style="--layer: 1" title="5:8-5:12: @0[5]: _3 = const true
@@ -176,178 +176,180 @@ For revisions in Pull Requests (PR):
 <span class="line"><span class="code" style="--layer: 0">        // empty value for the executed block. When the last line does not end in a semicolon</span></span>
 <span class="line"><span class="code" style="--layer: 0">        // (that is, when the block actually results in a value), the additional `Assign` is not</span></span>
 <span class="line"><span class="code" style="--layer: 0">        // generated, and the brace is not included.</span></span>
-<span class="line"><span class="code" style="--layer: 0">        let </span><span><span class="code even" style="--layer: 1" title="52:29-52:30: @53[1]: _43 = const 0_i32
-52:13-52:26: @53[2]: FakeRead(ForLet, _43)"><span class="annotation">@51,53⦊</span>mut countdown = 0<span class="annotation">⦉@51,53</span></span></span><span class="code" style="--layer: 0">;</span></span>
-<span class="line"><span class="code" style="--layer: 0">        if </span><span><span class="code even" style="--layer: 1" title="53:12-53:16: @53[5]: _45 = const true
-53:12-53:16: @53[6]: FakeRead(ForMatchedPlace, _45)"><span class="annotation">@51,53⦊</span>true<span class="annotation">⦉@51,53</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="54:13-54:27: @56[0]: _43 = const 10_i32
-53:17-55:10: @56[1]: _44 = const ()
-55:10-55:10: @56.Goto: goto -&gt; bb57"><span class="annotation">@54,56⦊</span>{</span></span>
-<span class="line"><span class="code odd" style="--layer: 1" title="54:13-54:27: @56[0]: _43 = const 10_i32
-53:17-55:10: @56[1]: _44 = const ()
-55:10-55:10: @56.Goto: goto -&gt; bb57">            countdown = 10;</span></span>
-<span class="line"><span class="code odd" style="--layer: 1" title="54:13-54:27: @56[0]: _43 = const 10_i32
-53:17-55:10: @56[1]: _44 = const ()
-55:10-55:10: @56.Goto: goto -&gt; bb57">        }<span class="annotation">⦉@54,56</span></span></span><span><span class="code even" style="--layer: 1" title="55:10-55:10: @55.Goto: goto -&gt; bb57"><span class="annotation">@55⦊</span>‸<span class="annotation">⦉@55</span></span></span><span class="code" style="--layer: 0"></span></span>
+<span class="line"><span class="code" style="--layer: 0">        // TODO(richkadel): Add a FIXME(?????) with Issue and refer to the discussion at:</span></span>
+<span class="line"><span class="code" style="--layer: 0">        // https://github.com/rust-lang/rust/pull/79109#discussion_r525612860</span></span>
+<span class="line"><span class="code" style="--layer: 0">        let </span><span><span class="code even" style="--layer: 1" title="54:29-54:30: @53[1]: _43 = const 0_i32
+54:13-54:26: @53[2]: FakeRead(ForLet, _43)"><span class="annotation">@51,53⦊</span>mut countdown = 0<span class="annotation">⦉@51,53</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">        if </span><span><span class="code even" style="--layer: 1" title="55:12-55:16: @53[5]: _45 = const true
+55:12-55:16: @53[6]: FakeRead(ForMatchedPlace, _45)"><span class="annotation">@51,53⦊</span>true<span class="annotation">⦉@51,53</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="56:13-56:27: @56[0]: _43 = const 10_i32
+55:17-57:10: @56[1]: _44 = const ()
+57:10-57:10: @56.Goto: goto -&gt; bb57"><span class="annotation">@54,56⦊</span>{</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="56:13-56:27: @56[0]: _43 = const 10_i32
+55:17-57:10: @56[1]: _44 = const ()
+57:10-57:10: @56.Goto: goto -&gt; bb57">            countdown = 10;</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="56:13-56:27: @56[0]: _43 = const 10_i32
+55:17-57:10: @56[1]: _44 = const ()
+57:10-57:10: @56.Goto: goto -&gt; bb57">        }<span class="annotation">⦉@54,56</span></span></span><span><span class="code even" style="--layer: 1" title="57:10-57:10: @55.Goto: goto -&gt; bb57"><span class="annotation">@55⦊</span>‸<span class="annotation">⦉@55</span></span></span><span class="code" style="--layer: 0"></span></span>
 <span class="line"><span class="code" style="--layer: 0"></span></span>
-<span class="line"><span class="code" style="--layer: 0">        if </span><span><span class="code odd" style="--layer: 1" title="57:12-57:21: @57[4]: _47 = _43
-57:12-57:25: @57[5]: _46 = Gt(move _47, const 7_i32)
-57:12-57:25: @57[7]: FakeRead(ForMatchedPlace, _46)"><span class="annotation">@57⦊</span>countdown &gt; 7<span class="annotation">⦉@57</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code even" style="--layer: 1" title="58:13-58:27: @60[0]: _48 = CheckedSub(_43, const 4_i32)
-58:13-58:27: @61[0]: _43 = move (_48.0: i32)
-57:26-59:10: @61[1]: _41 = const ()"><span class="annotation">@58,60,61⦊</span>{</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="58:13-58:27: @60[0]: _48 = CheckedSub(_43, const 4_i32)
-58:13-58:27: @61[0]: _43 = move (_48.0: i32)
-57:26-59:10: @61[1]: _41 = const ()">            countdown -= 4;</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="58:13-58:27: @60[0]: _48 = CheckedSub(_43, const 4_i32)
-58:13-58:27: @61[0]: _43 = move (_48.0: i32)
-57:26-59:10: @61[1]: _41 = const ()">        }<span class="annotation">⦉@58,60,61</span></span></span><span class="code" style="--layer: 0"></span></span>
+<span class="line"><span class="code" style="--layer: 0">        if </span><span><span class="code odd" style="--layer: 1" title="59:12-59:21: @57[4]: _47 = _43
+59:12-59:25: @57[5]: _46 = Gt(move _47, const 7_i32)
+59:12-59:25: @57[7]: FakeRead(ForMatchedPlace, _46)"><span class="annotation">@57⦊</span>countdown &gt; 7<span class="annotation">⦉@57</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code even" style="--layer: 1" title="60:13-60:27: @60[0]: _48 = CheckedSub(_43, const 4_i32)
+60:13-60:27: @61[0]: _43 = move (_48.0: i32)
+59:26-61:10: @61[1]: _41 = const ()"><span class="annotation">@58,60,61⦊</span>{</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="60:13-60:27: @60[0]: _48 = CheckedSub(_43, const 4_i32)
+60:13-60:27: @61[0]: _43 = move (_48.0: i32)
+59:26-61:10: @61[1]: _41 = const ()">            countdown -= 4;</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="60:13-60:27: @60[0]: _48 = CheckedSub(_43, const 4_i32)
+60:13-60:27: @61[0]: _43 = move (_48.0: i32)
+59:26-61:10: @61[1]: _41 = const ()">        }<span class="annotation">⦉@58,60,61</span></span></span><span class="code" style="--layer: 0"></span></span>
 <span class="line"><span class="code" style="--layer: 0">        // The closing brace of the `then` branch is now included in the coverage region, and shown</span></span>
 <span class="line"><span class="code" style="--layer: 0">        // as "executed" (giving its line a count of 1 here). Since, in the original version above,</span></span>
 <span class="line"><span class="code" style="--layer: 0">        // the closing brace shares the same line as the `else if` conditional expression (which is</span></span>
 <span class="line"><span class="code" style="--layer: 0">        // not executed if the first `then` condition is true), only the condition's code region is</span></span>
 <span class="line"><span class="code" style="--layer: 0">        // marked with a count of 0 now.</span></span>
-<span class="line"><span class="code" style="--layer: 0">        else if </span><span><span class="code odd" style="--layer: 1" title="65:17-65:26: @59[2]: _50 = _43
-65:17-65:30: @59[3]: _49 = Gt(move _50, const 2_i32)
-65:17-65:30: @59[5]: FakeRead(ForMatchedPlace, _49)"><span class="annotation">@59⦊</span>countdown &gt; 2<span class="annotation">⦉@59</span></span></span><span class="code" style="--layer: 0"> {</span></span>
-<span class="line"><span class="code" style="--layer: 0">            if </span><span><span class="code even" style="--layer: 1" title="66:16-66:25: @64[5]: _55 = _43
-66:16-66:29: @64[6]: _54 = Lt(move _55, const 1_i32)"><span class="annotation">@62,64⦊</span>countdown &lt; 1<span class="annotation">⦉@62,64</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code odd" style="--layer: 1" title="66:33-66:42: @71[2]: _57 = _43
-66:33-66:46: @71[3]: _56 = Gt(move _57, const 5_i32)"><span class="annotation">@71⦊</span>countdown &gt; 5<span class="annotation">⦉@71</span></span></span><span><span class="code even" style="--layer: 1" title="66:46-66:46: @69.Goto: goto -&gt; bb72"><span class="annotation">@69⦊</span>‸<span class="annotation">⦉@69</span></span></span><span><span class="code odd" style="--layer: 1" title="66:46-66:46: @70.Goto: goto -&gt; bb72"><span class="annotation">@70⦊</span>‸<span class="annotation">⦉@70</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code even" style="--layer: 1" title="66:50-66:59: @67[2]: _59 = _43
-66:50-66:64: @67[3]: _58 = Ne(move _59, const 9_i32)"><span class="annotation">@67⦊</span>countdown != 9<span class="annotation">⦉@67</span></span></span><span><span class="code odd" style="--layer: 1" title="66:64-66:64: @65.Goto: goto -&gt; bb68"><span class="annotation">@65⦊</span>‸<span class="annotation">⦉@65</span></span></span><span><span class="code even" style="--layer: 1" title="66:64-66:64: @66.Goto: goto -&gt; bb68"><span class="annotation">@66⦊</span>‸<span class="annotation">⦉@66</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="67:17-67:30: @75[0]: _43 = const 0_i32
-66:65-68:14: @75[1]: _51 = const ()
-68:14-68:14: @75.Goto: goto -&gt; bb76"><span class="annotation">@73,75⦊</span>{</span></span>
-<span class="line"><span class="code odd" style="--layer: 1" title="67:17-67:30: @75[0]: _43 = const 0_i32
-66:65-68:14: @75[1]: _51 = const ()
-68:14-68:14: @75.Goto: goto -&gt; bb76">                countdown = 0;</span></span>
-<span class="line"><span class="code odd" style="--layer: 1" title="67:17-67:30: @75[0]: _43 = const 0_i32
-66:65-68:14: @75[1]: _51 = const ()
-68:14-68:14: @75.Goto: goto -&gt; bb76">            }<span class="annotation">⦉@73,75</span></span></span><span><span class="code even" style="--layer: 1" title="68:14-68:14: @74.Goto: goto -&gt; bb76"><span class="annotation">@74⦊</span>‸<span class="annotation">⦉@74</span></span></span><span class="code" style="--layer: 0"></span></span>
-<span class="line"><span class="code" style="--layer: 0">            </span><span><span class="code odd" style="--layer: 1" title="69:13-69:27: @76[2]: _60 = CheckedSub(_43, const 5_i32)
-69:13-69:27: @77[0]: _43 = move (_60.0: i32)"><span class="annotation">@76,77⦊</span>countdown -= 5<span class="annotation">⦉@76,77</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">        else if </span><span><span class="code odd" style="--layer: 1" title="67:17-67:26: @59[2]: _50 = _43
+67:17-67:30: @59[3]: _49 = Gt(move _50, const 2_i32)
+67:17-67:30: @59[5]: FakeRead(ForMatchedPlace, _49)"><span class="annotation">@59⦊</span>countdown &gt; 2<span class="annotation">⦉@59</span></span></span><span class="code" style="--layer: 0"> {</span></span>
+<span class="line"><span class="code" style="--layer: 0">            if </span><span><span class="code even" style="--layer: 1" title="68:16-68:25: @64[5]: _55 = _43
+68:16-68:29: @64[6]: _54 = Lt(move _55, const 1_i32)"><span class="annotation">@62,64⦊</span>countdown &lt; 1<span class="annotation">⦉@62,64</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code odd" style="--layer: 1" title="68:33-68:42: @71[2]: _57 = _43
+68:33-68:46: @71[3]: _56 = Gt(move _57, const 5_i32)"><span class="annotation">@71⦊</span>countdown &gt; 5<span class="annotation">⦉@71</span></span></span><span><span class="code even" style="--layer: 1" title="68:46-68:46: @69.Goto: goto -&gt; bb72"><span class="annotation">@69⦊</span>‸<span class="annotation">⦉@69</span></span></span><span><span class="code odd" style="--layer: 1" title="68:46-68:46: @70.Goto: goto -&gt; bb72"><span class="annotation">@70⦊</span>‸<span class="annotation">⦉@70</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code even" style="--layer: 1" title="68:50-68:59: @67[2]: _59 = _43
+68:50-68:64: @67[3]: _58 = Ne(move _59, const 9_i32)"><span class="annotation">@67⦊</span>countdown != 9<span class="annotation">⦉@67</span></span></span><span><span class="code odd" style="--layer: 1" title="68:64-68:64: @65.Goto: goto -&gt; bb68"><span class="annotation">@65⦊</span>‸<span class="annotation">⦉@65</span></span></span><span><span class="code even" style="--layer: 1" title="68:64-68:64: @66.Goto: goto -&gt; bb68"><span class="annotation">@66⦊</span>‸<span class="annotation">⦉@66</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="69:17-69:30: @75[0]: _43 = const 0_i32
+68:65-70:14: @75[1]: _51 = const ()
+70:14-70:14: @75.Goto: goto -&gt; bb76"><span class="annotation">@73,75⦊</span>{</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="69:17-69:30: @75[0]: _43 = const 0_i32
+68:65-70:14: @75[1]: _51 = const ()
+70:14-70:14: @75.Goto: goto -&gt; bb76">                countdown = 0;</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="69:17-69:30: @75[0]: _43 = const 0_i32
+68:65-70:14: @75[1]: _51 = const ()
+70:14-70:14: @75.Goto: goto -&gt; bb76">            }<span class="annotation">⦉@73,75</span></span></span><span><span class="code even" style="--layer: 1" title="70:14-70:14: @74.Goto: goto -&gt; bb76"><span class="annotation">@74⦊</span>‸<span class="annotation">⦉@74</span></span></span><span class="code" style="--layer: 0"></span></span>
+<span class="line"><span class="code" style="--layer: 0">            </span><span><span class="code odd" style="--layer: 1" title="71:13-71:27: @76[2]: _60 = CheckedSub(_43, const 5_i32)
+71:13-71:27: @77[0]: _43 = move (_60.0: i32)"><span class="annotation">@76,77⦊</span>countdown -= 5<span class="annotation">⦉@76,77</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0">        } else {</span></span>
-<span class="line"><span class="code" style="--layer: 0">            </span><span><span class="code even" style="--layer: 1" title="71:13-71:19: @63[0]: _0 = const ()"><span class="annotation">@63⦊</span>return<span class="annotation">⦉@63</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">            </span><span><span class="code even" style="--layer: 1" title="73:13-73:19: @63[0]: _0 = const ()"><span class="annotation">@63⦊</span>return<span class="annotation">⦉@63</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0">        }</span></span>
-<span class="line"><span class="code" style="--layer: 0">    }</span><span><span class="code odd" style="--layer: 1" title="73:6-73:6: @78.Goto: goto -&gt; bb79"><span class="annotation">@78⦊</span>‸<span class="annotation">⦉@78</span></span></span><span><span class="code even" style="--layer: 1" title="73:6-73:6: @52.Goto: goto -&gt; bb79"><span class="annotation">@52⦊</span>‸<span class="annotation">⦉@52</span></span></span><span class="code" style="--layer: 0"></span></span>
+<span class="line"><span class="code" style="--layer: 0">    }</span><span><span class="code odd" style="--layer: 1" title="75:6-75:6: @78.Goto: goto -&gt; bb79"><span class="annotation">@78⦊</span>‸<span class="annotation">⦉@78</span></span></span><span><span class="code even" style="--layer: 1" title="75:6-75:6: @52.Goto: goto -&gt; bb79"><span class="annotation">@52⦊</span>‸<span class="annotation">⦉@52</span></span></span><span class="code" style="--layer: 0"></span></span>
 <span class="line"><span class="code" style="--layer: 0"></span></span>
-<span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code odd" style="--layer: 1" title="75:25-75:26: @79[3]: _62 = const 0_i32
-75:9-75:22: @79[4]: FakeRead(ForLet, _62)"><span class="annotation">@79⦊</span>mut countdown = 0<span class="annotation">⦉@79</span></span></span><span class="code" style="--layer: 0">;</span></span>
-<span class="line"><span class="code" style="--layer: 0">    if </span><span><span class="code odd" style="--layer: 1" title="76:8-76:12: @79[7]: _64 = const true
-76:8-76:12: @79[8]: FakeRead(ForMatchedPlace, _64)"><span class="annotation">@79⦊</span>true<span class="annotation">⦉@79</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code even" style="--layer: 1" title="77:9-77:22: @82[0]: _62 = const 1_i32
-76:13-78:6: @82[1]: _63 = const ()
-78:6-78:6: @82.Goto: goto -&gt; bb83"><span class="annotation">@80,82⦊</span>{</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="77:9-77:22: @82[0]: _62 = const 1_i32
-76:13-78:6: @82[1]: _63 = const ()
-78:6-78:6: @82.Goto: goto -&gt; bb83">        countdown = 1;</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="77:9-77:22: @82[0]: _62 = const 1_i32
-76:13-78:6: @82[1]: _63 = const ()
-78:6-78:6: @82.Goto: goto -&gt; bb83">    }<span class="annotation">⦉@80,82</span></span></span><span><span class="code odd" style="--layer: 1" title="78:6-78:6: @81.Goto: goto -&gt; bb83"><span class="annotation">@81⦊</span>‸<span class="annotation">⦉@81</span></span></span><span class="code" style="--layer: 0"></span></span>
+<span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code odd" style="--layer: 1" title="77:25-77:26: @79[3]: _62 = const 0_i32
+77:9-77:22: @79[4]: FakeRead(ForLet, _62)"><span class="annotation">@79⦊</span>mut countdown = 0<span class="annotation">⦉@79</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">    if </span><span><span class="code odd" style="--layer: 1" title="78:8-78:12: @79[7]: _64 = const true
+78:8-78:12: @79[8]: FakeRead(ForMatchedPlace, _64)"><span class="annotation">@79⦊</span>true<span class="annotation">⦉@79</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code even" style="--layer: 1" title="79:9-79:22: @82[0]: _62 = const 1_i32
+78:13-80:6: @82[1]: _63 = const ()
+80:6-80:6: @82.Goto: goto -&gt; bb83"><span class="annotation">@80,82⦊</span>{</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="79:9-79:22: @82[0]: _62 = const 1_i32
+78:13-80:6: @82[1]: _63 = const ()
+80:6-80:6: @82.Goto: goto -&gt; bb83">        countdown = 1;</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="79:9-79:22: @82[0]: _62 = const 1_i32
+78:13-80:6: @82[1]: _63 = const ()
+80:6-80:6: @82.Goto: goto -&gt; bb83">    }<span class="annotation">⦉@80,82</span></span></span><span><span class="code odd" style="--layer: 1" title="80:6-80:6: @81.Goto: goto -&gt; bb83"><span class="annotation">@81⦊</span>‸<span class="annotation">⦉@81</span></span></span><span class="code" style="--layer: 0"></span></span>
 <span class="line"><span class="code" style="--layer: 0"></span></span>
-<span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code even" style="--layer: 1" title="80:9-80:10: @106[0]: FakeRead(ForLet, _65)"><span class="annotation">@106⦊</span>z<span class="annotation">⦉@106</span></span></span><span class="code" style="--layer: 0"> = if </span><span><span class="code odd" style="--layer: 1" title="80:16-80:25: @83[5]: _67 = _62
-80:16-80:29: @83[6]: _66 = Gt(move _67, const 7_i32)
-80:16-80:29: @83[8]: FakeRead(ForMatchedPlace, _66)"><span class="annotation">@83⦊</span>countdown &gt; 7<span class="annotation">⦉@83</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code even" style="--layer: 1" title="81:9-81:23: @86[0]: _68 = CheckedSub(_62, const 4_i32)
-81:9-81:23: @87[0]: _62 = move (_68.0: i32)
-80:30-82:6: @87[1]: _65 = const ()"><span class="annotation">@84,86,87⦊</span>{</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="81:9-81:23: @86[0]: _68 = CheckedSub(_62, const 4_i32)
-81:9-81:23: @87[0]: _62 = move (_68.0: i32)
-80:30-82:6: @87[1]: _65 = const ()">        countdown -= 4;</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="81:9-81:23: @86[0]: _68 = CheckedSub(_62, const 4_i32)
-81:9-81:23: @87[0]: _62 = move (_68.0: i32)
-80:30-82:6: @87[1]: _65 = const ()">    }<span class="annotation">⦉@84,86,87</span></span></span><span class="code" style="--layer: 0"> else if </span><span><span class="code odd" style="--layer: 1" title="82:15-82:24: @85[2]: _70 = _62
-82:15-82:28: @85[3]: _69 = Gt(move _70, const 2_i32)
-82:15-82:28: @85[5]: FakeRead(ForMatchedPlace, _69)"><span class="annotation">@85⦊</span>countdown &gt; 2<span class="annotation">⦉@85</span></span></span><span class="code" style="--layer: 0"> {</span></span>
-<span class="line"><span class="code" style="--layer: 0">        if </span><span><span class="code even" style="--layer: 1" title="83:12-83:21: @90[5]: _75 = _62
-83:12-83:25: @90[6]: _74 = Lt(move _75, const 1_i32)"><span class="annotation">@88,90⦊</span>countdown &lt; 1<span class="annotation">⦉@88,90</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code odd" style="--layer: 1" title="83:29-83:38: @97[2]: _77 = _62
-83:29-83:42: @97[3]: _76 = Gt(move _77, const 5_i32)"><span class="annotation">@97⦊</span>countdown &gt; 5<span class="annotation">⦉@97</span></span></span><span><span class="code even" style="--layer: 1" title="83:42-83:42: @95.Goto: goto -&gt; bb98"><span class="annotation">@95⦊</span>‸<span class="annotation">⦉@95</span></span></span><span><span class="code odd" style="--layer: 1" title="83:42-83:42: @96.Goto: goto -&gt; bb98"><span class="annotation">@96⦊</span>‸<span class="annotation">⦉@96</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code even" style="--layer: 1" title="83:46-83:55: @93[2]: _79 = _62
-83:46-83:60: @93[3]: _78 = Ne(move _79, const 9_i32)"><span class="annotation">@93⦊</span>countdown != 9<span class="annotation">⦉@93</span></span></span><span><span class="code odd" style="--layer: 1" title="83:60-83:60: @91.Goto: goto -&gt; bb94"><span class="annotation">@91⦊</span>‸<span class="annotation">⦉@91</span></span></span><span><span class="code even" style="--layer: 1" title="83:60-83:60: @92.Goto: goto -&gt; bb94"><span class="annotation">@92⦊</span>‸<span class="annotation">⦉@92</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="84:13-84:26: @101[0]: _62 = const 0_i32
-83:61-85:10: @101[1]: _71 = const ()
-85:10-85:10: @101.Goto: goto -&gt; bb102"><span class="annotation">@99,101⦊</span>{</span></span>
-<span class="line"><span class="code odd" style="--layer: 1" title="84:13-84:26: @101[0]: _62 = const 0_i32
-83:61-85:10: @101[1]: _71 = const ()
-85:10-85:10: @101.Goto: goto -&gt; bb102">            countdown = 0;</span></span>
-<span class="line"><span class="code odd" style="--layer: 1" title="84:13-84:26: @101[0]: _62 = const 0_i32
-83:61-85:10: @101[1]: _71 = const ()
-85:10-85:10: @101.Goto: goto -&gt; bb102">        }<span class="annotation">⦉@99,101</span></span></span><span><span class="code even" style="--layer: 1" title="85:10-85:10: @100.Goto: goto -&gt; bb102"><span class="annotation">@100⦊</span>‸<span class="annotation">⦉@100</span></span></span><span class="code" style="--layer: 0"></span></span>
-<span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code odd" style="--layer: 1" title="86:9-86:23: @102[2]: _80 = CheckedSub(_62, const 5_i32)
-86:9-86:23: @103[0]: _62 = move (_80.0: i32)"><span class="annotation">@102,103⦊</span>countdown -= 5<span class="annotation">⦉@102,103</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code even" style="--layer: 1" title="82:9-82:10: @106[0]: FakeRead(ForLet, _65)"><span class="annotation">@106⦊</span>z<span class="annotation">⦉@106</span></span></span><span class="code" style="--layer: 0"> = if </span><span><span class="code odd" style="--layer: 1" title="82:16-82:25: @83[5]: _67 = _62
+82:16-82:29: @83[6]: _66 = Gt(move _67, const 7_i32)
+82:16-82:29: @83[8]: FakeRead(ForMatchedPlace, _66)"><span class="annotation">@83⦊</span>countdown &gt; 7<span class="annotation">⦉@83</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code even" style="--layer: 1" title="83:9-83:23: @86[0]: _68 = CheckedSub(_62, const 4_i32)
+83:9-83:23: @87[0]: _62 = move (_68.0: i32)
+82:30-84:6: @87[1]: _65 = const ()"><span class="annotation">@84,86,87⦊</span>{</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="83:9-83:23: @86[0]: _68 = CheckedSub(_62, const 4_i32)
+83:9-83:23: @87[0]: _62 = move (_68.0: i32)
+82:30-84:6: @87[1]: _65 = const ()">        countdown -= 4;</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="83:9-83:23: @86[0]: _68 = CheckedSub(_62, const 4_i32)
+83:9-83:23: @87[0]: _62 = move (_68.0: i32)
+82:30-84:6: @87[1]: _65 = const ()">    }<span class="annotation">⦉@84,86,87</span></span></span><span class="code" style="--layer: 0"> else if </span><span><span class="code odd" style="--layer: 1" title="84:15-84:24: @85[2]: _70 = _62
+84:15-84:28: @85[3]: _69 = Gt(move _70, const 2_i32)
+84:15-84:28: @85[5]: FakeRead(ForMatchedPlace, _69)"><span class="annotation">@85⦊</span>countdown &gt; 2<span class="annotation">⦉@85</span></span></span><span class="code" style="--layer: 0"> {</span></span>
+<span class="line"><span class="code" style="--layer: 0">        if </span><span><span class="code even" style="--layer: 1" title="85:12-85:21: @90[5]: _75 = _62
+85:12-85:25: @90[6]: _74 = Lt(move _75, const 1_i32)"><span class="annotation">@88,90⦊</span>countdown &lt; 1<span class="annotation">⦉@88,90</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code odd" style="--layer: 1" title="85:29-85:38: @97[2]: _77 = _62
+85:29-85:42: @97[3]: _76 = Gt(move _77, const 5_i32)"><span class="annotation">@97⦊</span>countdown &gt; 5<span class="annotation">⦉@97</span></span></span><span><span class="code even" style="--layer: 1" title="85:42-85:42: @95.Goto: goto -&gt; bb98"><span class="annotation">@95⦊</span>‸<span class="annotation">⦉@95</span></span></span><span><span class="code odd" style="--layer: 1" title="85:42-85:42: @96.Goto: goto -&gt; bb98"><span class="annotation">@96⦊</span>‸<span class="annotation">⦉@96</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code even" style="--layer: 1" title="85:46-85:55: @93[2]: _79 = _62
+85:46-85:60: @93[3]: _78 = Ne(move _79, const 9_i32)"><span class="annotation">@93⦊</span>countdown != 9<span class="annotation">⦉@93</span></span></span><span><span class="code odd" style="--layer: 1" title="85:60-85:60: @91.Goto: goto -&gt; bb94"><span class="annotation">@91⦊</span>‸<span class="annotation">⦉@91</span></span></span><span><span class="code even" style="--layer: 1" title="85:60-85:60: @92.Goto: goto -&gt; bb94"><span class="annotation">@92⦊</span>‸<span class="annotation">⦉@92</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="86:13-86:26: @101[0]: _62 = const 0_i32
+85:61-87:10: @101[1]: _71 = const ()
+87:10-87:10: @101.Goto: goto -&gt; bb102"><span class="annotation">@99,101⦊</span>{</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="86:13-86:26: @101[0]: _62 = const 0_i32
+85:61-87:10: @101[1]: _71 = const ()
+87:10-87:10: @101.Goto: goto -&gt; bb102">            countdown = 0;</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="86:13-86:26: @101[0]: _62 = const 0_i32
+85:61-87:10: @101[1]: _71 = const ()
+87:10-87:10: @101.Goto: goto -&gt; bb102">        }<span class="annotation">⦉@99,101</span></span></span><span><span class="code even" style="--layer: 1" title="87:10-87:10: @100.Goto: goto -&gt; bb102"><span class="annotation">@100⦊</span>‸<span class="annotation">⦉@100</span></span></span><span class="code" style="--layer: 0"></span></span>
+<span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code odd" style="--layer: 1" title="88:9-88:23: @102[2]: _80 = CheckedSub(_62, const 5_i32)
+88:9-88:23: @103[0]: _62 = move (_80.0: i32)"><span class="annotation">@102,103⦊</span>countdown -= 5<span class="annotation">⦉@102,103</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0">    } else {</span></span>
-<span class="line"><span class="code" style="--layer: 0">        let </span><span><span class="code even" style="--layer: 1" title="88:35-88:44: @89[1]: _82 = _62
-88:13-88:32: @89[2]: FakeRead(ForLet, _82)
-89:18-89:27: @89[9]: _113 = const main::promoted[1]
-89:18-89:27: @89[10]: _88 = &amp;(*_113)
-89:18-89:27: @89[11]: _87 = &amp;(*_88)
-89:18-89:27: @89[12]: _86 = move _87 as &amp;[&amp;str] (Pointer(Unsize))
-89:9-89:29: @89[18]: _94 = ()
-89:9-89:29: @89[19]: FakeRead(ForMatchedPlace, _94)
-89:9-89:29: @89[20]: _112 = const main::promoted[0]
-89:9-89:29: @89[21]: _92 = &amp;(*_112)
-89:9-89:29: @89[22]: _91 = &amp;(*_92)
-89:9-89:29: @89[23]: _90 = move _91 as &amp;[std::fmt::ArgumentV1] (Pointer(Unsize))
-89:9-89:29: @89.Call: _85 = Arguments::new_v1(move _86, move _90) -&gt; [return: bb104, unwind: bb132]
-89:9-89:29: @104.Call: _84 = _print(move _85) -&gt; [return: bb105, unwind: bb132]
-89:9-89:29: @105[5]: _83 = const ()
-90:9-90:15: @105[7]: _0 = const ()"><span class="annotation">@89,104,105⦊</span>should_be_reachable = countdown;</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="88:35-88:44: @89[1]: _82 = _62
-88:13-88:32: @89[2]: FakeRead(ForLet, _82)
-89:18-89:27: @89[9]: _113 = const main::promoted[1]
-89:18-89:27: @89[10]: _88 = &amp;(*_113)
-89:18-89:27: @89[11]: _87 = &amp;(*_88)
-89:18-89:27: @89[12]: _86 = move _87 as &amp;[&amp;str] (Pointer(Unsize))
-89:9-89:29: @89[18]: _94 = ()
-89:9-89:29: @89[19]: FakeRead(ForMatchedPlace, _94)
-89:9-89:29: @89[20]: _112 = const main::promoted[0]
-89:9-89:29: @89[21]: _92 = &amp;(*_112)
-89:9-89:29: @89[22]: _91 = &amp;(*_92)
-89:9-89:29: @89[23]: _90 = move _91 as &amp;[std::fmt::ArgumentV1] (Pointer(Unsize))
-89:9-89:29: @89.Call: _85 = Arguments::new_v1(move _86, move _90) -&gt; [return: bb104, unwind: bb132]
-89:9-89:29: @104.Call: _84 = _print(move _85) -&gt; [return: bb105, unwind: bb132]
-89:9-89:29: @105[5]: _83 = const ()
-90:9-90:15: @105[7]: _0 = const ()">        println!("reached");</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="88:35-88:44: @89[1]: _82 = _62
-88:13-88:32: @89[2]: FakeRead(ForLet, _82)
-89:18-89:27: @89[9]: _113 = const main::promoted[1]
-89:18-89:27: @89[10]: _88 = &amp;(*_113)
-89:18-89:27: @89[11]: _87 = &amp;(*_88)
-89:18-89:27: @89[12]: _86 = move _87 as &amp;[&amp;str] (Pointer(Unsize))
-89:9-89:29: @89[18]: _94 = ()
-89:9-89:29: @89[19]: FakeRead(ForMatchedPlace, _94)
-89:9-89:29: @89[20]: _112 = const main::promoted[0]
-89:9-89:29: @89[21]: _92 = &amp;(*_112)
-89:9-89:29: @89[22]: _91 = &amp;(*_92)
-89:9-89:29: @89[23]: _90 = move _91 as &amp;[std::fmt::ArgumentV1] (Pointer(Unsize))
-89:9-89:29: @89.Call: _85 = Arguments::new_v1(move _86, move _90) -&gt; [return: bb104, unwind: bb132]
-89:9-89:29: @104.Call: _84 = _print(move _85) -&gt; [return: bb105, unwind: bb132]
-89:9-89:29: @105[5]: _83 = const ()
-90:9-90:15: @105[7]: _0 = const ()">        return<span class="annotation">⦉@89,104,105</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">        let </span><span><span class="code even" style="--layer: 1" title="90:35-90:44: @89[1]: _82 = _62
+90:13-90:32: @89[2]: FakeRead(ForLet, _82)
+91:18-91:27: @89[9]: _113 = const main::promoted[1]
+91:18-91:27: @89[10]: _88 = &amp;(*_113)
+91:18-91:27: @89[11]: _87 = &amp;(*_88)
+91:18-91:27: @89[12]: _86 = move _87 as &amp;[&amp;str] (Pointer(Unsize))
+91:9-91:29: @89[18]: _94 = ()
+91:9-91:29: @89[19]: FakeRead(ForMatchedPlace, _94)
+91:9-91:29: @89[20]: _112 = const main::promoted[0]
+91:9-91:29: @89[21]: _92 = &amp;(*_112)
+91:9-91:29: @89[22]: _91 = &amp;(*_92)
+91:9-91:29: @89[23]: _90 = move _91 as &amp;[std::fmt::ArgumentV1] (Pointer(Unsize))
+91:9-91:29: @89.Call: _85 = Arguments::new_v1(move _86, move _90) -&gt; [return: bb104, unwind: bb132]
+91:9-91:29: @104.Call: _84 = _print(move _85) -&gt; [return: bb105, unwind: bb132]
+91:9-91:29: @105[5]: _83 = const ()
+92:9-92:15: @105[7]: _0 = const ()"><span class="annotation">@89,104,105⦊</span>should_be_reachable = countdown;</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="90:35-90:44: @89[1]: _82 = _62
+90:13-90:32: @89[2]: FakeRead(ForLet, _82)
+91:18-91:27: @89[9]: _113 = const main::promoted[1]
+91:18-91:27: @89[10]: _88 = &amp;(*_113)
+91:18-91:27: @89[11]: _87 = &amp;(*_88)
+91:18-91:27: @89[12]: _86 = move _87 as &amp;[&amp;str] (Pointer(Unsize))
+91:9-91:29: @89[18]: _94 = ()
+91:9-91:29: @89[19]: FakeRead(ForMatchedPlace, _94)
+91:9-91:29: @89[20]: _112 = const main::promoted[0]
+91:9-91:29: @89[21]: _92 = &amp;(*_112)
+91:9-91:29: @89[22]: _91 = &amp;(*_92)
+91:9-91:29: @89[23]: _90 = move _91 as &amp;[std::fmt::ArgumentV1] (Pointer(Unsize))
+91:9-91:29: @89.Call: _85 = Arguments::new_v1(move _86, move _90) -&gt; [return: bb104, unwind: bb132]
+91:9-91:29: @104.Call: _84 = _print(move _85) -&gt; [return: bb105, unwind: bb132]
+91:9-91:29: @105[5]: _83 = const ()
+92:9-92:15: @105[7]: _0 = const ()">        println!("reached");</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="90:35-90:44: @89[1]: _82 = _62
+90:13-90:32: @89[2]: FakeRead(ForLet, _82)
+91:18-91:27: @89[9]: _113 = const main::promoted[1]
+91:18-91:27: @89[10]: _88 = &amp;(*_113)
+91:18-91:27: @89[11]: _87 = &amp;(*_88)
+91:18-91:27: @89[12]: _86 = move _87 as &amp;[&amp;str] (Pointer(Unsize))
+91:9-91:29: @89[18]: _94 = ()
+91:9-91:29: @89[19]: FakeRead(ForMatchedPlace, _94)
+91:9-91:29: @89[20]: _112 = const main::promoted[0]
+91:9-91:29: @89[21]: _92 = &amp;(*_112)
+91:9-91:29: @89[22]: _91 = &amp;(*_92)
+91:9-91:29: @89[23]: _90 = move _91 as &amp;[std::fmt::ArgumentV1] (Pointer(Unsize))
+91:9-91:29: @89.Call: _85 = Arguments::new_v1(move _86, move _90) -&gt; [return: bb104, unwind: bb132]
+91:9-91:29: @104.Call: _84 = _print(move _85) -&gt; [return: bb105, unwind: bb132]
+91:9-91:29: @105[5]: _83 = const ()
+92:9-92:15: @105[7]: _0 = const ()">        return<span class="annotation">⦉@89,104,105</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0">    };</span></span>
 <span class="line"><span class="code" style="--layer: 0"></span></span>
-<span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code odd" style="--layer: 1" title="93:9-93:10: @127[0]: FakeRead(ForLet, _95)"><span class="annotation">@127⦊</span>w<span class="annotation">⦉@127</span></span></span><span class="code" style="--layer: 0"> = if </span><span><span class="code even" style="--layer: 1" title="93:16-93:25: @106[5]: _97 = _62
-93:16-93:29: @106[6]: _96 = Gt(move _97, const 7_i32)
-93:16-93:29: @106[8]: FakeRead(ForMatchedPlace, _96)"><span class="annotation">@106⦊</span>countdown &gt; 7<span class="annotation">⦉@106</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="94:9-94:23: @109[0]: _98 = CheckedSub(_62, const 4_i32)
-94:9-94:23: @110[0]: _62 = move (_98.0: i32)
-93:30-95:6: @110[1]: _95 = const ()"><span class="annotation">@107,109,110⦊</span>{</span></span>
-<span class="line"><span class="code odd" style="--layer: 1" title="94:9-94:23: @109[0]: _98 = CheckedSub(_62, const 4_i32)
-94:9-94:23: @110[0]: _62 = move (_98.0: i32)
-93:30-95:6: @110[1]: _95 = const ()">        countdown -= 4;</span></span>
-<span class="line"><span class="code odd" style="--layer: 1" title="94:9-94:23: @109[0]: _98 = CheckedSub(_62, const 4_i32)
-94:9-94:23: @110[0]: _62 = move (_98.0: i32)
-93:30-95:6: @110[1]: _95 = const ()">    }<span class="annotation">⦉@107,109,110</span></span></span><span class="code" style="--layer: 0"> else if </span><span><span class="code even" style="--layer: 1" title="95:15-95:24: @108[2]: _100 = _62
-95:15-95:28: @108[3]: _99 = Gt(move _100, const 2_i32)
-95:15-95:28: @108[5]: FakeRead(ForMatchedPlace, _99)"><span class="annotation">@108⦊</span>countdown &gt; 2<span class="annotation">⦉@108</span></span></span><span class="code" style="--layer: 0"> {</span></span>
-<span class="line"><span class="code" style="--layer: 0">        if </span><span><span class="code odd" style="--layer: 1" title="96:12-96:21: @113[5]: _105 = _62
-96:12-96:25: @113[6]: _104 = Lt(move _105, const 1_i32)"><span class="annotation">@111,113⦊</span>countdown &lt; 1<span class="annotation">⦉@111,113</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code even" style="--layer: 1" title="96:29-96:38: @120[2]: _107 = _62
-96:29-96:42: @120[3]: _106 = Gt(move _107, const 5_i32)"><span class="annotation">@120⦊</span>countdown &gt; 5<span class="annotation">⦉@120</span></span></span><span><span class="code odd" style="--layer: 1" title="96:42-96:42: @118.Goto: goto -&gt; bb121"><span class="annotation">@118⦊</span>‸<span class="annotation">⦉@118</span></span></span><span><span class="code even" style="--layer: 1" title="96:42-96:42: @119.Goto: goto -&gt; bb121"><span class="annotation">@119⦊</span>‸<span class="annotation">⦉@119</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code odd" style="--layer: 1" title="96:46-96:55: @116[2]: _109 = _62
-96:46-96:60: @116[3]: _108 = Ne(move _109, const 9_i32)"><span class="annotation">@116⦊</span>countdown != 9<span class="annotation">⦉@116</span></span></span><span><span class="code even" style="--layer: 1" title="96:60-96:60: @114.Goto: goto -&gt; bb117"><span class="annotation">@114⦊</span>‸<span class="annotation">⦉@114</span></span></span><span><span class="code odd" style="--layer: 1" title="96:60-96:60: @115.Goto: goto -&gt; bb117"><span class="annotation">@115⦊</span>‸<span class="annotation">⦉@115</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code even" style="--layer: 1" title="97:13-97:26: @124[0]: _62 = const 0_i32
-96:61-98:10: @124[1]: _101 = const ()
-98:10-98:10: @124.Goto: goto -&gt; bb125"><span class="annotation">@122,124⦊</span>{</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="97:13-97:26: @124[0]: _62 = const 0_i32
-96:61-98:10: @124[1]: _101 = const ()
-98:10-98:10: @124.Goto: goto -&gt; bb125">            countdown = 0;</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="97:13-97:26: @124[0]: _62 = const 0_i32
-96:61-98:10: @124[1]: _101 = const ()
-98:10-98:10: @124.Goto: goto -&gt; bb125">        }<span class="annotation">⦉@122,124</span></span></span><span><span class="code odd" style="--layer: 1" title="98:10-98:10: @123.Goto: goto -&gt; bb125"><span class="annotation">@123⦊</span>‸<span class="annotation">⦉@123</span></span></span><span class="code" style="--layer: 0"></span></span>
-<span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code even" style="--layer: 1" title="99:9-99:23: @125[2]: _110 = CheckedSub(_62, const 5_i32)
-99:9-99:23: @126[0]: _62 = move (_110.0: i32)"><span class="annotation">@125,126⦊</span>countdown -= 5<span class="annotation">⦉@125,126</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code odd" style="--layer: 1" title="95:9-95:10: @127[0]: FakeRead(ForLet, _95)"><span class="annotation">@127⦊</span>w<span class="annotation">⦉@127</span></span></span><span class="code" style="--layer: 0"> = if </span><span><span class="code even" style="--layer: 1" title="95:16-95:25: @106[5]: _97 = _62
+95:16-95:29: @106[6]: _96 = Gt(move _97, const 7_i32)
+95:16-95:29: @106[8]: FakeRead(ForMatchedPlace, _96)"><span class="annotation">@106⦊</span>countdown &gt; 7<span class="annotation">⦉@106</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="96:9-96:23: @109[0]: _98 = CheckedSub(_62, const 4_i32)
+96:9-96:23: @110[0]: _62 = move (_98.0: i32)
+95:30-97:6: @110[1]: _95 = const ()"><span class="annotation">@107,109,110⦊</span>{</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="96:9-96:23: @109[0]: _98 = CheckedSub(_62, const 4_i32)
+96:9-96:23: @110[0]: _62 = move (_98.0: i32)
+95:30-97:6: @110[1]: _95 = const ()">        countdown -= 4;</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="96:9-96:23: @109[0]: _98 = CheckedSub(_62, const 4_i32)
+96:9-96:23: @110[0]: _62 = move (_98.0: i32)
+95:30-97:6: @110[1]: _95 = const ()">    }<span class="annotation">⦉@107,109,110</span></span></span><span class="code" style="--layer: 0"> else if </span><span><span class="code even" style="--layer: 1" title="97:15-97:24: @108[2]: _100 = _62
+97:15-97:28: @108[3]: _99 = Gt(move _100, const 2_i32)
+97:15-97:28: @108[5]: FakeRead(ForMatchedPlace, _99)"><span class="annotation">@108⦊</span>countdown &gt; 2<span class="annotation">⦉@108</span></span></span><span class="code" style="--layer: 0"> {</span></span>
+<span class="line"><span class="code" style="--layer: 0">        if </span><span><span class="code odd" style="--layer: 1" title="98:12-98:21: @113[5]: _105 = _62
+98:12-98:25: @113[6]: _104 = Lt(move _105, const 1_i32)"><span class="annotation">@111,113⦊</span>countdown &lt; 1<span class="annotation">⦉@111,113</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code even" style="--layer: 1" title="98:29-98:38: @120[2]: _107 = _62
+98:29-98:42: @120[3]: _106 = Gt(move _107, const 5_i32)"><span class="annotation">@120⦊</span>countdown &gt; 5<span class="annotation">⦉@120</span></span></span><span><span class="code odd" style="--layer: 1" title="98:42-98:42: @118.Goto: goto -&gt; bb121"><span class="annotation">@118⦊</span>‸<span class="annotation">⦉@118</span></span></span><span><span class="code even" style="--layer: 1" title="98:42-98:42: @119.Goto: goto -&gt; bb121"><span class="annotation">@119⦊</span>‸<span class="annotation">⦉@119</span></span></span><span class="code" style="--layer: 0"> || </span><span><span class="code odd" style="--layer: 1" title="98:46-98:55: @116[2]: _109 = _62
+98:46-98:60: @116[3]: _108 = Ne(move _109, const 9_i32)"><span class="annotation">@116⦊</span>countdown != 9<span class="annotation">⦉@116</span></span></span><span><span class="code even" style="--layer: 1" title="98:60-98:60: @114.Goto: goto -&gt; bb117"><span class="annotation">@114⦊</span>‸<span class="annotation">⦉@114</span></span></span><span><span class="code odd" style="--layer: 1" title="98:60-98:60: @115.Goto: goto -&gt; bb117"><span class="annotation">@115⦊</span>‸<span class="annotation">⦉@115</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code even" style="--layer: 1" title="99:13-99:26: @124[0]: _62 = const 0_i32
+98:61-100:10: @124[1]: _101 = const ()
+100:10-100:10: @124.Goto: goto -&gt; bb125"><span class="annotation">@122,124⦊</span>{</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="99:13-99:26: @124[0]: _62 = const 0_i32
+98:61-100:10: @124[1]: _101 = const ()
+100:10-100:10: @124.Goto: goto -&gt; bb125">            countdown = 0;</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="99:13-99:26: @124[0]: _62 = const 0_i32
+98:61-100:10: @124[1]: _101 = const ()
+100:10-100:10: @124.Goto: goto -&gt; bb125">        }<span class="annotation">⦉@122,124</span></span></span><span><span class="code odd" style="--layer: 1" title="100:10-100:10: @123.Goto: goto -&gt; bb125"><span class="annotation">@123⦊</span>‸<span class="annotation">⦉@123</span></span></span><span class="code" style="--layer: 0"></span></span>
+<span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code even" style="--layer: 1" title="101:9-101:23: @125[2]: _110 = CheckedSub(_62, const 5_i32)
+101:9-101:23: @126[0]: _62 = move (_110.0: i32)"><span class="annotation">@125,126⦊</span>countdown -= 5<span class="annotation">⦉@125,126</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0">    } else {</span></span>
-<span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code odd" style="--layer: 1" title="101:9-101:15: @112[0]: _0 = const ()"><span class="annotation">@112⦊</span>return<span class="annotation">⦉@112</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code odd" style="--layer: 1" title="103:9-103:15: @112[0]: _0 = const ()"><span class="annotation">@112⦊</span>return<span class="annotation">⦉@112</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0">    };</span></span>
-<span class="line"><span class="code" style="--layer: 0">}</span><span><span class="code even" style="--layer: 1" title="103:2-103:2: @130.Goto: goto -&gt; bb131"><span class="annotation">@130⦊</span>‸<span class="annotation">⦉@130</span></span></span><span><span class="code odd" style="--layer: 1" title="103:2-103:2: @131.Return: return"><span class="annotation">@131⦊</span>‸<span class="annotation">⦉@131</span></span></span></span></div>
+<span class="line"><span class="code" style="--layer: 0">}</span><span><span class="code even" style="--layer: 1" title="105:2-105:2: @130.Goto: goto -&gt; bb131"><span class="annotation">@130⦊</span>‸<span class="annotation">⦉@130</span></span></span><span><span class="code odd" style="--layer: 1" title="105:2-105:2: @131.Return: return"><span class="annotation">@131⦊</span>‸<span class="annotation">⦉@131</span></span></span></span></div>
 </body>
 </html>

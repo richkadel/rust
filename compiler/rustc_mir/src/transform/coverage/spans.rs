@@ -1,5 +1,5 @@
 use super::debug::term_type;
-use super::graph::{BasicCoverageBlock, BasicCoverageBlockData, CoverageGraph};
+use super::graph::{BasicCoverageBlock, BasicCoverageBlockData, CoverageGraph, START_BCB};
 
 use crate::util::spanview::source_range_no_file;
 
@@ -68,12 +68,25 @@ impl CoverageStatement {
 #[derive(Debug, Clone)]
 pub(super) struct CoverageSpan {
     pub span: Span,
-    pub bcb: BasicCoverageBlock,
+    pub bcb: Option<BasicCoverageBlock>,
     pub coverage_statements: Vec<CoverageStatement>,
     pub is_closure: bool,
 }
 
 impl CoverageSpan {
+    pub fn unreachable(span: Span) -> Self {
+        Self { span, bcb: None, coverage_statements: vec![], is_closure: false }
+    }
+
+    pub fn for_fn_sig(fn_sig_span: Span) -> Self {
+        Self {
+            span: fn_sig_span,
+            bcb: Some(START_BCB),
+            coverage_statements: vec![],
+            is_closure: false,
+        }
+    }
+
     pub fn for_statement(
         statement: &Statement<'tcx>,
         span: Span,
@@ -91,7 +104,7 @@ impl CoverageSpan {
 
         Self {
             span,
-            bcb,
+            bcb: Some(bcb),
             coverage_statements: vec![CoverageStatement::Statement(bb, span, stmt_index)],
             is_closure,
         }
@@ -100,7 +113,7 @@ impl CoverageSpan {
     pub fn for_terminator(span: Span, bcb: BasicCoverageBlock, bb: BasicBlock) -> Self {
         Self {
             span,
-            bcb,
+            bcb: Some(bcb),
             coverage_statements: vec![CoverageStatement::Terminator(bb, span)],
             is_closure: false,
         }
@@ -131,7 +144,14 @@ impl CoverageSpan {
 
     #[inline]
     pub fn is_in_same_bcb(&self, other: &Self) -> bool {
-        self.bcb == other.bcb
+        if self.bcb == other.bcb {
+            return true;
+        }
+        if let (Some(self_bcb), Some(other_bcb)) = (self.bcb, other.bcb) {
+            self_bcb == other_bcb
+        } else {
+            false
+        }
     }
 
     pub fn format(&self, tcx: TyCtxt<'tcx>, mir_body: &'a mir::Body<'tcx>) -> String {
@@ -170,6 +190,9 @@ impl CoverageSpan {
 pub struct CoverageSpans<'a, 'tcx> {
     /// The MIR, used to look up `BasicBlockData`.
     mir_body: &'a mir::Body<'tcx>,
+
+    /// A `Span` covering the signature of function for the MIR.
+    fn_sig_span: Span,
 
     /// A `Span` covering the function body of the MIR (typically from left curly brace to right
     /// curly brace).
@@ -216,11 +239,13 @@ pub struct CoverageSpans<'a, 'tcx> {
 impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
     pub(super) fn generate_coverage_spans(
         mir_body: &'a mir::Body<'tcx>,
+        fn_sig_span: Span,
         body_span: Span,
         basic_coverage_blocks: &'a CoverageGraph,
     ) -> Vec<CoverageSpan> {
         let mut coverage_spans = CoverageSpans {
             mir_body,
+            fn_sig_span,
             body_span,
             basic_coverage_blocks,
             sorted_spans_iter: None,
@@ -277,17 +302,29 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
             return initial_spans;
         }
 
+        initial_spans.push(CoverageSpan::for_fn_sig(self.fn_sig_span));
+
         initial_spans.sort_unstable_by(|a, b| {
             if a.span.lo() == b.span.lo() {
                 if a.span.hi() == b.span.hi() {
                     if a.is_in_same_bcb(b) {
                         Some(Ordering::Equal)
                     } else {
-                        // Sort equal spans by dominator relationship, in reverse order (so
-                        // dominators always come after the dominated equal spans). When later
-                        // comparing two spans in order, the first will either dominate the second,
-                        // or they will have no dominator relationship.
-                        self.basic_coverage_blocks.dominators().rank_partial_cmp(b.bcb, a.bcb)
+                        if let Some(a_bcb) = a.bcb {
+                            if let Some(b_bcb) = b.bcb {
+                                // Sort equal spans by dominator relationship, in reverse order (so
+                                // dominators always come after the dominated equal spans). When later
+                                // comparing two spans in order, the first will either dominate the second,
+                                // or they will have no dominator relationship.
+                                self.basic_coverage_blocks
+                                    .dominators()
+                                    .rank_partial_cmp(b_bcb, a_bcb)
+                            } else {
+                                Some(Ordering::Less)
+                            }
+                        } else {
+                            Some(Ordering::Greater)
+                        }
                     }
                 } else {
                     // Sort hi() in reverse order so shorter spans are attempted after longer spans.
@@ -309,7 +346,24 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
     /// Iterate through the sorted `CoverageSpan`s, and return the refined list of merged and
     /// de-duplicated `CoverageSpan`s.
     fn to_refined_spans(mut self) -> Vec<CoverageSpan> {
+        if self.prev().is_closure {
+            debug!(
+                "  first span is a closure's body (with it's own MIR) but that body is \
+                unreachable by _this_ MIR. Adding an `unreachable` span for prev={:?}",
+                self.prev()
+            );
+            self.refined_spans.push(CoverageSpan::unreachable(self.prev().span));
+        }
         while self.next_coverage_span() {
+            if self.curr().is_closure {
+                debug!(
+                    "  curr covers a referenced closure body (with it's own MIR) but that body is \
+                    unreachable by _this_ MIR. Adding an `unreachable` span for curr={:?}",
+                    self.curr(),
+                );
+                self.refined_spans.push(CoverageSpan::unreachable(self.curr().span));
+            }
+
             if self.curr().is_mergeable(self.prev()) {
                 debug!("  same bcb (and neither is a closure), merge with prev={:?}", self.prev());
                 let prev = self.take_prev();
@@ -358,14 +412,20 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
         // least one other non-empty `CoverageSpan`.
         let mut has_coverage = BitSet::new_empty(basic_coverage_blocks.num_nodes());
         for covspan in &refined_spans {
-            if !covspan.span.is_empty() {
-                has_coverage.insert(covspan.bcb);
+            if let Some(bcb) = covspan.bcb {
+                if !covspan.span.is_empty() {
+                    has_coverage.insert(bcb);
+                }
             }
         }
         refined_spans.retain(|covspan| {
-            !(covspan.span.is_empty()
-                && is_goto(&basic_coverage_blocks[covspan.bcb].terminator(mir_body).kind)
-                && has_coverage.contains(covspan.bcb))
+            if let Some(bcb) = covspan.bcb {
+                !(covspan.span.is_empty()
+                    && is_goto(&basic_coverage_blocks[bcb].terminator(mir_body).kind)
+                    && has_coverage.contains(bcb))
+            } else {
+                true
+            }
         });
 
         // Remove `CoverageSpan`s derived from closures, originally added to ensure the coverage
@@ -508,11 +568,17 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
         self.prev().span.hi() <= self.curr().span.lo()
     }
 
-    /// If `prev`s span extends left of the closure (`curr`), carve out the closure's
-    /// span from `prev`'s span. (The closure's coverage counters will be injected when
-    /// processing the closure's own MIR.) Add the portion of the span to the left of the
-    /// closure; and if the span extends to the right of the closure, update `prev` to
-    /// that portion of the span. For any `pending_dups`, repeat the same process.
+    /// If `prev`s span extends left of the closure (`curr`), carve out the closure's span from
+    /// `prev`'s span. (The closure's coverage counters will be injected when processing the
+    /// closure's own MIR.) Add the portion of the span to the left of the closure; and if the span
+    /// extends to the right of the closure, update `prev` to that portion of the span. For any
+    /// `pending_dups`, repeat the same process. Ensure the closure's span is counted by adding an
+    /// "Unreachable" coverage span, which will be counted as zero *for this MIR* (the MIR
+    /// referencing the closure). The closure body is, after all, unreachalbe, from the perspective
+    /// of this MIR. Assuming the MIR is generated for the closure (assuming the closure is "used",
+    /// which is not always the case), the closures counters will be added to the `ZERO` counters.
+    /// Otherwise, at least the code span will be included in the coverage results (with an
+    /// execution count of `0`).
     fn carve_out_span_for_closure(&mut self) {
         let curr_span = self.curr().span;
         let left_cutoff = curr_span.lo();
@@ -641,7 +707,11 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
     }
 
     fn span_bcb_is_dominated_by(&self, covspan: &CoverageSpan, dom_covspan: &CoverageSpan) -> bool {
-        self.basic_coverage_blocks.is_dominated_by(covspan.bcb, dom_covspan.bcb)
+        if let (Some(covspan_bcb), Some(dom_covspan_bcb)) = (covspan.bcb, dom_covspan.bcb) {
+            self.basic_coverage_blocks.is_dominated_by(covspan_bcb, dom_covspan_bcb)
+        } else {
+            false
+        }
     }
 }
 

@@ -2,65 +2,134 @@
     2|       |
     3|       |// require-rust-edition-2018
     4|       |
-    5|      1|async fn f() -> u8 { 1 }
-    6|       |
-    7|       |async fn foo() -> [bool; 10] { [false; 10] }
-    8|       |
-    9|       |pub async fn g(x: u8) {
-   10|       |    match x {
-   11|       |        y if f().await == y => (),
-   12|       |        _ => (),
-   13|       |    }
-   14|      1|}
-   15|       |
-   16|       |// #78366: check the reference to the binding is recorded even if the binding is not autorefed
+    5|      1|async fn c(x: u8) -> u8 {
+    6|      1|    if x == 8 {
+    7|      1|        1
+    8|      0|    } else {
+    9|      0|        0
+   10|      0|    }
+   11|      2|}
+   12|       |
+   13|      0|async fn d() -> u8 { 1 }
+   14|       |
+   15|       |// Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
+   16|       |async fn e() -> u8 { 1 }
    17|       |
-   18|       |async fn h(x: usize) {
-   19|       |    match x {
-   20|       |        y if foo().await[y] => (),
-   21|       |        _ => (),
-   22|       |    }
-   23|      1|}
-   24|       |
-   25|      1|async fn i(x: u8) {
-   26|      1|    match x {
-   27|      1|        y if f().await == y + 1 => (),
+   18|      1|async fn f() -> u8 { 1 }
+   19|       |
+   20|       |// Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
+   21|       |async fn foo() -> [bool; 10] { [false; 10] }
+   22|       |
+   23|      1|pub async fn g(x: u8) {
+   24|      0|    match x {
+   25|      0|        y if e().await == y => (),
+   26|      0|        y if f().await == y => (),
+   27|      0|        _ => (),
+   28|      0|    }
+   29|      1|}
+   30|       |
+   31|      1|async fn h(x: usize) {
+   32|      0|    match x {
+   33|      0|        y if foo().await[y] => (),
+   34|      0|        _ => (),
+   35|      0|    }
+   36|      1|}
+   37|       |
+   38|      1|async fn i(x: u8) {
+   39|      1|    match x {
+   40|      1|        y if c(x).await == y + 1 => { d().await; },
+                      ^0                            ^0
+   41|      1|        y if f().await == y + 1 => (),
                       ^0                         ^0
-   28|      1|        _ => (),
-   29|       |    }
-   30|      2|}
-   31|       |
-   32|      1|fn main() {
-   33|      1|    let _ = g(10);
-   34|      1|    let _ = h(9);
-   35|      1|    let mut future = Box::pin(i(8));
-   36|      1|    executor::block_on(future.as_mut());
-   37|      1|}
-   38|       |
-   39|       |mod executor {
-   40|       |    use core::{
-   41|       |        future::Future,
-   42|       |        pin::Pin,
-   43|       |        task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
-   44|       |    };
+   42|      1|        _ => (),
+   43|      0|    } // shows `0` coverage on this line (see discussion below)
+   44|      2|}
    45|       |
-   46|       |    pub fn block_on<F: Future>(mut future: F) -> F::Output {
-   47|      1|        let mut future = unsafe { Pin::new_unchecked(&mut future) };
-   48|      1|
-   49|      1|        static VTABLE: RawWakerVTable = RawWakerVTable::new(
-   50|      1|            |_| unimplemented!("clone"),
-   51|      1|            |_| unimplemented!("wake"),
-   52|      1|            |_| unimplemented!("wake_by_ref"),
-   53|      1|            |_| (),
-   54|      1|        );
-   55|      1|        let waker = unsafe { Waker::from_raw(RawWaker::new(core::ptr::null(), &VTABLE)) };
-   56|      1|        let mut context = Context::from_waker(&waker);
-   57|       |
-   58|       |        loop {
-   59|      1|            if let Poll::Ready(val) = future.as_mut().poll(&mut context) {
-   60|      1|                break val;
-   61|       |            }
-   62|      0|        }
-   63|      1|    }
+   46|      1|fn j(x: u8) {
+   47|      1|    let c = 1;
+   48|      1|    let f = 2;
+   49|      1|    match x {
+   50|      1|        y if c == y + 1 => (),
+                      ^0                 ^0
+   51|      1|        y if f == y + 1 => (),
+                      ^0                 ^0
+   52|      1|        _ => (),
+   53|       |    } // non-async function should show no coverage on this line (compared with `i()`)
+   54|      1|}
+   55|       |
+   56|       |// TODO: Compare with `l()`, unused `k()` is allowed to compile, and shows `0` coverage, as desired
+   57|       |// (but not expected).
+   58|       |fn k(x: u8) {
+   59|       |    match x {
+   60|       |        1 => (),
+   61|       |        2 => (),
+   62|       |        _ => (),
+   63|       |    }
    64|       |}
+   65|       |
+   66|      1|fn l(x: u8) {
+   67|      1|    match x {
+   68|      0|        1 => (),
+   69|      0|        2 => (),
+   70|      1|        _ => (),
+   71|      1|    } // TODO(richkadel): Compare with `j()`, why does this line show coverage of `1`?
+   72|      1|}
+   73|       |
+   74|      1|fn main() {
+   75|      1|    let _ = g(10);
+   76|      1|    let _ = h(9);
+   77|      1|    let mut future = Box::pin(i(8));
+   78|      1|    j(7);
+   79|      1|    l(6);
+   80|      1|    executor::block_on(future.as_mut());
+   81|      1|}
+   82|       |
+   83|       |mod executor {
+   84|       |    use core::{
+   85|       |        future::Future,
+   86|       |        pin::Pin,
+   87|       |        task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
+   88|       |    };
+   89|       |
+   90|      1|    pub fn block_on<F: Future>(mut future: F) -> F::Output {
+   91|      1|        let mut future = unsafe { Pin::new_unchecked(&mut future) };
+   92|      1|
+   93|      1|        static VTABLE: RawWakerVTable = RawWakerVTable::new(
+   94|      1|            |_| unimplemented!("clone"),
+   95|      1|            |_| unimplemented!("wake"),
+   96|      1|            |_| unimplemented!("wake_by_ref"),
+   97|      1|            |_| (),
+   98|      1|        );
+   99|      1|        let waker = unsafe { Waker::from_raw(RawWaker::new(core::ptr::null(), &VTABLE)) };
+  100|      1|        let mut context = Context::from_waker(&waker);
+  101|       |
+  102|       |        loop {
+  103|      1|            if let Poll::Ready(val) = future.as_mut().poll(&mut context) {
+  104|      1|                break val;
+  105|       |            }
+  106|      0|        }
+  107|      1|    }
+  108|       |}
+  109|       |
+  110|       |// Async function bodies are executed in (hidden) closures that are "unused" if not "awaited"
+  111|       |// with an executor. If unused, they have no coverage, so the enclosing MIR (same function,
+  112|       |// without the closure body) submits a "Gap Region" to the Coverage Map, giving the function
+  113|       |// a coverage count (of `0`) *only* if the closure doesn't have it's own coverage. If the
+  114|       |// closure *is* used, the "Gap Region" is ignored *only* on the lines that also have coverage
+  115|       |// regions from the closure. That means lines that may otherwise have _no_ closure, in
+  116|       |// non-async functions, will have a coverage count of 0 in async functions.
+  117|       |//
+  118|       |// There is a tradeoff between highlighting too little uncovered code versus highlighting
+  119|       |// too much, and the conservative choice is the latter.
+  120|       |//
+  121|       |// TODO(richkadel): replace this TODO with a FIXME and issue once I'm sure this is how
+  122|       |// I'll leave it:
+  123|       |// FIXME(?????): Possible workarounds (with some effort) include:
+  124|       |// * Change how the Gap Region is injected, in the enclosing MIR. Currently,
+  125|       |//   `...::closure::spans::CoverageSpans::to_refined_spans()` adds a
+  126|       |//   "CoverageSpan::unreachable()" to the coverage spans for each enclosed closure. With some
+  127|       |//   effort, we could generate the actual coverage spans for the closure's MIR, and then add them
+  128|       |//   as unreachable GapRegion's.
+  129|       |// * *Or* we could check at codegen time if the closure's MIR *was* added to the coverage map,
+  130|       |//   and only add the Gap Region (under the enclosing function's coverage map) if not.
 

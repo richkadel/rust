@@ -16,7 +16,7 @@
    16|      1|            unwrap_or_else
    17|      1|        (
    18|      1|            ||
-   19|       |            {
+   19|      0|            {
    20|      0|                let mut countdown = 0;
    21|      0|                if is_false {
    22|      0|                    countdown = 10;
@@ -31,7 +31,7 @@
    31|      1|        a
    32|      1|    =
    33|      1|        ||
-   34|       |    {
+   34|      0|    {
    35|      0|        let mut countdown = 0;
    36|      0|        if is_false {
    37|      0|            countdown = 10;
@@ -58,7 +58,7 @@
    58|      1|            unwrap_or_else
    59|      1|        (
    60|      1|            ||
-   61|       |            {
+   61|      1|            {
    62|      1|                let mut countdown = 0;
    63|      1|                if is_false {
    64|      0|                    countdown = 10;
@@ -73,7 +73,7 @@
    73|      1|        a
    74|      1|    =
    75|      1|        ||
-   76|       |    {
+   76|      1|    {
    77|      1|        let mut countdown = 0;
    78|      1|        if is_false {
    79|      0|            countdown = 10;
@@ -90,5 +90,73 @@
    90|      1|            a
    91|      1|        )
    92|      1|    );
-   93|      1|}
+   93|      1|
+   94|      1|    let
+   95|      1|        quote_closure
+   96|      1|    =
+   97|      1|        |val|
+   98|      5|    {
+   99|      5|        let mut countdown = 0;
+  100|      5|        if is_false {
+  101|      0|            countdown = 10;
+  102|      5|        }
+  103|      5|        format!("'{}'", val)
+  104|      5|    };
+  105|      1|    println!(
+  106|      1|        "Repeated, quoted string: {:?}"
+  107|      1|        ,
+  108|      1|        std::iter::repeat("repeat me")
+  109|      1|            .take(5)
+  110|      1|            .map
+  111|      1|        (
+  112|      1|            quote_closure
+  113|      1|        )
+  114|      1|            .collect::<Vec<_>>()
+  115|      1|    );
+  116|      1|
+  117|      1|    let
+  118|      1|        _unused_closure
+  119|      1|    =
+  120|      1|        |
+  121|      0|            mut countdown
+  122|      0|        |
+  123|      0|    {
+  124|      0|        if is_false {
+  125|      0|            countdown = 10;
+  126|      0|        }
+  127|      0|        "closure should be unused".to_owned()
+  128|      1|    };
+  129|      1|
+  130|      1|    // Note that unused closures are not codegenned, so coverage counters are not generated for the
+  131|      1|    // body of any unused closure. To ensure closures do appear in coverage analysis, the enclosing
+  132|      1|    // function adds a "Gap Region" for the closure body. Gap Regions show zero coverage on _lines_
+  133|      1|    // that have no other coverage. By using a "Gap Region" (instead of the normal "Code Region")
+  134|      1|    // coverage results are less confusing for closures that _are_ used and executed, and unused
+  135|      1|    // closures spanning at least 1 line not including opening and closing tokens (`|` and `}`)
+  136|      1|    // show a coverage count of zero, as desired.
+  137|      1|    //
+  138|      1|    // However, an unused closure defined on a single line will likely not appear uncovered because
+  139|      1|    // the enclosing function will typically have a code span (related to the closure's definition)
+  140|      1|    // that touches the closure's line -- and as a result, the Gap Region is ignored for that line.
+  141|      1|    //
+  142|      1|    // Since Gap Regions deconflict with Code Regions at the line-level only, this seems to be the
+  143|      1|    // best we can do.
+  144|      1|    //
+  145|      1|    // The following examples show some of these variations.
+  146|      1|
+  147|      1|    let _short_unused_closure = | _unused_arg: u8 | println!("not called");
+  148|      1|
+  149|      1|    let _shortish_unused_closure = | _unused_arg: u8 | {
+  150|      0|        println!("not called")
+  151|      1|    };
+  152|      1|
+  153|      1|    let _as_short_unused_closure = |
+  154|      0|        _unused_arg: u8
+  155|      1|    | { println!("not called") };
+  156|      1|
+  157|      1|    let _almost_as_short_unused_closure = |
+  158|      0|        _unused_arg: u8
+  159|      1|    | { println!("not called") }
+  160|      1|    ;
+  161|      1|}
 

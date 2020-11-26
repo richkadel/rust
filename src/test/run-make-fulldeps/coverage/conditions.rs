@@ -49,6 +49,8 @@ fn main() {
         // empty value for the executed block. When the last line does not end in a semicolon
         // (that is, when the block actually results in a value), the additional `Assign` is not
         // generated, and the brace is not included.
+        // TODO(richkadel): Add a FIXME(?????) with Issue and refer to the discussion at:
+        // https://github.com/rust-lang/rust/pull/79109#discussion_r525612860
         let mut countdown = 0;
         if true {
             countdown = 10;

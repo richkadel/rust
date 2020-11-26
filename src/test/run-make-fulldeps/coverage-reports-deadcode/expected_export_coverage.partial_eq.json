@@ -11,13 +11,13 @@
               "percent": 100
             },
             "instantiations": {
-              "count": 8,
+              "count": 11,
               "covered": 5,
-              "percent": 62.5
+              "percent": 45.45454545454545
             },
             "lines": {
-              "count": 15,
-              "covered": 15,
+              "count": 16,
+              "covered": 16,
               "percent": 100
             },
             "regions": {
@@ -36,13 +36,13 @@
           "percent": 100
         },
         "instantiations": {
-          "count": 8,
+          "count": 11,
           "covered": 5,
-          "percent": 62.5
+          "percent": 45.45454545454545
         },
         "lines": {
-          "count": 15,
-          "covered": 15,
+          "count": 16,
+          "covered": 16,
           "percent": 100
         },
         "regions": {

@@ -16,13 +16,13 @@
               "percent": 100
             },
             "lines": {
-              "count": 2,
-              "covered": 2,
+              "count": 3,
+              "covered": 3,
               "percent": 100
             },
             "regions": {
-              "count": 2,
-              "covered": 2,
+              "count": 3,
+              "covered": 3,
               "notcovered": 0,
               "percent": 100
             }
@@ -41,13 +41,13 @@
           "percent": 100
         },
         "lines": {
-          "count": 2,
-          "covered": 2,
+          "count": 3,
+          "covered": 3,
           "percent": 100
         },
         "regions": {
-          "count": 2,
-          "covered": 2,
+          "count": 3,
+          "covered": 3,
           "notcovered": 0,
           "percent": 100
         }

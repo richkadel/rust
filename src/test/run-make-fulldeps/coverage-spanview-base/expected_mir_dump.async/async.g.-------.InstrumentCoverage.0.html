@@ -69,11 +69,12 @@ For revisions in Pull Requests (PR):
 </style>
 </head>
 <body>
-<div class="code" style="counter-reset: line 8"><span class="line"><span class="code" style="--layer: 0">pub async fn g(x: u8) {</span></span>
-<span class="line"><span class="code" style="--layer: 0">    match x {</span></span>
-<span class="line"><span class="code" style="--layer: 0">        y if f().await == y =&gt; (),</span></span>
-<span class="line"><span class="code" style="--layer: 0">        _ =&gt; (),</span></span>
-<span class="line"><span class="code" style="--layer: 0">    }</span></span>
-<span class="line"><span class="code" style="--layer: 0">}</span><span><span class="code even" style="--layer: 1" title="14:2-14:2: @1.Return: return"><span class="annotation">@0,1⦊</span>‸<span class="annotation">⦉@0,1</span></span></span></span></div>
+<div class="code" style="counter-reset: line 22"><span class="line"><span><span class="code even" style="--layer: 1"><span class="annotation">@0,1⦊</span>pub async fn g(x: u8) <span class="annotation">⦉@0,1</span></span></span><span><span class="code odd" style="--layer: 1"><span class="annotation">Unreachable⦊</span>{</span></span>
+<span class="line"><span class="code odd" style="--layer: 1">    match x {</span></span>
+<span class="line"><span class="code odd" style="--layer: 1">        y if e().await == y =&gt; (),</span></span>
+<span class="line"><span class="code odd" style="--layer: 1">        y if f().await == y =&gt; (),</span></span>
+<span class="line"><span class="code odd" style="--layer: 1">        _ =&gt; (),</span></span>
+<span class="line"><span class="code odd" style="--layer: 1">    }</span></span>
+<span class="line"><span class="code odd" style="--layer: 1">}<span class="annotation">⦉Unreachable</span></span></span><span><span class="code even" style="--layer: 1" title="29:2-29:2: @1.Return: return"><span class="annotation">@0,1⦊</span>‸<span class="annotation">⦉@0,1</span></span></span></span></div>
 </body>
 </html>
