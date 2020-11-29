@@ -5,12 +5,12 @@
     5|      1|async fn c(x: u8) -> u8 {
     6|      1|    if x == 8 {
     7|      1|        1
-    8|      0|    } else {
+    8|       |    } else {
     9|      0|        0
-   10|      0|    }
-   11|      2|}
+   10|       |    }
+   11|      1|}
    12|       |
-   13|      0|async fn d() -> u8 { 1 }
+   13|       |async fn d() -> u8 { 1 }
    14|       |
    15|       |// Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
    16|      0|async fn e() -> u8 { 1 }
@@ -26,110 +26,118 @@
    26|      0|        y if f().await == y => (),
    27|      0|        _ => (),
    28|      0|    }
-   29|      1|}
+   29|      0|}
    30|       |
-   31|      1|async fn h(x: usize) {
-   32|      0|    match x {
-   33|      0|        y if foo().await[y] => (),
-   34|      0|        _ => (),
-   35|      0|    }
-   36|      1|}
-   37|       |
-   38|      1|async fn i(x: u8) {
-   39|      1|    match x {
-   40|      1|        y if c(x).await == y + 1 => { d().await; },
+   31|      1|async fn h(x: usize) { // The function signature is counted when called,
+   32|      0|    // but the body is not executed (not awaited) so the open brace has a `0` count
+   33|      0|    // (at least when displayed with `llvm-cov show` in color-mode).
+   34|      0|    match x {
+   35|      0|        y if foo().await[y] => (),
+   36|      0|        _ => (),
+   37|      0|    }
+   38|      0|}
+   39|       |
+   40|      1|async fn i(x: u8) { // line coverage is 1, but there are 2 regions:
+   41|      1|                    // (a) the function signature, counted when the function is called; and
+   42|      1|                    // (b) the open brace for the function body, counted once when the body is
+   43|      1|                    // executed asynchronously.
+   44|      1|    match x {
+   45|      1|        y if c(x).await == y + 1 => { d().await; }
                       ^0                            ^0
-   41|      1|        y if f().await == y + 1 => (),
+   46|      1|        y if f().await == y + 1 => (),
                       ^0                         ^0
-   42|      1|        _ => (),
-   43|      0|    } // shows `0` coverage on this line (see discussion below)
-   44|      2|}
-   45|       |
-   46|      1|fn j(x: u8) {
-   47|      1|    let c = 1;
-   48|      1|    let f = 2;
-   49|      1|    match x {
-   50|      1|        y if c == y + 1 => (),
-                      ^0                 ^0
-   51|      1|        y if f == y + 1 => (),
-                      ^0                 ^0
-   52|      1|        _ => (),
-   53|       |    } // non-async function should show no coverage on this line (compared with `i()`)
-   54|      1|}
-   55|       |
-   56|       |// TODO: Compare with `l()`, unused `k()` is allowed to compile, and shows `0` coverage, as desired
-   57|       |// (but not expected).
-   58|      0|fn k(x: u8) {
-   59|      0|    match x {
-   60|      0|        1 => (),
-   61|      0|        2 => (),
-   62|      0|        _ => (),
-   63|      0|    }
-   64|      0|}
-   65|       |
-   66|      1|fn l(x: u8) {
-   67|      1|    match x {
-   68|      0|        1 => (),
-   69|      0|        2 => (),
-   70|      1|        _ => (),
-   71|      1|    } // TODO(richkadel): Compare with `j()`, why does this line show coverage of `1`?
-   72|      1|}
-   73|       |
-   74|      1|fn main() {
-   75|      1|    let _ = g(10);
-   76|      1|    let _ = h(9);
-   77|      1|    let mut future = Box::pin(i(8));
-   78|      1|    j(7);
-   79|      1|    l(6);
-   80|      1|    executor::block_on(future.as_mut());
-   81|      1|}
-   82|       |
-   83|       |mod executor {
-   84|       |    use core::{
-   85|       |        future::Future,
-   86|       |        pin::Pin,
-   87|       |        task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
-   88|       |    };
-   89|       |
-   90|      1|    pub fn block_on<F: Future>(mut future: F) -> F::Output {
-   91|      1|        let mut future = unsafe { Pin::new_unchecked(&mut future) };
-   92|      1|
-   93|      1|        static VTABLE: RawWakerVTable = RawWakerVTable::new(
-   94|      1|            |_| unimplemented!("clone"),
-   95|      1|            |_| unimplemented!("wake"),
-   96|      1|            |_| unimplemented!("wake_by_ref"),
-   97|      1|            |_| (),
-   98|      1|        );
-   99|      1|        let waker = unsafe { Waker::from_raw(RawWaker::new(core::ptr::null(), &VTABLE)) };
-  100|      1|        let mut context = Context::from_waker(&waker);
+   47|      1|        _ => (),
+   48|       |    }
+   49|      1|}
+   50|       |
+   51|      1|fn j(x: u8) {
+   52|      1|    // non-async versions of `c()`, `d()`, and `f()` to make it similar to async `i()`.
+   53|      1|    fn c(x: u8) -> u8 {
+   54|      1|        if x == 8 {
+   55|      1|            1 // This line appears covered, but the 1-character expression span covering the `1`
+                          ^0
+   56|      1|              // is not executed. (`llvm-cov show` displays a `^0` below the `1` ). This is because
+   57|      1|              // `fn j()` executes the open brace for the funciton body, followed by the function's
+   58|      1|              // first executable statement, `match x`. Inner function declarations are not
+   59|      1|              // "visible" to the MIR for `j()`, so the code region counts all lines between the
+   60|      1|              // open brace and the first statement as executed, which is, in a sense, true.
+   61|      1|              // `llvm-cov show` overcomes this kind of situation by showing the actual counts
+   62|      1|              // of the enclosed coverages, (that is, the `1` expression was not executed, and
+   63|      1|              // accurately displays a `0`).
+   64|      1|        } else {
+   65|      1|            0
+   66|      1|        }
+   67|      1|    }
+   68|      1|    fn d() -> u8 { 1 }
+   69|      1|    fn f() -> u8 { 1 }
+   70|      1|    match x {
+   71|      1|        y if c(x) == y + 1 => { d(); }
+                      ^0                    ^0
+   72|      1|        y if f() == y + 1 => (),
+                      ^0                   ^0
+   73|      1|        _ => (),
+   74|       |    }
+   75|      1|}
+   76|       |
+   77|      0|fn k(x: u8) { // unused function
+   78|      0|    match x {
+   79|      0|        1 => (),
+   80|      0|        2 => (),
+   81|      0|        _ => (),
+   82|       |    }
+   83|      0|}
+   84|       |
+   85|      1|fn l(x: u8) {
+   86|      1|    match x {
+   87|      0|        1 => (),
+   88|      0|        2 => (),
+   89|      1|        _ => (),
+   90|       |    }
+   91|      1|}
+   92|       |
+   93|      1|fn main() {
+   94|      1|    let _ = g(10);
+   95|      1|    let _ = h(9);
+   96|      1|    let mut future = Box::pin(i(8));
+   97|      1|    j(7);
+   98|      1|    l(6);
+   99|      1|    executor::block_on(future.as_mut());
+  100|      1|}
   101|       |
-  102|       |        loop {
-  103|      1|            if let Poll::Ready(val) = future.as_mut().poll(&mut context) {
-  104|      1|                break val;
-  105|       |            }
-  106|      0|        }
-  107|      1|    }
-  108|       |}
-  109|       |
-  110|       |// Async function bodies are executed in (hidden) closures that are "unused" if not "awaited"
-  111|       |// with an executor. If unused, they have no coverage, so the enclosing MIR (same function,
-  112|       |// without the closure body) submits a "Gap Region" to the Coverage Map, giving the function
-  113|       |// a coverage count (of `0`) *only* if the closure doesn't have it's own coverage. If the
-  114|       |// closure *is* used, the "Gap Region" is ignored *only* on the lines that also have coverage
-  115|       |// regions from the closure. That means lines that may otherwise have _no_ closure, in
-  116|       |// non-async functions, will have a coverage count of 0 in async functions.
-  117|       |//
-  118|       |// There is a tradeoff between highlighting too little uncovered code versus highlighting
-  119|       |// too much, and the conservative choice is the latter.
-  120|       |//
-  121|       |// TODO(richkadel): replace this TODO with a FIXME and issue once I'm sure this is how
-  122|       |// I'll leave it:
-  123|       |// FIXME(?????): Possible workarounds (with some effort) include:
-  124|       |// * Change how the Gap Region is injected, in the enclosing MIR. Currently,
-  125|       |//   `...::closure::spans::CoverageSpans::to_refined_spans()` adds a
-  126|       |//   "CoverageSpan::unreachable()" to the coverage spans for each enclosed closure. With some
-  127|       |//   effort, we could generate the actual coverage spans for the closure's MIR, and then add them
-  128|       |//   as unreachable GapRegion's.
-  129|       |// * *Or* we could check at codegen time if the closure's MIR *was* added to the coverage map,
-  130|       |//   and only add the Gap Region (under the enclosing function's coverage map) if not.
+  102|       |mod executor {
+  103|       |    use core::{
+  104|       |        future::Future,
+  105|       |        pin::Pin,
+  106|       |        task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
+  107|       |    };
+  108|       |
+  109|      1|    pub fn block_on<F: Future>(mut future: F) -> F::Output {
+  110|      1|        let mut future = unsafe { Pin::new_unchecked(&mut future) };
+  111|      1|
+  112|      1|        static VTABLE: RawWakerVTable = RawWakerVTable::new(
+  113|      1|            |_| unimplemented!("clone"),
+  114|      1|            |_| unimplemented!("wake"),
+  115|      1|            |_| unimplemented!("wake_by_ref"),
+  116|      1|            |_| (),
+  117|      1|        );
+  118|      1|        let waker = unsafe { Waker::from_raw(RawWaker::new(core::ptr::null(), &VTABLE)) };
+  119|      1|        let mut context = Context::from_waker(&waker);
+  120|       |
+  121|       |        loop {
+  122|      1|            if let Poll::Ready(val) = future.as_mut().poll(&mut context) {
+  123|      1|                break val;
+  124|      0|            }
+  125|       |        }
+  126|      1|    }
+  127|       |}
+  128|       |
+  129|       |// Async body coverage
+  130|       |// ===================
+  131|       |//
+  132|       |// Async function bodies are executed in (hidden) closures that are "unused" if not "awaited"
+  133|       |// with an executor. If unused, they have no coverage, so the enclosing MIR (same function,
+  134|       |// without the closure body) injects a `CoverageKind::Unreachable` region with the span of the
+  135|       |// closure body, and the `DefId` of the closure. When building the Coverage Map for the LLVM
+  136|       |// module (the crate), these unreachable code regions are only added if the Coverage Map does
+  137|       |// not add a function for the unreachable `DefId`.
 

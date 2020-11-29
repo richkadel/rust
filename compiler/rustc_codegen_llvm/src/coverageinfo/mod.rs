@@ -15,6 +15,7 @@ use rustc_middle::mir::coverage::{
     CodeRegion, CounterValueReference, ExpressionOperandId, InjectedExpressionId, Op,
 };
 use rustc_middle::ty::Instance;
+use rustc_span::def_id::DefId;
 
 use std::cell::RefCell;
 use std::ffi::CString;
@@ -127,7 +128,12 @@ impl CoverageInfoBuilderMethods<'tcx> for Builder<'a, 'll, 'tcx> {
         }
     }
 
-    fn add_coverage_unreachable(&mut self, instance: Instance<'tcx>, region: CodeRegion) -> bool {
+    fn add_coverage_unreachable(
+        &mut self,
+        instance: Instance<'tcx>,
+        closure_def_id: Option<DefId>,
+        region: CodeRegion,
+    ) -> bool {
         if let Some(coverage_context) = self.coverage_context() {
             debug!(
                 "adding unreachable code to coverage_map: instance={:?}, at {:?}",
@@ -137,7 +143,7 @@ impl CoverageInfoBuilderMethods<'tcx> for Builder<'a, 'll, 'tcx> {
             coverage_map
                 .entry(instance)
                 .or_insert_with(|| FunctionCoverage::new(self.tcx, instance))
-                .add_unreachable_region(region);
+                .add_unreachable(closure_def_id, region);
             true
         } else {
             false

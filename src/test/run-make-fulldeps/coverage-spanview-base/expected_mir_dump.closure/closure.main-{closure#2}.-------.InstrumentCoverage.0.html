@@ -71,19 +71,22 @@ For revisions in Pull Requests (PR):
 <body>
 <div class="code" style="counter-reset: line 96"><span class="line">        <span class="code" style="--layer: 0">|val|</span></span>
 <span class="line"><span class="code" style="--layer: 0">    </span><span><span class="code even" style="--layer: 1" title="99:29-99:30: @0[1]: _3 = const 0_i32
-99:13-99:26: @0[2]: FakeRead(ForLet, _3)"><span class="annotation">@0⦊</span>{</span></span>
+99:13-99:26: @0[2]: FakeRead(ForLet, _3)
+100:12-100:20: @0[5]: _5 = (*((*_1).0: &amp;bool))
+100:12-100:20: @0[6]: FakeRead(ForMatchedPlace, _5)"><span class="annotation">@0⦊</span>{</span></span>
 <span class="line"><span class="code even" style="--layer: 1" title="99:29-99:30: @0[1]: _3 = const 0_i32
-99:13-99:26: @0[2]: FakeRead(ForLet, _3)">        let mut countdown = 0<span class="annotation">⦉@0</span></span></span><span class="code" style="--layer: 0">;</span></span>
-<span class="line"><span class="code" style="--layer: 0">        if </span><span><span class="code even" style="--layer: 1" title="100:12-100:20: @0[5]: _5 = (*((*_1).0: &amp;bool))
-100:12-100:20: @0[6]: FakeRead(ForMatchedPlace, _5)"><span class="annotation">@0⦊</span>is_false<span class="annotation">⦉@0</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="101:13-101:27: @3[0]: _3 = const 10_i32
-100:21-102:10: @3[1]: _4 = const ()
-102:10-102:10: @3.Goto: goto -&gt; bb4"><span class="annotation">@1,3⦊</span>{</span></span>
+99:13-99:26: @0[2]: FakeRead(ForLet, _3)
+100:12-100:20: @0[5]: _5 = (*((*_1).0: &amp;bool))
+100:12-100:20: @0[6]: FakeRead(ForMatchedPlace, _5)">        let mut countdown = 0;</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="99:29-99:30: @0[1]: _3 = const 0_i32
+99:13-99:26: @0[2]: FakeRead(ForLet, _3)
+100:12-100:20: @0[5]: _5 = (*((*_1).0: &amp;bool))
+100:12-100:20: @0[6]: FakeRead(ForMatchedPlace, _5)">        if is_false<span class="annotation">⦉@0</span></span></span><span class="code" style="--layer: 0"> </span><span><span class="code odd" style="--layer: 1" title="101:13-101:27: @3[0]: _3 = const 10_i32
+100:21-102:10: @3[1]: _4 = const ()"><span class="annotation">@1,3⦊</span>{</span></span>
 <span class="line"><span class="code odd" style="--layer: 1" title="101:13-101:27: @3[0]: _3 = const 10_i32
-100:21-102:10: @3[1]: _4 = const ()
-102:10-102:10: @3.Goto: goto -&gt; bb4">            countdown = 10;</span></span>
+100:21-102:10: @3[1]: _4 = const ()">            countdown = 10;</span></span>
 <span class="line"><span class="code odd" style="--layer: 1" title="101:13-101:27: @3[0]: _3 = const 10_i32
-100:21-102:10: @3[1]: _4 = const ()
-102:10-102:10: @3.Goto: goto -&gt; bb4">        }<span class="annotation">⦉@1,3</span></span></span><span><span class="code even" style="--layer: 1" title="102:10-102:10: @2.Goto: goto -&gt; bb4"><span class="annotation">@2⦊</span>‸<span class="annotation">⦉@2</span></span></span><span class="code" style="--layer: 0"></span></span>
+100:21-102:10: @3[1]: _4 = const ()">        }<span class="annotation">⦉@1,3</span></span></span><span><span class="code even" style="--layer: 1" title="102:10-102:10: @2[0]: _4 = const ()"><span class="annotation">@2⦊</span>‸<span class="annotation">⦉@2</span></span></span><span class="code" style="--layer: 0"></span></span>
 <span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code odd" style="--layer: 1" title="103:17-103:23: @4[7]: _22 = const main::{closure#2}::promoted[0]
 103:17-103:23: @4[8]: _10 = &amp;(*_22)
 103:17-103:23: @4[9]: _9 = &amp;(*_10)

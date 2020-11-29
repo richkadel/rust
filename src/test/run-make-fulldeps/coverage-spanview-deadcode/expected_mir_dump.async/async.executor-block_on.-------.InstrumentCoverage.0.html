@@ -69,171 +69,171 @@ For revisions in Pull Requests (PR):
 </style>
 </head>
 <body>
-<div class="code" style="counter-reset: line 89"><span class="line">    <span><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)"><span class="annotation">@0,1,2,3,4,5⦊</span>pub fn block_on&lt;F: Future&gt;(mut future: F) -&gt; F::Output {</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)">        let mut future = unsafe { Pin::new_unchecked(&amp;mut future) };</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)"></span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)">        static VTABLE: RawWakerVTable = RawWakerVTable::new(</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)">            |_| unimplemented!("clone"),</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)">            |_| unimplemented!("wake"),</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)">            |_| unimplemented!("wake_by_ref"),</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)">            |_| (),</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)">        );</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)">        let waker = unsafe { Waker::from_raw(RawWaker::new(core::ptr::null(), &amp;VTABLE)) };</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="91:54-91:65: @0[2]: _3 = &amp;mut _1
-91:35-91:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
-91:13-91:23: @1[1]: FakeRead(ForLet, _2)
-99:60-99:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
-99:80-99:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
-99:79-99:86: @2[4]: _8 = &amp;(*_9)
-99:79-99:86: @2[5]: _7 = &amp;(*_8)
-99:46-99:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
-99:30-99:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
-99:13-99:18: @4[1]: FakeRead(ForLet, _4)
-100:47-100:53: @4[7]: _12 = &amp;_4
-100:47-100:53: @4[8]: _11 = &amp;(*_12)
-100:27-100:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
-100:13-100:24: @5[1]: FakeRead(ForLet, _10)">        let mut context = Context::from_waker(&amp;waker)<span class="annotation">⦉@0,1,2,3,4,5</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<div class="code" style="counter-reset: line 108"><span class="line">    <span><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)"><span class="annotation">@0,1,2,3,4,5⦊</span>pub fn block_on&lt;F: Future&gt;(mut future: F) -&gt; F::Output {</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)">        let mut future = unsafe { Pin::new_unchecked(&amp;mut future) };</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)"></span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)">        static VTABLE: RawWakerVTable = RawWakerVTable::new(</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)">            |_| unimplemented!("clone"),</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)">            |_| unimplemented!("wake"),</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)">            |_| unimplemented!("wake_by_ref"),</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)">            |_| (),</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)">        );</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)">        let waker = unsafe { Waker::from_raw(RawWaker::new(core::ptr::null(), &amp;VTABLE)) };</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="110:54-110:65: @0[2]: _3 = &amp;mut _1
+110:35-110:66: @0.Call: _2 = Pin::&lt;&amp;mut F&gt;::new_unchecked(move _3) -&gt; [return: bb1, unwind: bb20]
+110:13-110:23: @1[1]: FakeRead(ForLet, _2)
+118:60-118:77: @1.Call: _6 = null::&lt;()&gt;() -&gt; [return: bb2, unwind: bb20]
+118:80-118:86: @2[3]: _9 = const {alloc0: &amp;RawWakerVTable}
+118:79-118:86: @2[4]: _8 = &amp;(*_9)
+118:79-118:86: @2[5]: _7 = &amp;(*_8)
+118:46-118:87: @2.Call: _5 = RawWaker::new(move _6, move _7) -&gt; [return: bb3, unwind: bb20]
+118:30-118:88: @3.Call: _4 = Waker::from_raw(move _5) -&gt; [return: bb4, unwind: bb20]
+118:13-118:18: @4[1]: FakeRead(ForLet, _4)
+119:47-119:53: @4[7]: _12 = &amp;_4
+119:47-119:53: @4[8]: _11 = &amp;(*_12)
+119:27-119:54: @4.Call: _10 = Context::from_waker(move _11) -&gt; [return: bb5, unwind: bb19]
+119:13-119:24: @5[1]: FakeRead(ForLet, _10)">        let mut context = Context::from_waker(&amp;waker)<span class="annotation">⦉@0,1,2,3,4,5</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0"></span></span>
 <span class="line"><span class="code" style="--layer: 0">        loop {</span></span>
-<span class="line"><span class="code" style="--layer: 0">            if let Poll::Ready(</span><span><span class="code odd" style="--layer: 1" title="103:32-103:35: @12[1]: _20 = move ((_14 as Ready).0: &lt;F as std::future::Future&gt;::Output)"><span class="annotation">@10,12,14,15,16,17⦊</span>val<span class="annotation">⦉@10,12,14,15,16,17</span></span></span><span class="code" style="--layer: 0">) = </span><span><span class="code even" style="--layer: 1" title="103:39-103:45: @7[3]: _16 = &amp;mut _2
-103:39-103:54: @7.Call: _15 = Pin::&lt;&amp;mut F&gt;::as_mut(move _16) -&gt; [return: bb8, unwind: bb19]
-103:60-103:72: @8[3]: _18 = &amp;mut _10
-103:60-103:72: @8[4]: _17 = &amp;mut (*_18)
-103:39-103:73: @8.Call: _14 = &lt;F as Future&gt;::poll(move _15, move _17) -&gt; [return: bb9, unwind: bb19]
-103:39-103:73: @9[2]: FakeRead(ForMatchedPlace, _14)"><span class="annotation">@6,7,8,9⦊</span>future.as_mut().poll(&amp;mut context)<span class="annotation">⦉@6,7,8,9</span></span></span><span class="code" style="--layer: 0"> {</span></span>
-<span class="line"><span class="code" style="--layer: 0">                break </span><span><span class="code odd" style="--layer: 1" title="104:23-104:26: @12[2]: _0 = move _20"><span class="annotation">@10,12,14,15,16,17⦊</span>val<span class="annotation">⦉@10,12,14,15,16,17</span></span></span><span class="code" style="--layer: 0">;</span></span>
-<span class="line"><span class="code" style="--layer: 0">            }</span></span>
-<span class="line"><span class="code" style="--layer: 0">        }</span><span><span class="code even" style="--layer: 1" title="106:10-106:10: @13.Goto: goto -&gt; bb6"><span class="annotation">@11,13⦊</span>‸<span class="annotation">⦉@11,13</span></span></span><span class="code" style="--layer: 0"></span></span>
-<span class="line"><span class="code" style="--layer: 0">    }</span><span><span class="code odd" style="--layer: 1" title="107:6-107:6: @17.Return: return"><span class="annotation">@10,12,14,15,16,17⦊</span>‸<span class="annotation">⦉@10,12,14,15,16,17</span></span></span></span></div>
+<span class="line"><span class="code" style="--layer: 0">            if let Poll::Ready(</span><span><span class="code odd" style="--layer: 1" title="122:32-122:35: @12[1]: _20 = move ((_14 as Ready).0: &lt;F as std::future::Future&gt;::Output)"><span class="annotation">@10,12,14,15,16,17⦊</span>val<span class="annotation">⦉@10,12,14,15,16,17</span></span></span><span class="code" style="--layer: 0">) = </span><span><span class="code even" style="--layer: 1" title="122:39-122:45: @7[3]: _16 = &amp;mut _2
+122:39-122:54: @7.Call: _15 = Pin::&lt;&amp;mut F&gt;::as_mut(move _16) -&gt; [return: bb8, unwind: bb19]
+122:60-122:72: @8[3]: _18 = &amp;mut _10
+122:60-122:72: @8[4]: _17 = &amp;mut (*_18)
+122:39-122:73: @8.Call: _14 = &lt;F as Future&gt;::poll(move _15, move _17) -&gt; [return: bb9, unwind: bb19]
+122:39-122:73: @9[2]: FakeRead(ForMatchedPlace, _14)"><span class="annotation">@6,7,8,9⦊</span>future.as_mut().poll(&amp;mut context)<span class="annotation">⦉@6,7,8,9</span></span></span><span class="code" style="--layer: 0"> {</span></span>
+<span class="line"><span class="code" style="--layer: 0">                break </span><span><span class="code odd" style="--layer: 1" title="123:23-123:26: @12[2]: _0 = move _20"><span class="annotation">@10,12,14,15,16,17⦊</span>val<span class="annotation">⦉@10,12,14,15,16,17</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">            }</span><span><span class="code even" style="--layer: 1" title="124:14-124:14: @11[0]: _13 = const ()"><span class="annotation">@11,13⦊</span>‸<span class="annotation">⦉@11,13</span></span></span><span class="code" style="--layer: 0"></span></span>
+<span class="line"><span class="code" style="--layer: 0">        }</span></span>
+<span class="line"><span class="code" style="--layer: 0">    }</span><span><span class="code odd" style="--layer: 1" title="126:6-126:6: @17.Return: return"><span class="annotation">@10,12,14,15,16,17⦊</span>‸<span class="annotation">⦉@10,12,14,15,16,17</span></span></span></span></div>
 </body>
 </html>

@@ -2,7 +2,7 @@
     2|       |// structure of this test.
     3|       |
     4|      2|#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-                                                    ^1       ^1
+                                                    ^1
     5|       |pub struct Version {
     6|       |    major: usize,
     7|      1|    minor: usize,

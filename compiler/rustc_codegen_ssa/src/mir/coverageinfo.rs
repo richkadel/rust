@@ -36,9 +36,10 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
             CoverageKind::Expression { id, lhs, op, rhs } => {
                 bx.add_coverage_counter_expression(self.instance, id, lhs, op, rhs, code_region);
             }
-            CoverageKind::Unreachable => {
+            CoverageKind::Unreachable { closure_def_id } => {
                 bx.add_coverage_unreachable(
                     self.instance,
+                    closure_def_id,
                     code_region.expect("unreachable regions always have code regions"),
                 );
             }

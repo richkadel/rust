@@ -69,11 +69,13 @@ For revisions in Pull Requests (PR):
 </style>
 </head>
 <body>
-<div class="code" style="counter-reset: line 30"><span class="line"><span><span class="code even" style="--layer: 1"><span class="annotation">@0,1⦊</span>async fn h(x: usize) <span class="annotation">⦉@0,1</span></span></span><span><span class="code odd" style="--layer: 1"><span class="annotation">Unreachable⦊</span>{</span></span>
-<span class="line"><span class="code odd" style="--layer: 1">    match x {</span></span>
-<span class="line"><span class="code odd" style="--layer: 1">        y if foo().await[y] =&gt; (),</span></span>
-<span class="line"><span class="code odd" style="--layer: 1">        _ =&gt; (),</span></span>
-<span class="line"><span class="code odd" style="--layer: 1">    }</span></span>
-<span class="line"><span class="code odd" style="--layer: 1">}<span class="annotation">⦉Unreachable</span></span></span><span><span class="code even" style="--layer: 1" title="36:2-36:2: @1.Return: return"><span class="annotation">@0,1⦊</span>‸<span class="annotation">⦉@0,1</span></span></span></span></div>
+<div class="code" style="counter-reset: line 30"><span class="line"><span><span class="code even" style="--layer: 1"><span class="annotation">@0,1⦊</span>async fn h(x: usize) <span class="annotation">⦉@0,1</span></span></span><span><span class="code even" style="--layer: 1" title="31:22-38:2: @0[1]: _2 = [generator@../coverage/async.rs:31:22: 38:2 (#0)] { x: _1 }"><span class="annotation">@0,1⦊</span>{ // The function signature is counted when called,</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="31:22-38:2: @0[1]: _2 = [generator@../coverage/async.rs:31:22: 38:2 (#0)] { x: _1 }">    // but the body is not executed (not awaited) so the open brace has a `0` count</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="31:22-38:2: @0[1]: _2 = [generator@../coverage/async.rs:31:22: 38:2 (#0)] { x: _1 }">    // (at least when displayed with `llvm-cov show` in color-mode).</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="31:22-38:2: @0[1]: _2 = [generator@../coverage/async.rs:31:22: 38:2 (#0)] { x: _1 }">    match x {</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="31:22-38:2: @0[1]: _2 = [generator@../coverage/async.rs:31:22: 38:2 (#0)] { x: _1 }">        y if foo().await[y] =&gt; (),</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="31:22-38:2: @0[1]: _2 = [generator@../coverage/async.rs:31:22: 38:2 (#0)] { x: _1 }">        _ =&gt; (),</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="31:22-38:2: @0[1]: _2 = [generator@../coverage/async.rs:31:22: 38:2 (#0)] { x: _1 }">    }</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="31:22-38:2: @0[1]: _2 = [generator@../coverage/async.rs:31:22: 38:2 (#0)] { x: _1 }">}<span class="annotation">⦉@0,1</span></span></span></span></div>
 </body>
 </html>

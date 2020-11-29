@@ -21,7 +21,7 @@
    21|     10|        } else if countdown < 5 {
    22|      3|            let result = might_overflow(1);
    23|      3|            println!("Result: {}", result);
-   24|     15|        }
+   24|      6|        }
    25|      9|        countdown -= 1;
    26|       |    }
    27|      0|    Ok(())

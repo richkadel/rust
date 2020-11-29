@@ -2,30 +2,10 @@
     2|       |// structure of this test.
     3|       |
     4|      2|#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-                                                    ^1       ^1
-  ------------------
-  | Unexecuted instantiation: <partial_eq::Version as core::cmp::PartialOrd>::gt
-  ------------------
-  | Unexecuted instantiation: <partial_eq::Version as core::cmp::PartialOrd>::le
-  ------------------
-  | Unexecuted instantiation: <partial_eq::Version as core::cmp::PartialOrd>::ge
-  ------------------
-  | <partial_eq::Version as core::cmp::PartialOrd>::lt:
-  |    4|      1|#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-  ------------------
+                                                    ^1
     5|       |pub struct Version {
     6|       |    major: usize,
     7|      1|    minor: usize,
-  ------------------
-  | Unexecuted instantiation: <partial_eq::Version as core::cmp::PartialOrd>::gt::{closure#0}
-  ------------------
-  | Unexecuted instantiation: <partial_eq::Version as core::cmp::PartialOrd>::ge::{closure#0}
-  ------------------
-  | <partial_eq::Version as core::cmp::PartialOrd>::lt::{closure#0}:
-  |    7|      1|    minor: usize,
-  ------------------
-  | Unexecuted instantiation: <partial_eq::Version as core::cmp::PartialOrd>::le::{closure#0}
-  ------------------
     8|       |    patch: usize,
     9|       |}
    10|       |

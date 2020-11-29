@@ -5,7 +5,7 @@ use crate::llvm;
 use llvm::coverageinfo::CounterMappingRegion;
 use rustc_codegen_ssa::coverageinfo::map::{Counter, CounterExpression};
 use rustc_codegen_ssa::traits::ConstMethods;
-use rustc_data_structures::fx::FxIndexSet;
+use rustc_data_structures::fx::{FxHashSet, FxIndexSet};
 use rustc_llvm::RustString;
 use rustc_middle::mir::coverage::CodeRegion;
 
@@ -42,6 +42,11 @@ pub fn finalize<'ll, 'tcx>(cx: &CodegenCx<'ll, 'tcx>) {
         return;
     }
 
+    let covered_def_ids = function_coverage_map
+        .keys()
+        .map(|instance| instance.def.def_id())
+        .collect::<FxHashSet<_>>();
+
     let mut mapgen = CoverageMapGenerator::new();
 
     // Encode coverage mappings and generate function records
@@ -52,7 +57,7 @@ pub fn finalize<'ll, 'tcx>(cx: &CodegenCx<'ll, 'tcx>) {
         let mangled_function_name = cx.tcx.symbol_name(instance).to_string();
         let function_source_hash = function_coverage.source_hash();
         let (expressions, counter_regions) =
-            function_coverage.get_expressions_and_counter_regions();
+            function_coverage.get_expressions_and_counter_regions(&covered_def_ids);
 
         let coverage_mapping_buffer = llvm::build_byte_buffer(|coverage_mapping_buffer| {
             mapgen.write_coverage_mapping(expressions, counter_regions, coverage_mapping_buffer);
@@ -141,36 +146,14 @@ impl CoverageMapGenerator {
                 virtual_file_mapping.push(filenames_index as u32);
             }
             debug!("Adding counter {:?} to map for {:?}", counter, region);
-            match counter.kind {
-                rustc_codegen_ssa::coverageinfo::map::CounterKind::Zero => {
-                    // Assume `Zero` counters are either from `Unreachable` code regions, or they
-                    // should at least be handled similarly, the `gap_region` signifies a code span
-                    // that should be marked as known, but uncovered (counted as zero executions)
-                    // _except_ where other code regions overlap. For example, a closure that is
-                    // defined but never used will probably not get codegenned, and therefore would
-                    // not have any coverage, but the MIR in which the closure is defined can at
-                    // least inject the span for the closure as a `gap_region`, ensuring the code
-                    // region is at least known about, and can be flagged as uncovered if necessary.
-                    mapping_regions.push(CounterMappingRegion::gap_region(
-                        counter,
-                        current_file_id,
-                        start_line,
-                        start_col,
-                        end_line,
-                        end_col,
-                    ));
-                }
-                _ => {
-                    mapping_regions.push(CounterMappingRegion::code_region(
-                        counter,
-                        current_file_id,
-                        start_line,
-                        start_col,
-                        end_line,
-                        end_col,
-                    ));
-                }
-            }
+            mapping_regions.push(CounterMappingRegion::code_region(
+                counter,
+                current_file_id,
+                start_line,
+                start_col,
+                end_line,
+                end_col,
+            ));
         }
 
         // Encode and append the current function's coverage mapping data

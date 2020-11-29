@@ -69,38 +69,40 @@ For revisions in Pull Requests (PR):
 </style>
 </head>
 <body>
-<div class="code" style="counter-reset: line 45"><span class="line"><span><span class="code even" style="--layer: 1" title="47:13-47:14: @0[1]: _2 = const 1_u8
-47:9-47:10: @0[2]: FakeRead(ForLet, _2)
-48:13-48:14: @0[4]: _3 = const 2_u8
-48:9-48:10: @0[5]: FakeRead(ForLet, _3)
-49:11-49:12: @0[6]: FakeRead(ForMatchedPlace, _1)"><span class="annotation">@0,3,4⦊</span>fn j(x: u8) {</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="47:13-47:14: @0[1]: _2 = const 1_u8
-47:9-47:10: @0[2]: FakeRead(ForLet, _2)
-48:13-48:14: @0[4]: _3 = const 2_u8
-48:9-48:10: @0[5]: FakeRead(ForLet, _3)
-49:11-49:12: @0[6]: FakeRead(ForMatchedPlace, _1)">    let c = 1;</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="47:13-47:14: @0[1]: _2 = const 1_u8
-47:9-47:10: @0[2]: FakeRead(ForLet, _2)
-48:13-48:14: @0[4]: _3 = const 2_u8
-48:9-48:10: @0[5]: FakeRead(ForLet, _3)
-49:11-49:12: @0[6]: FakeRead(ForMatchedPlace, _1)">    let f = 2;</span></span>
-<span class="line"><span class="code even" style="--layer: 1" title="47:13-47:14: @0[1]: _2 = const 1_u8
-47:9-47:10: @0[2]: FakeRead(ForLet, _2)
-48:13-48:14: @0[4]: _3 = const 2_u8
-48:9-48:10: @0[5]: FakeRead(ForLet, _3)
-49:11-49:12: @0[6]: FakeRead(ForMatchedPlace, _1)">    match x<span class="annotation">⦉@0,3,4</span></span></span><span class="code" style="--layer: 0"> {</span></span>
-<span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code odd" style="--layer: 1" title="50:9-50:10: @5[3]: _4 = _1"><span class="annotation">@5⦊</span>y<span class="annotation">⦉@5</span></span></span><span class="code" style="--layer: 0"> if </span><span><span class="code even" style="--layer: 1" title="50:14-50:15: @3[4]: _7 = _2
-50:19-50:20: @3[7]: _9 = (*_5)
-50:19-50:24: @3[8]: _10 = CheckedAdd(_9, const 1_u8)
-50:19-50:24: @4[0]: _8 = move (_10.0: u8)
-50:14-50:24: @4[2]: _6 = Eq(move _7, move _8)"><span class="annotation">@0,3,4⦊</span>c == y + 1<span class="annotation">⦉@0,3,4</span></span></span><span><span class="code odd" style="--layer: 1" title="50:24-50:24: @6.Goto: goto -&gt; bb1"><span class="annotation">@6⦊</span>‸<span class="annotation">⦉@6</span></span></span><span class="code" style="--layer: 0"> =&gt; </span><span><span class="code even" style="--layer: 1" title="50:28-50:30: @5[4]: _0 = ()"><span class="annotation">@5⦊</span>()<span class="annotation">⦉@5</span></span></span><span class="code" style="--layer: 0">,</span></span>
-<span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code odd" style="--layer: 1" title="51:9-51:10: @9[3]: _11 = _1"><span class="annotation">@9⦊</span>y<span class="annotation">⦉@9</span></span></span><span class="code" style="--layer: 0"> if </span><span><span class="code even" style="--layer: 1" title="51:14-51:15: @7[4]: _14 = _3
-51:19-51:20: @7[7]: _16 = (*_12)
-51:19-51:24: @7[8]: _17 = CheckedAdd(_16, const 1_u8)
-51:19-51:24: @8[0]: _15 = move (_17.0: u8)
-51:14-51:24: @8[2]: _13 = Eq(move _14, move _15)"><span class="annotation">@1,7,8⦊</span>f == y + 1<span class="annotation">⦉@1,7,8</span></span></span><span><span class="code odd" style="--layer: 1" title="51:24-51:24: @10.Goto: goto -&gt; bb2"><span class="annotation">@10⦊</span>‸<span class="annotation">⦉@10</span></span></span><span class="code" style="--layer: 0"> =&gt; </span><span><span class="code even" style="--layer: 1" title="51:28-51:30: @9[4]: _0 = ()"><span class="annotation">@9⦊</span>()<span class="annotation">⦉@9</span></span></span><span class="code" style="--layer: 0">,</span></span>
-<span class="line"><span class="code" style="--layer: 0">        _ =&gt; </span><span><span class="code odd" style="--layer: 1" title="52:14-52:16: @2[0]: _0 = ()"><span class="annotation">@2⦊</span>()<span class="annotation">⦉@2</span></span></span><span class="code" style="--layer: 0">,</span></span>
-<span class="line"><span class="code" style="--layer: 0">    } // non-async function should show no coverage on this line (compared with `i()`)</span></span>
-<span class="line"><span class="code" style="--layer: 0">}</span><span><span class="code even" style="--layer: 1" title="54:2-54:2: @11.Return: return"><span class="annotation">@11⦊</span>‸<span class="annotation">⦉@11</span></span></span></span></div>
+<div class="code" style="counter-reset: line 50"><span class="line"><span><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)"><span class="annotation">@0,3,4,5⦊</span>fn j(x: u8) {</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">    // non-async versions of `c()`, `d()`, and `f()` to make it similar to async `i()`.</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">    fn c(x: u8) -&gt; u8 {</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">        if x == 8 {</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">            1 // This line appears covered, but the 1-character expression span covering the `1`</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">              // is not executed. (`llvm-cov show` displays a `^0` below the `1` ). This is because</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">              // `fn j()` executes the open brace for the funciton body, followed by the function's</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">              // first executable statement, `match x`. Inner function declarations are not</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">              // "visible" to the MIR for `j()`, so the code region counts all lines between the</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">              // open brace and the first statement as executed, which is, in a sense, true.</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">              // `llvm-cov show` overcomes this kind of situation by showing the actual counts</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">              // of the enclosed coverages, (that is, the `1` expression was not executed, and</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">              // accurately displays a `0`).</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">        } else {</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">            0</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">        }</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">    }</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">    fn d() -&gt; u8 { 1 }</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">    fn f() -&gt; u8 { 1 }</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="70:11-70:12: @0[0]: FakeRead(ForMatchedPlace, _1)">    match x<span class="annotation">⦉@0,3,4,5</span></span></span><span class="code" style="--layer: 0"> {</span></span>
+<span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code odd" style="--layer: 1" title="71:9-71:10: @6[3]: _2 = _1"><span class="annotation">@6,8⦊</span>y<span class="annotation">⦉@6,8</span></span></span><span class="code" style="--layer: 0"> if </span><span><span class="code even" style="--layer: 1" title="71:16-71:17: @3[5]: _6 = _1
+71:14-71:18: @3.Call: _5 = j::c(move _6) -&gt; [return: bb4, unwind: bb15]
+71:22-71:23: @4[3]: _8 = (*_3)
+71:22-71:27: @4[4]: _9 = CheckedAdd(_8, const 1_u8)
+71:22-71:27: @5[0]: _7 = move (_9.0: u8)
+71:14-71:27: @5[2]: _4 = Eq(move _5, move _7)"><span class="annotation">@0,3,4,5⦊</span>c(x) == y + 1<span class="annotation">⦉@0,3,4,5</span></span></span><span class="code" style="--layer: 0"> =&gt; </span><span><span class="code odd" style="--layer: 1" title="71:33-71:36: @6.Call: _10 = j::d() -&gt; [return: bb8, unwind: bb15]
+71:31-71:39: @8[1]: _0 = const ()"><span class="annotation">@6,8⦊</span>{ d(); }<span class="annotation">⦉@6,8</span></span></span><span class="code" style="--layer: 0"></span></span>
+<span class="line"><span class="code" style="--layer: 0">        </span><span><span class="code even" style="--layer: 1" title="72:9-72:10: @12[3]: _11 = _1"><span class="annotation">@12⦊</span>y<span class="annotation">⦉@12</span></span></span><span class="code" style="--layer: 0"> if </span><span><span class="code odd" style="--layer: 1" title="72:14-72:17: @9.Call: _14 = j::f() -&gt; [return: bb10, unwind: bb15]
+72:21-72:22: @10[2]: _16 = (*_12)
+72:21-72:26: @10[3]: _17 = CheckedAdd(_16, const 1_u8)
+72:21-72:26: @11[0]: _15 = move (_17.0: u8)
+72:14-72:26: @11[2]: _13 = Eq(move _14, move _15)"><span class="annotation">@1,9,10,11⦊</span>f() == y + 1<span class="annotation">⦉@1,9,10,11</span></span></span><span class="code" style="--layer: 0"> =&gt; </span><span><span class="code even" style="--layer: 1" title="72:30-72:32: @12[4]: _0 = ()"><span class="annotation">@12⦊</span>()<span class="annotation">⦉@12</span></span></span><span class="code" style="--layer: 0">,</span></span>
+<span class="line"><span class="code" style="--layer: 0">        _ =&gt; </span><span><span class="code odd" style="--layer: 1" title="73:14-73:16: @2[0]: _0 = ()"><span class="annotation">@2⦊</span>()<span class="annotation">⦉@2</span></span></span><span class="code" style="--layer: 0">,</span></span>
+<span class="line"><span class="code" style="--layer: 0">    }</span></span>
+<span class="line"><span class="code" style="--layer: 0">}</span><span><span class="code even" style="--layer: 1" title="75:2-75:2: @14.Return: return"><span class="annotation">@14⦊</span>‸<span class="annotation">⦉@14</span></span></span></span></div>
 </body>
 </html>

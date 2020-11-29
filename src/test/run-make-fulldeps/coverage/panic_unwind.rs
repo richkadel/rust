@@ -17,12 +17,7 @@ fn main() -> Result<(), u8> {
             might_panic(true);
         } else if countdown < 5 {
             might_panic(false);
-        } // TODO(richkadel): I don't yet have a rational explanation for the `else if` block's
-        // closing brace getting a count of 15, when the loop only iterates 10 times!
-        // I can see there is a BCB from a Goto terminator that computes its count from an
-        // Expression adding counts from two incoming edges, one probably with a count of 10,
-        // and the other 5. But why?
-        // Note the "implicit else" here, after an `else if` (if that's important).
+        }
         countdown -= 1;
     }
     Ok(())

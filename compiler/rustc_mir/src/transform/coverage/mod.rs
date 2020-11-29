@@ -274,7 +274,23 @@ impl<'a, 'tcx> Instrumentor<'a, 'tcx> {
         let mut bcb_counters = IndexVec::from_elem_n(None, self.basic_coverage_blocks.num_nodes());
         for covspan in coverage_spans {
             let span = covspan.span;
-            if let Some(bcb) = covspan.bcb {
+            if covspan.is_closure() {
+                // A closure body has its own, separate MIR, but the code span for the closure body
+                // is known to the enclosing function's MIR. Since it is possible for a closure to
+                // be "unused", that closure's MIR would not get codegenned and would not have any
+                // known coverage. Adding an `Unreachable` code region for the closure ensures the
+                // closure's region is known to coverage and can be marked "uncovered" if needed.
+                // Note, the `Unreachable` region will generate a `Zero` counter.
+                let coverage_kind =
+                    CoverageKind::Unreachable { closure_def_id: covspan.closure_def_id };
+                inject_statement(
+                    self.mir_body,
+                    coverage_kind,
+                    mir::START_BLOCK,
+                    Some(make_code_region(file_name, &source_file, span, body_span)),
+                );
+            } else {
+                let bcb = covspan.bcb;
                 let counter_kind = if let Some(&counter_operand) = bcb_counters[bcb].as_ref() {
                     self.coverage_counters.make_identity_counter(counter_operand)
                 } else if let Some(counter_kind) = self.bcb_data_mut(bcb).take_counter() {
@@ -285,68 +301,14 @@ impl<'a, 'tcx> Instrumentor<'a, 'tcx> {
                     bug!("Every BasicCoverageBlock should have a Counter or Expression");
                 };
                 graphviz_data.add_bcb_coverage_span_with_counter(bcb, &covspan, &counter_kind);
-                // FIXME(#78542): Can spans for `TerminatorKind::Goto` be improved to avoid special
-                // cases?
-                let some_code_region = if self.is_code_region_redundant(bcb, span, body_span) {
-                    None
-                } else {
-                    Some(make_code_region(file_name, &source_file, span, body_span))
-                };
                 inject_statement(
                     self.mir_body,
                     counter_kind,
                     self.bcb_last_bb(bcb),
-                    some_code_region,
-                );
-            } else {
-                // A closure body has its own, separate MIR, but the code span for the closure body
-                // is known to the enclosing function's MIR. Since it is possible for a closure to
-                // be "unused", that closure's MIR would not get codegenned and would not have any
-                // known coverage. Adding an `Unreachable` code region for the closure ensures the
-                // closure's region is known to coverage and can be marked "uncovered" if needed.
-                // Note, the `Unreachable` region will generate a `Zero` counter, which is
-                // subsequently turned into a `gap_region` in the Coverage Map. The `gap_region`
-                // ensures code is only marked uncovered if there is no other defined coverage.
-                inject_statement(
-                    self.mir_body,
-                    CoverageKind::Unreachable,
-                    mir::START_BLOCK,
                     Some(make_code_region(file_name, &source_file, span, body_span)),
                 );
             }
         }
-    }
-
-    /// Returns true if the type of `BasicCoverageBlock` (specifically, it's `BasicBlock`s
-    /// `TerminatorKind`) with the given `Span` (relative to the `body_span`) is known to produce
-    /// a redundant coverage count.
-    ///
-    /// There is at least one case for this, and if it's not handled, the last line in a function
-    /// will be double-counted.
-    ///
-    /// If this method returns `true`, the counter (which other `Expressions` may depend on) is
-    /// still injected, but without an associated code region.
-    // FIXME(#78542): Can spans for `TerminatorKind::Goto` be improved to avoid special cases?
-    fn is_code_region_redundant(
-        &self,
-        bcb: BasicCoverageBlock,
-        span: Span,
-        body_span: Span,
-    ) -> bool {
-        if span.hi() == body_span.hi() {
-            // All functions execute a `Return`-terminated `BasicBlock`, regardless of how the
-            // function returns; but only some functions also _can_ return after a `Goto` block
-            // that ends on the closing brace of the function (with the `Return`). When this
-            // happens, the last character is counted 2 (or possibly more) times, when we know
-            // the function returned only once (of course). By giving all `Goto` terminators at
-            // the end of a function a `non-reportable` code region, they are still counted
-            // if appropriate, but they don't increment the line counter, as long as their is
-            // also a `Return` on that last line.
-            if let TerminatorKind::Goto { .. } = self.bcb_terminator(bcb).kind {
-                return true;
-            }
-        }
-        false
     }
 
     /// `inject_coverage_span_counters()` looped through the `CoverageSpan`s and injected the
@@ -443,11 +405,6 @@ impl<'a, 'tcx> Instrumentor<'a, 'tcx> {
     #[inline]
     fn bcb_last_bb(&self, bcb: BasicCoverageBlock) -> BasicBlock {
         self.bcb_data(bcb).last_bb()
-    }
-
-    #[inline]
-    fn bcb_terminator(&self, bcb: BasicCoverageBlock) -> &Terminator<'tcx> {
-        self.bcb_data(bcb).terminator(self.mir_body)
     }
 
     #[inline]

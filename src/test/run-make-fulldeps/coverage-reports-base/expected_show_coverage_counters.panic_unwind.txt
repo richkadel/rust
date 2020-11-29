@@ -5,9 +5,8 @@ Counter in file 0 16:27 -> 18:10, #2
 Counter in file 0 18:19 -> 18:32, (((#1 + (#2 + (#3 + #4))) - #5) - #2)
 Counter in file 0 18:33 -> 20:10, #3
 Counter in file 0 20:10 -> 20:11, #4
-Counter in file 0 20:10 -> 20:11, (#3 + #4)
-Counter in file 0 26:9 -> 26:23, (#2 + (#3 + #4))
-Counter in file 0 28:5 -> 29:2, #5
+Counter in file 0 21:9 -> 21:23, (#2 + (#3 + #4))
+Counter in file 0 23:5 -> 24:2, #5
 Counter in file 0 4:1 -> 4:36, #1
 Counter in file 0 5:8 -> 5:20, (#1 + 0)
 Counter in file 0 6:9 -> 7:26, #2
@@ -24,9 +23,9 @@ Combined regions:
   16:27 -> 18:10 (count=0)
   18:19 -> 18:32 (count=10)
   18:33 -> 20:10 (count=3)
-  20:10 -> 20:11 (count=15)
-  26:9 -> 26:23 (count=9)
-  28:5 -> 29:2 (count=0)
+  20:10 -> 20:11 (count=6)
+  21:9 -> 21:23 (count=9)
+  23:5 -> 24:2 (count=0)
 Segment at 4:1 (count = 4), RegionEntry
 Segment at 4:36 (count = 0), Skipped
 Segment at 5:8 (count = 4), RegionEntry
@@ -46,9 +45,9 @@ Segment at 18:10 (count = 0), Skipped
 Segment at 18:19 (count = 10), RegionEntry
 Segment at 18:32 (count = 0), Skipped
 Segment at 18:33 (count = 3), RegionEntry
-Segment at 20:10 (count = 15), RegionEntry
+Segment at 20:10 (count = 6), RegionEntry
 Segment at 20:11 (count = 0), Skipped
-Segment at 26:9 (count = 9), RegionEntry
-Segment at 26:23 (count = 0), Skipped
-Segment at 28:5 (count = 0), RegionEntry
-Segment at 29:2 (count = 0), Skipped
+Segment at 21:9 (count = 9), RegionEntry
+Segment at 21:23 (count = 0), Skipped
+Segment at 23:5 (count = 0), RegionEntry
+Segment at 24:2 (count = 0), Skipped

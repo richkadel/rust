@@ -6,50 +6,50 @@
           "filename": "../coverage/async.rs",
           "summary": {
             "functions": {
-              "count": 17,
-              "covered": 13,
-              "percent": 76.47058823529412
+              "count": 18,
+              "covered": 15,
+              "percent": 83.33333333333334
             },
             "instantiations": {
-              "count": 17,
-              "covered": 13,
-              "percent": 76.47058823529412
+              "count": 18,
+              "covered": 15,
+              "percent": 83.33333333333334
             },
             "lines": {
-              "count": 90,
-              "covered": 56,
-              "percent": 62.22222222222222
+              "count": 101,
+              "covered": 75,
+              "percent": 74.25742574257426
             },
             "regions": {
-              "count": 64,
-              "covered": 40,
+              "count": 59,
+              "covered": 35,
               "notcovered": 24,
-              "percent": 62.5
+              "percent": 59.32203389830508
             }
           }
         }
       ],
       "totals": {
         "functions": {
-          "count": 17,
-          "covered": 13,
-          "percent": 76.47058823529412
+          "count": 18,
+          "covered": 15,
+          "percent": 83.33333333333334
         },
         "instantiations": {
-          "count": 17,
-          "covered": 13,
-          "percent": 76.47058823529412
+          "count": 18,
+          "covered": 15,
+          "percent": 83.33333333333334
         },
         "lines": {
-          "count": 90,
-          "covered": 56,
-          "percent": 62.22222222222222
+          "count": 101,
+          "covered": 75,
+          "percent": 74.25742574257426
         },
         "regions": {
-          "count": 64,
-          "covered": 40,
+          "count": 59,
+          "covered": 35,
           "notcovered": 24,
-          "percent": 62.5
+          "percent": 59.32203389830508
         }
       }
     }

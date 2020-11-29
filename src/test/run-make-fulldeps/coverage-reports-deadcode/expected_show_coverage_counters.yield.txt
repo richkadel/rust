@@ -1,6 +1,5 @@
 Counter in file 0 7:1 -> 7:11, #1
 Counter in file 0 8:9 -> 8:22, (#1 + 0)
-Counter in file 0 8:25 -> 11:6, 0
 Counter in file 0 13:11 -> 14:35, (#1 + 0)
 Counter in file 0 14:39 -> 14:41, #4
 Counter in file 0 15:14 -> 15:52, (#2 + #3)
@@ -9,7 +8,6 @@ Counter in file 0 18:34 -> 18:39, (#4 - #5)
 Counter in file 0 18:44 -> 18:46, ((#4 - #5) - #6)
 Counter in file 0 19:14 -> 19:52, (#5 + #6)
 Counter in file 0 22:9 -> 22:22, (((#4 - #5) - #6) + 0)
-Counter in file 0 22:25 -> 27:6, 0
 Counter in file 0 29:11 -> 30:35, (((#4 - #5) - #6) + 0)
 Counter in file 0 30:39 -> 30:41, #9
 Counter in file 0 31:14 -> 31:52, (#7 + #8)
@@ -27,7 +25,6 @@ Emitting segments for file: ../coverage/yield.rs
 Combined regions:
   7:1 -> 7:11 (count=1)
   8:9 -> 8:22 (count=1)
-  8:25 -> 11:6 (count=0)
   8:28 -> 9:16 (count=1)
   10:16 -> 11:6 (count=1)
   13:11 -> 14:35 (count=1)
@@ -38,7 +35,6 @@ Combined regions:
   18:44 -> 18:46 (count=1)
   19:14 -> 19:52 (count=0)
   22:9 -> 22:22 (count=1)
-  22:25 -> 27:6 (count=0)
   22:28 -> 23:16 (count=1)
   24:9 -> 24:16 (count=1)
   25:9 -> 25:16 (count=0)
@@ -54,9 +50,8 @@ Segment at 7:1 (count = 1), RegionEntry
 Segment at 7:11 (count = 0), Skipped
 Segment at 8:9 (count = 1), RegionEntry
 Segment at 8:22 (count = 0), Skipped
-Segment at 8:25 (count = 0), Gap
 Segment at 8:28 (count = 1), RegionEntry
-Segment at 9:16 (count = 0), Gap
+Segment at 9:16 (count = 0), Skipped
 Segment at 10:16 (count = 1), RegionEntry
 Segment at 11:6 (count = 0), Skipped
 Segment at 13:11 (count = 1), RegionEntry
@@ -75,13 +70,12 @@ Segment at 19:14 (count = 0), RegionEntry
 Segment at 19:52 (count = 0), Skipped
 Segment at 22:9 (count = 1), RegionEntry
 Segment at 22:22 (count = 0), Skipped
-Segment at 22:25 (count = 0), Gap
 Segment at 22:28 (count = 1), RegionEntry
-Segment at 23:16 (count = 0), Gap
+Segment at 23:16 (count = 0), Skipped
 Segment at 24:9 (count = 1), RegionEntry
-Segment at 24:16 (count = 0), Gap
+Segment at 24:16 (count = 0), Skipped
 Segment at 25:9 (count = 0), RegionEntry
-Segment at 25:16 (count = 0), Gap
+Segment at 25:16 (count = 0), Skipped
 Segment at 26:16 (count = 0), RegionEntry
 Segment at 27:6 (count = 0), Skipped
 Segment at 29:11 (count = 1), RegionEntry

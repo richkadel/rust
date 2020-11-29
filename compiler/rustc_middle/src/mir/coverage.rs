@@ -1,6 +1,7 @@
 //! Metadata from source code coverage analysis and instrumentation.
 
 use rustc_macros::HashStable;
+use rustc_span::def_id::DefId;
 use rustc_span::Symbol;
 
 use std::cmp::Ord;
@@ -104,7 +105,9 @@ pub enum CoverageKind {
         op: Op,
         rhs: ExpressionOperandId,
     },
-    Unreachable,
+    Unreachable {
+        closure_def_id: Option<DefId>,
+    },
 }
 
 impl CoverageKind {
@@ -113,7 +116,7 @@ impl CoverageKind {
         match *self {
             Counter { id, .. } => ExpressionOperandId::from(id),
             Expression { id, .. } => ExpressionOperandId::from(id),
-            Unreachable => bug!("Unreachable coverage cannot be part of an expression"),
+            Unreachable { .. } => bug!("Unreachable coverage cannot be part of an expression"),
         }
     }
 
@@ -132,7 +135,10 @@ impl CoverageKind {
     }
 
     pub fn is_unreachable(&self) -> bool {
-        *self == Self::Unreachable
+        match self {
+            Self::Unreachable { .. } => true,
+            _ => false,
+        }
     }
 }
 
@@ -149,7 +155,9 @@ impl Debug for CoverageKind {
                 if *op == Op::Add { "+" } else { "-" },
                 rhs.index(),
             ),
-            Unreachable => write!(fmt, "Unreachable"),
+            Unreachable { closure_def_id } => {
+                write!(fmt, "Unreachable(closure_def_id = {:?})", closure_def_id)
+            }
         }
     }
 }

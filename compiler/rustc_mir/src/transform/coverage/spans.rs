@@ -4,13 +4,13 @@ use super::graph::{BasicCoverageBlock, BasicCoverageBlockData, CoverageGraph, ST
 use crate::util::spanview::source_range_no_file;
 
 use rustc_data_structures::graph::WithNumNodes;
-use rustc_index::bit_set::BitSet;
 use rustc_middle::mir::{
     self, AggregateKind, BasicBlock, FakeReadCause, Rvalue, Statement, StatementKind, Terminator,
     TerminatorKind,
 };
 use rustc_middle::ty::TyCtxt;
 
+use rustc_span::def_id::DefId;
 use rustc_span::source_map::original_sp;
 use rustc_span::{BytePos, Span, SyntaxContext};
 
@@ -68,22 +68,18 @@ impl CoverageStatement {
 #[derive(Debug, Clone)]
 pub(super) struct CoverageSpan {
     pub span: Span,
-    pub bcb: Option<BasicCoverageBlock>,
+    pub bcb: BasicCoverageBlock,
     pub coverage_statements: Vec<CoverageStatement>,
-    pub is_closure: bool,
+    pub closure_def_id: Option<DefId>,
 }
 
 impl CoverageSpan {
-    pub fn unreachable(span: Span) -> Self {
-        Self { span, bcb: None, coverage_statements: vec![], is_closure: false }
-    }
-
     pub fn for_fn_sig(fn_sig_span: Span) -> Self {
         Self {
             span: fn_sig_span,
-            bcb: Some(START_BCB),
+            bcb: START_BCB,
             coverage_statements: vec![],
-            is_closure: false,
+            closure_def_id: None,
         }
     }
 
@@ -94,37 +90,36 @@ impl CoverageSpan {
         bb: BasicBlock,
         stmt_index: usize,
     ) -> Self {
-        let is_closure = match statement.kind {
-            StatementKind::Assign(box (
-                _,
-                Rvalue::Aggregate(box AggregateKind::Closure(_, _), _),
-            )) => true,
-            _ => false,
+        let closure_def_id = match statement.kind {
+            StatementKind::Assign(box (_, Rvalue::Aggregate(box ref kind, _))) => match kind {
+                AggregateKind::Closure(def_id, _) | AggregateKind::Generator(def_id, _, _) => {
+                    Some(*def_id)
+                }
+                _ => None,
+            },
+            _ => None,
         };
 
         Self {
             span,
-            bcb: Some(bcb),
+            bcb,
             coverage_statements: vec![CoverageStatement::Statement(bb, span, stmt_index)],
-            is_closure,
+            closure_def_id,
         }
     }
 
     pub fn for_terminator(span: Span, bcb: BasicCoverageBlock, bb: BasicBlock) -> Self {
         Self {
             span,
-            bcb: Some(bcb),
+            bcb: bcb,
             coverage_statements: vec![CoverageStatement::Terminator(bb, span)],
-            is_closure: false,
+            closure_def_id: None,
         }
     }
 
     pub fn merge_from(&mut self, mut other: CoverageSpan) {
         debug_assert!(self.is_mergeable(&other));
         self.span = self.span.to(other.span);
-        if other.is_closure {
-            self.is_closure = true;
-        }
         self.coverage_statements.append(&mut other.coverage_statements);
     }
 
@@ -138,20 +133,18 @@ impl CoverageSpan {
     }
 
     #[inline]
+    pub fn is_closure(&self) -> bool {
+        self.closure_def_id.is_some()
+    }
+
+    #[inline]
     pub fn is_mergeable(&self, other: &Self) -> bool {
-        self.is_in_same_bcb(other) && !(self.is_closure || other.is_closure)
+        self.is_in_same_bcb(other) && !(self.is_closure() || other.is_closure())
     }
 
     #[inline]
     pub fn is_in_same_bcb(&self, other: &Self) -> bool {
-        if self.bcb == other.bcb {
-            return true;
-        }
-        if let (Some(self_bcb), Some(other_bcb)) = (self.bcb, other.bcb) {
-            self_bcb == other_bcb
-        } else {
-            false
-        }
+        self.bcb == other.bcb
     }
 
     pub fn format(&self, tcx: TyCtxt<'tcx>, mir_body: &'a mir::Body<'tcx>) -> String {
@@ -284,7 +277,13 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
     ///
     ///    Closures are exposed in their enclosing functions as `Assign` `Rvalue`s, and since
     ///    closures have their own MIR, their `Span` in their enclosing function should be left
-    ///    "uncovered".
+    ///    "uncovered"; *however*, a closure that is never called may not be codegenned, and if
+    ///    not, it won't have any coverage. Instead, we want it to have coverage, but show `0`
+    ///    executions. So, in the enclosing function, the span for the closure will get a
+    ///    `CoverageKind::Unreachable`, including the closure's `DefId`, so at codegen time, when
+    ///    generating the Coverage Map for a crate (LLVM module), the `DefId` can be used to
+    ///    lookup functions in the Coverage Map, and if not found, a `Zero` coverage code region
+    ///    will be added.
     ///
     /// Note the resulting vector of `CoverageSpan`s does may not be fully sorted (and does not need
     /// to be).
@@ -310,21 +309,11 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
                     if a.is_in_same_bcb(b) {
                         Some(Ordering::Equal)
                     } else {
-                        if let Some(a_bcb) = a.bcb {
-                            if let Some(b_bcb) = b.bcb {
-                                // Sort equal spans by dominator relationship, in reverse order (so
-                                // dominators always come after the dominated equal spans). When later
-                                // comparing two spans in order, the first will either dominate the second,
-                                // or they will have no dominator relationship.
-                                self.basic_coverage_blocks
-                                    .dominators()
-                                    .rank_partial_cmp(b_bcb, a_bcb)
-                            } else {
-                                Some(Ordering::Less)
-                            }
-                        } else {
-                            Some(Ordering::Greater)
-                        }
+                        // Sort equal spans by dominator relationship, in reverse order (so
+                        // dominators always come after the dominated equal spans). When later
+                        // comparing two spans in order, the first will either dominate the second,
+                        // or they will have no dominator relationship.
+                        self.basic_coverage_blocks.dominators().rank_partial_cmp(b.bcb, a.bcb)
                     }
                 } else {
                     // Sort hi() in reverse order so shorter spans are attempted after longer spans.
@@ -346,24 +335,7 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
     /// Iterate through the sorted `CoverageSpan`s, and return the refined list of merged and
     /// de-duplicated `CoverageSpan`s.
     fn to_refined_spans(mut self) -> Vec<CoverageSpan> {
-        if self.prev().is_closure {
-            debug!(
-                "  first span is a closure's body (with it's own MIR) but that body is \
-                unreachable by _this_ MIR. Adding an `unreachable` span for prev={:?}",
-                self.prev()
-            );
-            self.refined_spans.push(CoverageSpan::unreachable(self.prev().span));
-        }
         while self.next_coverage_span() {
-            if self.curr().is_closure {
-                debug!(
-                    "  curr covers a referenced closure body (with it's own MIR) but that body is \
-                    unreachable by _this_ MIR. Adding an `unreachable` span for curr={:?}",
-                    self.curr(),
-                );
-                self.refined_spans.push(CoverageSpan::unreachable(self.curr().span));
-            }
-
             if self.curr().is_mergeable(self.prev()) {
                 debug!("  same bcb (and neither is a closure), merge with prev={:?}", self.prev());
                 let prev = self.take_prev();
@@ -377,7 +349,7 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
                 );
                 let prev = self.take_prev();
                 self.refined_spans.push(prev);
-            } else if self.prev().is_closure {
+            } else if self.prev().is_closure() {
                 // drop any equal or overlapping span (`curr`) and keep `prev` to test again in the
                 // next iter
                 debug!(
@@ -385,8 +357,8 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
                     prev={:?}",
                     self.prev()
                 );
-                self.discard_curr();
-            } else if self.curr().is_closure {
+                self.take_curr();
+            } else if self.curr().is_closure() {
                 self.carve_out_span_for_closure();
             } else if self.prev_original_span == self.curr().span {
                 // Note that this compares the new span to `prev_original_span`, which may not
@@ -399,39 +371,29 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
 
         debug!("    AT END, adding last prev={:?}", self.prev());
         let prev = self.take_prev();
-        let CoverageSpans {
-            mir_body, basic_coverage_blocks, pending_dups, mut refined_spans, ..
-        } = self;
+        let CoverageSpans { pending_dups, mut refined_spans, .. } = self;
         for dup in pending_dups {
             debug!("    ...adding at least one pending dup={:?}", dup);
             refined_spans.push(dup);
         }
-        refined_spans.push(prev);
 
-        // Remove `CoverageSpan`s with empty spans ONLY if the empty `CoverageSpan`s BCB also has at
-        // least one other non-empty `CoverageSpan`.
-        let mut has_coverage = BitSet::new_empty(basic_coverage_blocks.num_nodes());
-        for covspan in &refined_spans {
-            if let Some(bcb) = covspan.bcb {
-                if !covspan.span.is_empty() {
-                    has_coverage.insert(bcb);
-                }
-            }
+        // Async functions wrap a closure that implements the body to be executed. The enclosing
+        // function is initially called, posts the closure to the executor, and returns. To avoid
+        // showing the return from the enclosing function as a "covered" return from the closure,
+        // the enclosing function's `TerminatorKind::Return`s `CoverageSpan` is excluded. The
+        // closure's `Return` is the only one that will be counted. This provides adequate
+        // coverage, and more intuitive counts. (Avoids double-counting the closing brace of the
+        // function body.)
+        let body_ends_with_closure = if let Some(last_covspan) = refined_spans.last() {
+            last_covspan.is_closure() && last_covspan.span.hi() == self.body_span.hi()
+        } else {
+            false
+        };
+
+        if !body_ends_with_closure {
+            refined_spans.push(prev);
         }
-        refined_spans.retain(|covspan| {
-            if let Some(bcb) = covspan.bcb {
-                !(covspan.span.is_empty()
-                    && is_goto(&basic_coverage_blocks[bcb].terminator(mir_body).kind)
-                    && has_coverage.contains(bcb))
-            } else {
-                true
-            }
-        });
 
-        // Remove `CoverageSpan`s derived from closures, originally added to ensure the coverage
-        // regions for the current function leave room for the closure's own coverage regions
-        // (injected separately, from the closure's own MIR).
-        refined_spans.retain(|covspan| !covspan.is_closure);
         refined_spans
     }
 
@@ -551,8 +513,8 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
 
     /// If called, then the next call to `next_coverage_span()` will *not* update `prev` with the
     /// `curr` coverage span.
-    fn discard_curr(&mut self) {
-        self.some_curr = None;
+    fn take_curr(&mut self) -> CoverageSpan {
+        self.some_curr.take().unwrap_or_else(|| bug!("invalid attempt to unwrap a None some_curr"))
     }
 
     /// Returns true if the curr span should be skipped because prev has already advanced beyond the
@@ -607,7 +569,8 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
                 dup.span = dup.span.with_lo(right_cutoff);
             }
             self.pending_dups.append(&mut pending_dups);
-            self.discard_curr(); // since self.prev() was already updated
+            let closure_covspan = self.take_curr();
+            self.refined_spans.push(closure_covspan); // since self.prev() was already updated
         } else {
             pending_dups.clear();
         }
@@ -707,11 +670,7 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
     }
 
     fn span_bcb_is_dominated_by(&self, covspan: &CoverageSpan, dom_covspan: &CoverageSpan) -> bool {
-        if let (Some(covspan_bcb), Some(dom_covspan_bcb)) = (covspan.bcb, dom_covspan.bcb) {
-            self.basic_coverage_blocks.is_dominated_by(covspan_bcb, dom_covspan_bcb)
-        } else {
-            false
-        }
+        self.basic_coverage_blocks.is_dominated_by(covspan.bcb, dom_covspan.bcb)
     }
 }
 
@@ -775,30 +734,8 @@ pub(super) fn filtered_terminator_span(
         | TerminatorKind::DropAndReplace { .. }
         | TerminatorKind::SwitchInt { .. }
         // For `FalseEdge`, only the `real` branch is taken, so it is similar to a `Goto`.
-        // FIXME(richkadel): Note that `Goto` was moved to it's own match arm, for the reasons
-        // described below. Add tests to confirm whether or not similar cases also apply to
-        // `FalseEdge`.
-        | TerminatorKind::FalseEdge { .. } => None,
-
-        // FIXME(#78542): Can spans for `TerminatorKind::Goto` be improved to avoid special cases?
-        //
-        // `Goto`s are often the targets of `SwitchInt` branches, and certain important
-        // optimizations to replace some `Counter`s with `Expression`s require a separate
-        // `BasicCoverageBlock` for each branch, to support the `Counter`, when needed.
-        //
-        // Also, some test cases showed that `Goto` terminators, and to some degree their `Span`s,
-        // provided useful context for coverage, such as to count and show when `if` blocks
-        // _without_ `else` blocks execute the `false` case (counting when the body of the `if`
-        // was _not_ taken). In these cases, the `Goto` span is ultimately given a `CoverageSpan`
-        // of 1 character, at the end of it's original `Span`.
-        //
-        // However, in other cases, a visible `CoverageSpan` is not wanted, but the `Goto`
-        // block must still be counted (for example, to contribute its count to an `Expression`
-        // that reports the execution count for some other block). In these cases, the code region
-        // is set to `None`. (See `Instrumentor::is_code_region_redundant()`.)
-        TerminatorKind::Goto { .. } => {
-            Some(function_source_span(terminator.source_info.span.shrink_to_hi(), body_span))
-        }
+        | TerminatorKind::FalseEdge { .. }
+        | TerminatorKind::Goto { .. } => None,
 
         // Retain spans from all other terminators
         TerminatorKind::Resume
@@ -818,12 +755,4 @@ pub(super) fn filtered_terminator_span(
 fn function_source_span(span: Span, body_span: Span) -> Span {
     let span = original_sp(span, body_span).with_ctxt(SyntaxContext::root());
     if body_span.contains(span) { span } else { body_span }
-}
-
-#[inline(always)]
-fn is_goto(term_kind: &TerminatorKind<'tcx>) -> bool {
-    match term_kind {
-        TerminatorKind::Goto { .. } => true,
-        _ => false,
-    }
 }

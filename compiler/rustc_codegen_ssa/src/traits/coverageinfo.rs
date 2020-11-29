@@ -1,6 +1,7 @@
 use super::BackendTypes;
 use rustc_middle::mir::coverage::*;
 use rustc_middle::ty::Instance;
+use rustc_span::def_id::DefId;
 
 pub trait CoverageInfoMethods: BackendTypes {
     fn coverageinfo_finalize(&self);
@@ -41,5 +42,10 @@ pub trait CoverageInfoBuilderMethods<'tcx>: BackendTypes {
 
     /// Returns true if the region was added to the coverage map; false if `-Z instrument-coverage`
     /// is not enabled (a coverage map is not being generated).
-    fn add_coverage_unreachable(&mut self, instance: Instance<'tcx>, region: CodeRegion) -> bool;
+    fn add_coverage_unreachable(
+        &mut self,
+        instance: Instance<'tcx>,
+        closure_def_id: Option<DefId>,
+        region: CodeRegion,
+    ) -> bool;
 }

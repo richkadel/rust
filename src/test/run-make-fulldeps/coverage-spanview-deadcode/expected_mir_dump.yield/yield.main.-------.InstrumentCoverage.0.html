@@ -70,10 +70,10 @@ For revisions in Pull Requests (PR):
 </head>
 <body>
 <div class="code" style="counter-reset: line 6"><span class="line"><span><span class="code even" style="--layer: 1"><span class="annotation">@0,1,2⦊</span>fn main() <span class="annotation">⦉@0,1,2</span></span></span><span class="code" style="--layer: 0">{</span></span>
-<span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code even" style="--layer: 1" title="8:9-8:22: @0[2]: FakeRead(ForLet, _1)"><span class="annotation">@0,1,2⦊</span>mut generator<span class="annotation">⦉@0,1,2</span></span></span><span class="code" style="--layer: 0"> = </span><span><span class="code odd" style="--layer: 1"><span class="annotation">Unreachable⦊</span>|| {</span></span>
-<span class="line"><span class="code odd" style="--layer: 1">        yield 1;</span></span>
-<span class="line"><span class="code odd" style="--layer: 1">        return "foo"</span></span>
-<span class="line"><span class="code odd" style="--layer: 1">    }<span class="annotation">⦉Unreachable</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code even" style="--layer: 1" title="8:9-8:22: @0[2]: FakeRead(ForLet, _1)"><span class="annotation">@0,1,2⦊</span>mut generator<span class="annotation">⦉@0,1,2</span></span></span><span class="code" style="--layer: 0"> = </span><span><span class="code even" style="--layer: 1" title="8:25-11:6: @0[1]: _1 = [generator@../coverage/yield.rs:8:25: 11:6 (#0)]"><span class="annotation">@0,1,2⦊</span>|| {</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="8:25-11:6: @0[1]: _1 = [generator@../coverage/yield.rs:8:25: 11:6 (#0)]">        yield 1;</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="8:25-11:6: @0[1]: _1 = [generator@../coverage/yield.rs:8:25: 11:6 (#0)]">        return "foo"</span></span>
+<span class="line"><span class="code even" style="--layer: 1" title="8:25-11:6: @0[1]: _1 = [generator@../coverage/yield.rs:8:25: 11:6 (#0)]">    }<span class="annotation">⦉@0,1,2</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0"></span></span>
 <span class="line"><span class="code" style="--layer: 0">    match </span><span><span class="code even" style="--layer: 1" title="13:20-13:34: @0[7]: _5 = &amp;mut _1
 13:11-13:35: @0.Call: _4 = Pin::&lt;&amp;mut [generator@../coverage/yield.rs:8:25: 11:6 {i32, ()}]&gt;::new(move _5) -&gt; [return: bb1, unwind: bb26]
@@ -98,12 +98,12 @@ For revisions in Pull Requests (PR):
 <span class="line"><span class="code" style="--layer: 0">        _ =&gt; </span><span><span class="code even" style="--layer: 1" title="19:14-19:52: @9.Call: begin_panic::&lt;&amp;str&gt;(const &quot;unexpected value from resume&quot;) -&gt; bb26"><span class="annotation">@9⦊</span>panic!("unexpected value from resume")<span class="annotation">⦉@9</span></span></span><span class="code" style="--layer: 0">,</span></span>
 <span class="line"><span class="code" style="--layer: 0">    }</span></span>
 <span class="line"><span class="code" style="--layer: 0"></span></span>
-<span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code odd" style="--layer: 1" title="22:9-22:22: @13[5]: FakeRead(ForLet, _17)"><span class="annotation">@12,13,14,15⦊</span>mut generator<span class="annotation">⦉@12,13,14,15</span></span></span><span class="code" style="--layer: 0"> = </span><span><span class="code even" style="--layer: 1"><span class="annotation">Unreachable⦊</span>|| {</span></span>
-<span class="line"><span class="code even" style="--layer: 1">        yield 1;</span></span>
-<span class="line"><span class="code even" style="--layer: 1">        yield 2;</span></span>
-<span class="line"><span class="code even" style="--layer: 1">        yield 3;</span></span>
-<span class="line"><span class="code even" style="--layer: 1">        return "foo"</span></span>
-<span class="line"><span class="code even" style="--layer: 1">    }<span class="annotation">⦉Unreachable</span></span></span><span class="code" style="--layer: 0">;</span></span>
+<span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code odd" style="--layer: 1" title="22:9-22:22: @13[5]: FakeRead(ForLet, _17)"><span class="annotation">@12,13,14,15⦊</span>mut generator<span class="annotation">⦉@12,13,14,15</span></span></span><span class="code" style="--layer: 0"> = </span><span><span class="code odd" style="--layer: 1" title="22:25-27:6: @13[4]: _17 = [generator@../coverage/yield.rs:22:25: 27:6 (#0)]"><span class="annotation">@12,13,14,15⦊</span>|| {</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="22:25-27:6: @13[4]: _17 = [generator@../coverage/yield.rs:22:25: 27:6 (#0)]">        yield 1;</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="22:25-27:6: @13[4]: _17 = [generator@../coverage/yield.rs:22:25: 27:6 (#0)]">        yield 2;</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="22:25-27:6: @13[4]: _17 = [generator@../coverage/yield.rs:22:25: 27:6 (#0)]">        yield 3;</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="22:25-27:6: @13[4]: _17 = [generator@../coverage/yield.rs:22:25: 27:6 (#0)]">        return "foo"</span></span>
+<span class="line"><span class="code odd" style="--layer: 1" title="22:25-27:6: @13[4]: _17 = [generator@../coverage/yield.rs:22:25: 27:6 (#0)]">    }<span class="annotation">⦉@12,13,14,15</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0"></span></span>
 <span class="line"><span class="code" style="--layer: 0">    match </span><span><span class="code odd" style="--layer: 1" title="29:20-29:34: @13[10]: _21 = &amp;mut _17
 29:11-29:35: @13.Call: _20 = Pin::&lt;&amp;mut [generator@../coverage/yield.rs:22:25: 27:6 {i32, ()}]&gt;::new(move _21) -&gt; [return: bb14, unwind: bb26]
