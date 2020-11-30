@@ -273,41 +273,24 @@ impl<'a, 'tcx> Instrumentor<'a, 'tcx> {
 
         let mut bcb_counters = IndexVec::from_elem_n(None, self.basic_coverage_blocks.num_nodes());
         for covspan in coverage_spans {
+            let bcb = covspan.bcb;
             let span = covspan.span;
-            if covspan.is_closure() {
-                // A closure body has its own, separate MIR, but the code span for the closure body
-                // is known to the enclosing function's MIR. Since it is possible for a closure to
-                // be "unused", that closure's MIR would not get codegenned and would not have any
-                // known coverage. Adding an `Unreachable` code region for the closure ensures the
-                // closure's region is known to coverage and can be marked "uncovered" if needed.
-                // Note, the `Unreachable` region will generate a `Zero` counter.
-                let coverage_kind =
-                    CoverageKind::Unreachable { closure_def_id: covspan.closure_def_id };
-                inject_statement(
-                    self.mir_body,
-                    coverage_kind,
-                    mir::START_BLOCK,
-                    Some(make_code_region(file_name, &source_file, span, body_span)),
-                );
+            let counter_kind = if let Some(&counter_operand) = bcb_counters[bcb].as_ref() {
+                self.coverage_counters.make_identity_counter(counter_operand)
+            } else if let Some(counter_kind) = self.bcb_data_mut(bcb).take_counter() {
+                bcb_counters[bcb] = Some(counter_kind.as_operand_id());
+                debug_used_expressions.add_expression_operands(&counter_kind);
+                counter_kind
             } else {
-                let bcb = covspan.bcb;
-                let counter_kind = if let Some(&counter_operand) = bcb_counters[bcb].as_ref() {
-                    self.coverage_counters.make_identity_counter(counter_operand)
-                } else if let Some(counter_kind) = self.bcb_data_mut(bcb).take_counter() {
-                    bcb_counters[bcb] = Some(counter_kind.as_operand_id());
-                    debug_used_expressions.add_expression_operands(&counter_kind);
-                    counter_kind
-                } else {
-                    bug!("Every BasicCoverageBlock should have a Counter or Expression");
-                };
-                graphviz_data.add_bcb_coverage_span_with_counter(bcb, &covspan, &counter_kind);
-                inject_statement(
-                    self.mir_body,
-                    counter_kind,
-                    self.bcb_last_bb(bcb),
-                    Some(make_code_region(file_name, &source_file, span, body_span)),
-                );
-            }
+                bug!("Every BasicCoverageBlock should have a Counter or Expression");
+            };
+            graphviz_data.add_bcb_coverage_span_with_counter(bcb, &covspan, &counter_kind);
+            inject_statement(
+                self.mir_body,
+                counter_kind,
+                self.bcb_last_bb(bcb),
+                Some(make_code_region(file_name, &source_file, span, body_span)),
+            );
         }
     }
 

@@ -10,7 +10,6 @@ use rustc_middle::mir::{
 };
 use rustc_middle::ty::TyCtxt;
 
-use rustc_span::def_id::DefId;
 use rustc_span::source_map::original_sp;
 use rustc_span::{BytePos, Span, SyntaxContext};
 
@@ -70,17 +69,12 @@ pub(super) struct CoverageSpan {
     pub span: Span,
     pub bcb: BasicCoverageBlock,
     pub coverage_statements: Vec<CoverageStatement>,
-    pub closure_def_id: Option<DefId>,
+    pub is_closure: bool,
 }
 
 impl CoverageSpan {
     pub fn for_fn_sig(fn_sig_span: Span) -> Self {
-        Self {
-            span: fn_sig_span,
-            bcb: START_BCB,
-            coverage_statements: vec![],
-            closure_def_id: None,
-        }
+        Self { span: fn_sig_span, bcb: START_BCB, coverage_statements: vec![], is_closure: false }
     }
 
     pub fn for_statement(
@@ -90,30 +84,28 @@ impl CoverageSpan {
         bb: BasicBlock,
         stmt_index: usize,
     ) -> Self {
-        let closure_def_id = match statement.kind {
+        let is_closure = match statement.kind {
             StatementKind::Assign(box (_, Rvalue::Aggregate(box ref kind, _))) => match kind {
-                AggregateKind::Closure(def_id, _) | AggregateKind::Generator(def_id, _, _) => {
-                    Some(*def_id)
-                }
-                _ => None,
+                AggregateKind::Closure(_, _) | AggregateKind::Generator(_, _, _) => true,
+                _ => false,
             },
-            _ => None,
+            _ => false,
         };
 
         Self {
             span,
             bcb,
             coverage_statements: vec![CoverageStatement::Statement(bb, span, stmt_index)],
-            closure_def_id,
+            is_closure,
         }
     }
 
     pub fn for_terminator(span: Span, bcb: BasicCoverageBlock, bb: BasicBlock) -> Self {
         Self {
             span,
-            bcb: bcb,
+            bcb,
             coverage_statements: vec![CoverageStatement::Terminator(bb, span)],
-            closure_def_id: None,
+            is_closure: false,
         }
     }
 
@@ -133,13 +125,8 @@ impl CoverageSpan {
     }
 
     #[inline]
-    pub fn is_closure(&self) -> bool {
-        self.closure_def_id.is_some()
-    }
-
-    #[inline]
     pub fn is_mergeable(&self, other: &Self) -> bool {
-        self.is_in_same_bcb(other) && !(self.is_closure() || other.is_closure())
+        self.is_in_same_bcb(other) && !(self.is_closure || other.is_closure)
     }
 
     #[inline]
@@ -277,13 +264,7 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
     ///
     ///    Closures are exposed in their enclosing functions as `Assign` `Rvalue`s, and since
     ///    closures have their own MIR, their `Span` in their enclosing function should be left
-    ///    "uncovered"; *however*, a closure that is never called may not be codegenned, and if
-    ///    not, it won't have any coverage. Instead, we want it to have coverage, but show `0`
-    ///    executions. So, in the enclosing function, the span for the closure will get a
-    ///    `CoverageKind::Unreachable`, including the closure's `DefId`, so at codegen time, when
-    ///    generating the Coverage Map for a crate (LLVM module), the `DefId` can be used to
-    ///    lookup functions in the Coverage Map, and if not found, a `Zero` coverage code region
-    ///    will be added.
+    ///    "uncovered".
     ///
     /// Note the resulting vector of `CoverageSpan`s does may not be fully sorted (and does not need
     /// to be).
@@ -349,7 +330,7 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
                 );
                 let prev = self.take_prev();
                 self.refined_spans.push(prev);
-            } else if self.prev().is_closure() {
+            } else if self.prev().is_closure {
                 // drop any equal or overlapping span (`curr`) and keep `prev` to test again in the
                 // next iter
                 debug!(
@@ -358,7 +339,7 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
                     self.prev()
                 );
                 self.take_curr();
-            } else if self.curr().is_closure() {
+            } else if self.curr().is_closure {
                 self.carve_out_span_for_closure();
             } else if self.prev_original_span == self.curr().span {
                 // Note that this compares the new span to `prev_original_span`, which may not
@@ -385,7 +366,7 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
         // coverage, and more intuitive counts. (Avoids double-counting the closing brace of the
         // function body.)
         let body_ends_with_closure = if let Some(last_covspan) = refined_spans.last() {
-            last_covspan.is_closure() && last_covspan.span.hi() == self.body_span.hi()
+            last_covspan.is_closure && last_covspan.span.hi() == self.body_span.hi()
         } else {
             false
         };
@@ -394,6 +375,10 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
             refined_spans.push(prev);
         }
 
+        // Remove `CoverageSpan`s derived from closures, originally added to ensure the coverage
+        // regions for the current function leave room for the closure's own coverage regions
+        // (injected separately, from the closure's own MIR).
+        refined_spans.retain(|covspan| !covspan.is_closure);
         refined_spans
     }
 
@@ -534,13 +519,7 @@ impl<'a, 'tcx> CoverageSpans<'a, 'tcx> {
     /// `prev`'s span. (The closure's coverage counters will be injected when processing the
     /// closure's own MIR.) Add the portion of the span to the left of the closure; and if the span
     /// extends to the right of the closure, update `prev` to that portion of the span. For any
-    /// `pending_dups`, repeat the same process. Ensure the closure's span is counted by adding an
-    /// "Unreachable" coverage span, which will be counted as zero *for this MIR* (the MIR
-    /// referencing the closure). The closure body is, after all, unreachalbe, from the perspective
-    /// of this MIR. Assuming the MIR is generated for the closure (assuming the closure is "used",
-    /// which is not always the case), the closures counters will be added to the `ZERO` counters.
-    /// Otherwise, at least the code span will be included in the coverage results (with an
-    /// execution count of `0`).
+    /// `pending_dups`, repeat the same process.
     fn carve_out_span_for_closure(&mut self) {
         let curr_span = self.curr().span;
         let left_cutoff = curr_span.lo();

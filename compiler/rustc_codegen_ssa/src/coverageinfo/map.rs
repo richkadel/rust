@@ -1,6 +1,5 @@
 pub use super::ffi::*;
 
-use rustc_data_structures::fx::FxHashSet;
 use rustc_index::vec::IndexVec;
 use rustc_middle::mir::coverage::{
     CodeRegion, CounterValueReference, ExpressionOperandId, InjectedExpressionId,
@@ -8,7 +7,6 @@ use rustc_middle::mir::coverage::{
 };
 use rustc_middle::ty::Instance;
 use rustc_middle::ty::TyCtxt;
-use rustc_span::def_id::DefId;
 
 #[derive(Clone, Debug)]
 pub struct Expression {
@@ -16,12 +14,6 @@ pub struct Expression {
     op: Op,
     rhs: ExpressionOperandId,
     region: Option<CodeRegion>,
-}
-
-#[derive(Debug)]
-struct Unreachable {
-    closure_def_id: Option<DefId>,
-    region: CodeRegion,
 }
 
 /// Collects all of the coverage regions associated with (a) injected counters, (b) counter
@@ -41,7 +33,7 @@ pub struct FunctionCoverage<'tcx> {
     source_hash: u64,
     counters: IndexVec<CounterValueReference, Option<CodeRegion>>,
     expressions: IndexVec<InjectedExpressionIndex, Option<Expression>>,
-    unreachables: Vec<Unreachable>,
+    unreachable_regions: Vec<CodeRegion>,
 }
 
 impl<'tcx> FunctionCoverage<'tcx> {
@@ -56,7 +48,7 @@ impl<'tcx> FunctionCoverage<'tcx> {
             source_hash: 0, // will be set with the first `add_counter()`
             counters: IndexVec::from_elem_n(None, coverageinfo.num_counters as usize),
             expressions: IndexVec::from_elem_n(None, coverageinfo.num_expressions as usize),
-            unreachables: Vec::new(),
+            unreachable_regions: Vec::new(),
         }
     }
 
@@ -108,8 +100,8 @@ impl<'tcx> FunctionCoverage<'tcx> {
     }
 
     /// Add a region that will be marked as "unreachable", with a constant "zero counter".
-    pub fn add_unreachable(&mut self, closure_def_id: Option<DefId>, region: CodeRegion) {
-        self.unreachables.push(Unreachable { closure_def_id, region })
+    pub fn add_unreachable_region(&mut self, region: CodeRegion) {
+        self.unreachable_regions.push(region)
     }
 
     /// Return the source hash, generated from the HIR node structure, and used to indicate whether
@@ -121,9 +113,8 @@ impl<'tcx> FunctionCoverage<'tcx> {
     /// Generate an array of CounterExpressions, and an iterator over all `Counter`s and their
     /// associated `Regions` (from which the LLVM-specific `CoverageMapGenerator` will create
     /// `CounterMappingRegion`s.
-    pub fn get_expressions_and_counter_regions<'a, 'b: 'a>(
+    pub fn get_expressions_and_counter_regions<'a>(
         &'a self,
-        covered_def_ids: &'b FxHashSet<DefId>,
     ) -> (Vec<CounterExpression>, impl Iterator<Item = (Counter, &'a CodeRegion)>) {
         assert!(
             self.source_hash != 0,
@@ -133,10 +124,10 @@ impl<'tcx> FunctionCoverage<'tcx> {
 
         let counter_regions = self.counter_regions();
         let (counter_expressions, expression_regions) = self.expressions_with_regions();
-        let unreachables = self.unreachables(covered_def_ids);
+        let unreachable_regions = self.unreachable_regions();
 
         let counter_regions =
-            counter_regions.chain(expression_regions.into_iter().chain(unreachables));
+            counter_regions.chain(expression_regions.into_iter().chain(unreachable_regions));
         (counter_expressions, counter_regions)
     }
 
@@ -259,20 +250,8 @@ impl<'tcx> FunctionCoverage<'tcx> {
         (counter_expressions, expression_regions.into_iter())
     }
 
-    fn unreachables<'a, 'b: 'a>(
-        &'a self,
-        covered_def_ids: &'b FxHashSet<DefId>,
-    ) -> impl Iterator<Item = (Counter, &'a CodeRegion)> {
-        self.unreachables.iter().filter_map(move |unreachable| {
-            if let Some(closure_def_id) = unreachable.closure_def_id {
-                if covered_def_ids.contains(&closure_def_id) {
-                    debug!("unreachable {:?} IS COVERED AND WILL BE FILTERED", unreachable);
-                    return None;
-                }
-            }
-            debug!("unreachable {:?} IS NOT COVERED... ADDING Counter::zero()", unreachable);
-            Some((Counter::zero(), &unreachable.region))
-        })
+    fn unreachable_regions<'a>(&'a self) -> impl Iterator<Item = (Counter, &'a CodeRegion)> {
+        self.unreachable_regions.iter().map(|region| (Counter::zero(), region))
     }
 
     fn expression_index(&self, id_descending_from_max: u32) -> InjectedExpressionIndex {

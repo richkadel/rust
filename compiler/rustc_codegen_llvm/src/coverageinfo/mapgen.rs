@@ -39,7 +39,6 @@ pub fn finalize<'ll, 'tcx>(cx: &CodegenCx<'ll, 'tcx>) {
         Some(ctx) => ctx.take_function_coverage_map(),
         None => return,
     };
-
     if function_coverage_map.is_empty() {
         // This module has no functions with coverage instrumentation
         return;
@@ -59,7 +58,7 @@ pub fn finalize<'ll, 'tcx>(cx: &CodegenCx<'ll, 'tcx>) {
             let def_id = local_def_id.to_def_id();
             if !covered_def_ids.contains(&def_id) {
                 if let Some(code_region) = tcx.covered_body_as_code_region(def_id) {
-                    first_function_coverage.add_unreachable(None, code_region.clone());
+                    first_function_coverage.add_unreachable_region(code_region.clone());
                 }
             }
         }
@@ -75,7 +74,7 @@ pub fn finalize<'ll, 'tcx>(cx: &CodegenCx<'ll, 'tcx>) {
         let mangled_function_name = tcx.symbol_name(instance).to_string();
         let function_source_hash = function_coverage.source_hash();
         let (expressions, counter_regions) =
-            function_coverage.get_expressions_and_counter_regions(&covered_def_ids);
+            function_coverage.get_expressions_and_counter_regions();
 
         let coverage_mapping_buffer = llvm::build_byte_buffer(|coverage_mapping_buffer| {
             mapgen.write_coverage_mapping(expressions, counter_regions, coverage_mapping_buffer);

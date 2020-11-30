@@ -1,0 +1,59 @@
+{
+  "data": [
+    {
+      "files": [
+        {
+          "filename": "../coverage/async.rs",
+          "summary": {
+            "functions": {
+              "count": 16,
+              "covered": 15,
+              "percent": 93.75
+            },
+            "instantiations": {
+              "count": 16,
+              "covered": 15,
+              "percent": 93.75
+            },
+            "lines": {
+              "count": 105,
+              "covered": 75,
+              "percent": 71.42857142857143
+            },
+            "regions": {
+              "count": 56,
+              "covered": 35,
+              "notcovered": 21,
+              "percent": 62.5
+            }
+          }
+        }
+      ],
+      "totals": {
+        "functions": {
+          "count": 16,
+          "covered": 15,
+          "percent": 93.75
+        },
+        "instantiations": {
+          "count": 16,
+          "covered": 15,
+          "percent": 93.75
+        },
+        "lines": {
+          "count": 105,
+          "covered": 75,
+          "percent": 71.42857142857143
+        },
+        "regions": {
+          "count": 56,
+          "covered": 35,
+          "notcovered": 21,
+          "percent": 62.5
+        }
+      }
+    }
+  ],
+  "type": "llvm.coverage.json.export",
+  "version": "2.0.1"
+}

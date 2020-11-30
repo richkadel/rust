@@ -127,7 +127,18 @@ fn main() {
         "closure should be unused".to_owned()
     };
 
+    let mut countdown = 10;
+    let _short_unused_closure = | _unused_arg: u8 | countdown += 1;
+
+    // Macros can sometimes confuse the coverage results. Compare this next assignment, with an
+    // unused closure that invokes the `println!()` macro, with the closure assignment above, that
+    // does not use a macro. The closure above correctly shows `0` executions.
     let _short_unused_closure = | _unused_arg: u8 | println!("not called");
+    // The closure assignment above is executed, with a line count of `1`, but the `println!()`
+    // could not have been called, and yet, there is no indication that it wasn't...
+
+    // ...but adding block braces gives the expected result, showing the block was not executed.
+    let _short_unused_closure_block = | _unused_arg: u8 | { println!("not called") };
 
     let _shortish_unused_closure = | _unused_arg: u8 | {
         println!("not called")

@@ -12,12 +12,10 @@ async fn c(x: u8) -> u8 {
 
 async fn d() -> u8 { 1 }
 
-// Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
 async fn e() -> u8 { 1 } // unused function; executor does not block on `g()`
 
 async fn f() -> u8 { 1 }
 
-// Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
 async fn foo() -> [bool; 10] { [false; 10] } // unused function; executor does not block on `h()`
 
 pub async fn g(x: u8) {
@@ -74,7 +72,6 @@ fn j(x: u8) {
     }
 }
 
-// Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
 fn k(x: u8) { // unused function
     match x {
         1 => (),
@@ -126,13 +123,3 @@ mod executor {
         }
     }
 }
-
-// Async body coverage
-// ===================
-//
-// Async function bodies are executed in (hidden) closures that are "unused" if not "awaited"
-// with an executor. If unused, they have no coverage, so the enclosing MIR (same function,
-// without the closure body) injects a `CoverageKind::Unreachable` region with the span of the
-// closure body, and the `DefId` of the closure. When building the Coverage Map for the LLVM
-// module (the crate), these unreachable code regions are only added if the Coverage Map does
-// not add a function for the unreachable `DefId`.

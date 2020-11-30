@@ -137,6 +137,7 @@ impl CoverageGraph {
                     // `Terminator`s `successors()` list) checking the number of successors won't
                     // work.
                 }
+
                 // The following `TerminatorKind`s are either not expected outside an unwind branch,
                 // or they should not (under normal circumstances) branch. Coverage graphs are
                 // simplified by assuring coverage results are accurate for well-behaved programs.
