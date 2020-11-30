@@ -86,7 +86,6 @@ endif
 	"$(LLVM_BIN_DIR)"/llvm-cov show \
 			$(DEBUG_FLAG) \
 			--Xdemangler="$(RUST_DEMANGLER)" \
-			--ignore-filename-regex="library/(core|std)/src" \
 			--show-line-counts-or-regions \
 			--instr-profile="$(TMPDIR)"/$@.profdata \
 			$(call BIN,"$(TMPDIR)"/$@) \

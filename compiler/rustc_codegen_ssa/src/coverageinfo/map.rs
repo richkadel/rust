@@ -1,5 +1,6 @@
 pub use super::ffi::*;
 
+use rustc_data_structures::fx::FxHashSet;
 use rustc_index::vec::IndexVec;
 use rustc_middle::mir::coverage::{
     CodeRegion, CounterValueReference, ExpressionOperandId, InjectedExpressionId,
@@ -102,6 +103,32 @@ impl<'tcx> FunctionCoverage<'tcx> {
     /// Add a region that will be marked as "unreachable", with a constant "zero counter".
     pub fn add_unreachable_region(&mut self, region: CodeRegion) {
         self.unreachable_regions.push(region)
+    }
+
+    pub fn take_unreachable_regions_in_covered_files(
+        &mut self,
+        unreachable_code_regions: &mut Vec<CodeRegion>,
+    ) {
+        let mut covered_filenames = FxHashSet::default();
+        for region in self.counters.iter().filter_map(|opt| opt.as_ref()) {
+            covered_filenames.insert(region.file_name);
+        }
+        for region in self
+            .expressions
+            .iter()
+            .filter_map(|opt| opt.as_ref())
+            .filter_map(|exp| exp.region.as_ref())
+        {
+            covered_filenames.insert(region.file_name);
+        }
+        for region in &self.unreachable_regions {
+            covered_filenames.insert(region.file_name);
+        }
+        for unreachable_region in unreachable_code_regions.drain_filter(|unreachable_region| {
+            covered_filenames.contains(&unreachable_region.file_name)
+        }) {
+            self.add_unreachable_region(unreachable_region);
+        }
     }
 
     /// Return the source hash, generated from the HIR node structure, and used to indicate whether

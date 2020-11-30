@@ -8,7 +8,6 @@ Counter in file 0 141:59 -> 141:85, 0
 Counter in file 0 143:56 -> 145:6, 0
 Counter in file 0 149:7 -> 149:33, 0
 Counter in file 0 153:7 -> 153:33, 0
-Counter in file 1 95:23 -> 97:6, 0
 Counter in file 0 3:1 -> 18:13, #1
 Counter in file 0 25:14 -> 33:9, (#1 + 0)
 Counter in file 0 40:6 -> 60:13, (#1 + 0)

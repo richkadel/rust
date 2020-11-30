@@ -35,7 +35,7 @@ pub fn finalize<'ll, 'tcx>(cx: &CodegenCx<'ll, 'tcx>) {
         tcx.sess.fatal("rustc option `-Z instrument-coverage` requires LLVM 11 or higher.");
     }
 
-    let mut function_coverage_map = match cx.coverage_context() {
+    let function_coverage_map = match cx.coverage_context() {
         Some(ctx) => ctx.take_function_coverage_map(),
         None => return,
     };
@@ -49,27 +49,33 @@ pub fn finalize<'ll, 'tcx>(cx: &CodegenCx<'ll, 'tcx>) {
         .map(|instance| instance.def.def_id())
         .collect::<FxHashSet<_>>();
 
-    if let Some(first_function_coverage) = function_coverage_map.values_mut().next() {
-        // Any coverage-instrumented MIR that did not make it to codegen should be added to the
-        // Coverage Map, so coverage analysis will show that function as uncovered. Since the
-        // function is not codegenned, add the unreachable code region to the first available
-        // function that *will* be added to the Coverage Map.
-        for local_def_id in tcx.mir_keys(LOCAL_CRATE).iter() {
+    // Any coverage-instrumented MIR that did not make it to codegen should be added to the
+    // Coverage Map, so coverage analysis will show that function as uncovered. Since the
+    // function is not codegenned, add the unreachable code region to the first available
+    // function that *will* be added to the Coverage Map.
+    let mut unreachable_code_regions = tcx
+        .mir_keys(LOCAL_CRATE)
+        .iter()
+        .filter_map(|local_def_id| {
             let def_id = local_def_id.to_def_id();
-            if !covered_def_ids.contains(&def_id) {
-                if let Some(code_region) = tcx.covered_body_as_code_region(def_id) {
-                    first_function_coverage.add_unreachable_region(code_region.clone());
-                }
+            if covered_def_ids.contains(&def_id) {
+                None
+            } else {
+                tcx.covered_body_as_code_region(def_id).clone() // Some if MIR has `StatementKind::Coverage`
             }
-        }
-    }
+        })
+        .collect::<Vec<_>>();
 
     let mut mapgen = CoverageMapGenerator::new();
 
     // Encode coverage mappings and generate function records
     let mut function_data = Vec::new();
-    for (instance, function_coverage) in function_coverage_map {
+    for (instance, mut function_coverage) in function_coverage_map {
         debug!("Generate coverage map for: {:?}", instance);
+        if !unreachable_code_regions.is_empty() {
+            function_coverage
+                .take_unreachable_regions_in_covered_files(&mut unreachable_code_regions);
+        }
 
         let mangled_function_name = tcx.symbol_name(instance).to_string();
         let function_source_hash = function_coverage.source_hash();
