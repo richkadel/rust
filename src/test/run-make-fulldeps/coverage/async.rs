@@ -13,12 +13,12 @@ async fn c(x: u8) -> u8 {
 async fn d() -> u8 { 1 }
 
 // Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
-async fn e() -> u8 { 1 }
+async fn e() -> u8 { 1 } // unused function; executor does not block on `g()`
 
 async fn f() -> u8 { 1 }
 
 // Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
-async fn foo() -> [bool; 10] { [false; 10] }
+async fn foo() -> [bool; 10] { [false; 10] } // unused function; executor does not block on `h()`
 
 pub async fn g(x: u8) {
     match x {
@@ -74,6 +74,7 @@ fn j(x: u8) {
     }
 }
 
+// Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
 fn k(x: u8) { // unused function
     match x {
         1 => (),

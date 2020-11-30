@@ -29,11 +29,6 @@
    18|      2|        println!("BOOM times {}!!!", self.strength);
    19|      2|    }
   ------------------
-  | <generics::Firework<i32> as core::ops::drop::Drop>::drop:
-  |   17|      1|    fn drop(&mut self) {
-  |   18|      1|        println!("BOOM times {}!!!", self.strength);
-  |   19|      1|    }
-  ------------------
   | <generics::Firework<f64> as core::ops::drop::Drop>::drop:
   |   17|      1|    fn drop(&mut self) {
   |   18|      1|        println!("BOOM times {}!!!", self.strength);
@@ -52,12 +47,17 @@
    30|      1|    if true {
    31|      1|        println!("Exiting with error...");
    32|      1|        return Err(1);
-   33|       |    }
-   34|       |
-   35|       |    let _ = Firework { strength: 1000 };
-   36|       |
-   37|       |    Ok(())
+   33|      0|    }
+   34|      0|
+   35|      0|    let _ = Firework { strength: 1000 };
+   36|      0|
+   37|      0|    Ok(())
    38|      1|}
+  ------------------
+  | Unexecuted instantiation: <generics::Firework<i32> as core::ops::drop::Drop>::drop
+  ------------------
+  | Unexecuted instantiation: generics::main
+  ------------------
    39|       |
    40|       |// Expected program output:
    41|       |//   Exiting with error...

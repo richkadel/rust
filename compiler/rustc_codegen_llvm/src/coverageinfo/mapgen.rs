@@ -6,6 +6,7 @@ use llvm::coverageinfo::CounterMappingRegion;
 use rustc_codegen_ssa::coverageinfo::map::{Counter, CounterExpression};
 use rustc_codegen_ssa::traits::ConstMethods;
 use rustc_data_structures::fx::{FxHashSet, FxIndexSet};
+use rustc_hir::def_id::LOCAL_CRATE;
 use rustc_llvm::RustString;
 use rustc_middle::mir::coverage::CodeRegion;
 
@@ -26,17 +27,19 @@ use tracing::debug;
 /// undocumented details in Clang's implementation (that may or may not be important) were also
 /// replicated for Rust's Coverage Map.
 pub fn finalize<'ll, 'tcx>(cx: &CodegenCx<'ll, 'tcx>) {
+    let tcx = cx.tcx;
     // Ensure LLVM supports Coverage Map Version 4 (encoded as a zero-based value: 3).
     // If not, the LLVM Version must be less than 11.
     let version = coverageinfo::mapping_version();
     if version != 3 {
-        cx.tcx.sess.fatal("rustc option `-Z instrument-coverage` requires LLVM 11 or higher.");
+        tcx.sess.fatal("rustc option `-Z instrument-coverage` requires LLVM 11 or higher.");
     }
 
-    let function_coverage_map = match cx.coverage_context() {
+    let mut function_coverage_map = match cx.coverage_context() {
         Some(ctx) => ctx.take_function_coverage_map(),
         None => return,
     };
+
     if function_coverage_map.is_empty() {
         // This module has no functions with coverage instrumentation
         return;
@@ -47,6 +50,21 @@ pub fn finalize<'ll, 'tcx>(cx: &CodegenCx<'ll, 'tcx>) {
         .map(|instance| instance.def.def_id())
         .collect::<FxHashSet<_>>();
 
+    if let Some(first_function_coverage) = function_coverage_map.values_mut().next() {
+        // Any coverage-instrumented MIR that did not make it to codegen should be added to the
+        // Coverage Map, so coverage analysis will show that function as uncovered. Since the
+        // function is not codegenned, add the unreachable code region to the first available
+        // function that *will* be added to the Coverage Map.
+        for local_def_id in tcx.mir_keys(LOCAL_CRATE).iter() {
+            let def_id = local_def_id.to_def_id();
+            if !covered_def_ids.contains(&def_id) {
+                if let Some(code_region) = tcx.covered_body_as_code_region(def_id) {
+                    first_function_coverage.add_unreachable(None, code_region.clone());
+                }
+            }
+        }
+    }
+
     let mut mapgen = CoverageMapGenerator::new();
 
     // Encode coverage mappings and generate function records
@@ -54,7 +72,7 @@ pub fn finalize<'ll, 'tcx>(cx: &CodegenCx<'ll, 'tcx>) {
     for (instance, function_coverage) in function_coverage_map {
         debug!("Generate coverage map for: {:?}", instance);
 
-        let mangled_function_name = cx.tcx.symbol_name(instance).to_string();
+        let mangled_function_name = tcx.symbol_name(instance).to_string();
         let function_source_hash = function_coverage.source_hash();
         let (expressions, counter_regions) =
             function_coverage.get_expressions_and_counter_regions(&covered_def_ids);

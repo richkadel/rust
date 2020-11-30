@@ -203,7 +203,7 @@ For revisions in Pull Requests (PR):
 <span class="line"><span class="code" style="--layer: 0">            </span><span><span class="code even" style="--layer: 1" title="54:13-54:19: @63[0]: _0 = const ()"><span class="annotation">@63⦊</span>return<span class="annotation">⦉@63</span></span></span><span class="code" style="--layer: 0">;</span></span>
 <span class="line"><span class="code" style="--layer: 0">        }</span></span>
 <span class="line"><span class="code" style="--layer: 0">    }</span><span><span class="code odd" style="--layer: 1" title="56:6-56:6: @52[0]: _41 = const ()"><span class="annotation">@52⦊</span>‸<span class="annotation">⦉@52</span></span></span><span class="code" style="--layer: 0"> // Note: closing brace shows uncovered (vs. `0` for implicit else) because condition literal</span></span>
-<span class="line"><span class="code" style="--layer: 0">    // `true` was const-evaluated. It's known at compile time that the `if` block will be executed.</span></span>
+<span class="line"><span class="code" style="--layer: 0">      // `true` was const-evaluated. The compiler knows the `if` block will be executed.</span></span>
 <span class="line"><span class="code" style="--layer: 0"></span></span>
 <span class="line"><span class="code" style="--layer: 0">    let </span><span><span class="code even" style="--layer: 1" title="59:25-59:26: @79[3]: _62 = const 0_i32
 59:9-59:22: @79[4]: FakeRead(ForLet, _62)

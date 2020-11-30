@@ -2,6 +2,11 @@ Counter in file 0 98:5 -> 100:20, #1
 Counter in file 0 100:21 -> 102:10, #2
 Counter in file 0 102:10 -> 102:11, (#1 - #2)
 Counter in file 0 103:9 -> 104:6, (#2 + (#1 - #2))
+Counter in file 0 123:5 -> 128:6, 0
+Counter in file 0 132:56 -> 134:6, 0
+Counter in file 0 138:7 -> 138:33, 0
+Counter in file 0 142:7 -> 142:33, 0
+Counter in file 1 95:23 -> 97:6, 0
 Counter in file 0 61:13 -> 63:28, #1
 Counter in file 0 63:29 -> 65:18, #2
 Counter in file 0 65:18 -> 65:19, (#1 - #2)
@@ -63,14 +68,18 @@ Combined regions:
   103:9 -> 104:6 (count=5)
   104:6 -> 120:9 (count=1)
   120:9 -> 128:6 (count=0)
+  123:5 -> 128:6 (count=0)
   128:6 -> 130:33 (count=1)
   130:33 -> 130:75 (count=0)
   130:75 -> 132:36 (count=1)
   132:36 -> 134:6 (count=0)
+  132:56 -> 134:6 (count=0)
   134:6 -> 136:36 (count=1)
   136:36 -> 138:33 (count=0)
+  138:7 -> 138:33 (count=0)
   138:33 -> 140:43 (count=1)
   140:43 -> 142:33 (count=0)
+  142:7 -> 142:33 (count=0)
   142:33 -> 144:2 (count=1)
 Segment at 3:1 (count = 1), RegionEntry
 Segment at 18:13 (count = 0), Skipped
@@ -114,13 +123,22 @@ Segment at 102:11 (count = 0), Skipped
 Segment at 103:9 (count = 5), RegionEntry
 Segment at 104:6 (count = 1), RegionEntry
 Segment at 120:9 (count = 0), RegionEntry
+Segment at 123:5 (count = 0), RegionEntry
 Segment at 128:6 (count = 1), RegionEntry
 Segment at 130:33 (count = 0), RegionEntry
 Segment at 130:75 (count = 1), RegionEntry
 Segment at 132:36 (count = 0), RegionEntry
+Segment at 132:56 (count = 0), RegionEntry
 Segment at 134:6 (count = 1), RegionEntry
 Segment at 136:36 (count = 0), RegionEntry
+Segment at 138:7 (count = 0), RegionEntry
 Segment at 138:33 (count = 1), RegionEntry
 Segment at 140:43 (count = 0), RegionEntry
+Segment at 142:7 (count = 0), RegionEntry
 Segment at 142:33 (count = 1), RegionEntry
 Segment at 144:2 (count = 0), Skipped
+Emitting segments for file: /usr/local/google/home/richkadel/rust/library/std/src/macros.rs
+Combined regions:
+  95:23 -> 97:6 (count=0)
+Segment at 95:23 (count = 0), RegionEntry
+Segment at 97:6 (count = 0), Skipped

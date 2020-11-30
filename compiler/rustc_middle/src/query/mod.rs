@@ -346,6 +346,15 @@ rustc_queries! {
             cache_on_disk_if { key.is_local() }
         }
 
+        /// Returns the `CodeRegion` for the body of a function that has instrumented coverage, in
+        /// case the function was optimized out before codegen, and before being added to the
+        /// Coverage Map.
+        query covered_body_as_code_region(key: DefId) -> Option<mir::coverage::CodeRegion> {
+            desc { |tcx| "retrieving the MIR body as a `CodeRegion`, if instrumented, for `{}`", tcx.def_path_str(key) }
+            storage(ArenaCacheSelector<'tcx>)
+            cache_on_disk_if { key.is_local() }
+        }
+
         /// The `DefId` is the `DefId` of the containing MIR body. Promoteds do not have their own
         /// `DefId`. This function returns all promoteds in the specified body. The body references
         /// promoteds by the `DefId` and the `mir::Promoted` index. This is necessary, because

@@ -16,15 +16,41 @@
               "percent": 66.66666666666666
             },
             "lines": {
-              "count": 147,
+              "count": 158,
               "covered": 120,
-              "percent": 81.63265306122449
+              "percent": 75.9493670886076
             },
             "regions": {
-              "count": 36,
+              "count": 41,
               "covered": 20,
-              "notcovered": 16,
-              "percent": 55.55555555555556
+              "notcovered": 21,
+              "percent": 48.78048780487805
+            }
+          }
+        },
+        {
+          "filename": "/usr/local/google/home/richkadel/rust/library/std/src/macros.rs",
+          "summary": {
+            "functions": {
+              "count": 0,
+              "covered": 0,
+              "percent": 0
+            },
+            "instantiations": {
+              "count": 0,
+              "covered": 0,
+              "percent": 0
+            },
+            "lines": {
+              "count": 0,
+              "covered": 0,
+              "percent": 0
+            },
+            "regions": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0
             }
           }
         }
@@ -41,15 +67,15 @@
           "percent": 66.66666666666666
         },
         "lines": {
-          "count": 147,
+          "count": 158,
           "covered": 120,
-          "percent": 81.63265306122449
+          "percent": 75.9493670886076
         },
         "regions": {
-          "count": 36,
+          "count": 41,
           "covered": 20,
-          "notcovered": 16,
-          "percent": 55.55555555555556
+          "notcovered": 21,
+          "percent": 48.78048780487805
         }
       }
     }

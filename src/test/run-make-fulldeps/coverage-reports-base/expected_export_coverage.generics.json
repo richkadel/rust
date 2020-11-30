@@ -6,50 +6,50 @@
           "filename": "../coverage/generics.rs",
           "summary": {
             "functions": {
-              "count": 3,
-              "covered": 3,
+              "count": 2,
+              "covered": 2,
               "percent": 100
             },
             "instantiations": {
               "count": 5,
-              "covered": 5,
-              "percent": 100
+              "covered": 3,
+              "percent": 60
             },
             "lines": {
-              "count": 18,
-              "covered": 18,
-              "percent": 100
+              "count": 38,
+              "covered": 15,
+              "percent": 39.473684210526315
             },
             "regions": {
-              "count": 5,
-              "covered": 5,
-              "notcovered": 0,
-              "percent": 100
+              "count": 7,
+              "covered": 4,
+              "notcovered": 3,
+              "percent": 57.14285714285714
             }
           }
         }
       ],
       "totals": {
         "functions": {
-          "count": 3,
-          "covered": 3,
+          "count": 2,
+          "covered": 2,
           "percent": 100
         },
         "instantiations": {
           "count": 5,
-          "covered": 5,
-          "percent": 100
+          "covered": 3,
+          "percent": 60
         },
         "lines": {
-          "count": 18,
-          "covered": 18,
-          "percent": 100
+          "count": 38,
+          "covered": 15,
+          "percent": 39.473684210526315
         },
         "regions": {
-          "count": 5,
-          "covered": 5,
-          "notcovered": 0,
-          "percent": 100
+          "count": 7,
+          "covered": 4,
+          "notcovered": 3,
+          "percent": 57.14285714285714
         }
       }
     }

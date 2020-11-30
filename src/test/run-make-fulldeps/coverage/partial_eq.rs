@@ -4,8 +4,8 @@
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Version {
     major: usize,
-    minor: usize,
-    patch: usize,
+    minor: usize, // Count: 1 - `PartialOrd` compared `minor` values in 3.2.1 vs. 3.3.0
+    patch: usize, // Count: 0 - `PartialOrd` was determined by `minor` (2 < 3)
 }
 
 impl Version {

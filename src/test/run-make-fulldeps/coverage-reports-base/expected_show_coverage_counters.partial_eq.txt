@@ -1,4 +1,19 @@
+Counter in file 0 4:10 -> 4:15, 0
+Counter in file 0 4:24 -> 4:33, 0
+Counter in file 0 4:24 -> 4:33, 0
+Counter in file 0 4:35 -> 4:37, 0
+Counter in file 0 4:39 -> 4:49, 0
+Counter in file 0 4:39 -> 4:49, 0
+Counter in file 0 4:39 -> 4:49, 0
+Counter in file 0 4:39 -> 4:49, 0
+Counter in file 0 4:51 -> 4:54, 0
 Counter in file 0 7:5 -> 7:6, #1
+Counter in file 0 7:5 -> 7:17, 0
+Counter in file 0 7:5 -> 7:17, 0
+Counter in file 0 7:5 -> 7:17, 0
+Counter in file 0 8:5 -> 8:17, 0
+Counter in file 0 8:5 -> 8:17, 0
+Counter in file 0 8:5 -> 8:17, 0
 Counter in file 0 21:1 -> 26:2, #1
 Counter in file 0 4:17 -> 4:22, #1
 Counter in file 0 12:5 -> 18:6, #1
@@ -6,17 +21,36 @@ Counter in file 0 4:39 -> 4:40, #1
 Counter in file 0 8:5 -> 8:17, #1
 Emitting segments for file: ../coverage/partial_eq.rs
 Combined regions:
+  4:10 -> 4:15 (count=0)
   4:17 -> 4:22 (count=2)
+  4:24 -> 4:33 (count=0)
+  4:35 -> 4:37 (count=0)
+  4:39 -> 4:49 (count=0)
   4:39 -> 4:40 (count=1)
+  4:51 -> 4:54 (count=0)
+  7:5 -> 7:17 (count=0)
   7:5 -> 7:6 (count=1)
+  8:5 -> 8:17 (count=0)
   12:5 -> 18:6 (count=2)
   21:1 -> 26:2 (count=1)
+Segment at 4:10 (count = 0), RegionEntry
+Segment at 4:15 (count = 0), Skipped
 Segment at 4:17 (count = 2), RegionEntry
 Segment at 4:22 (count = 0), Skipped
+Segment at 4:24 (count = 0), RegionEntry
+Segment at 4:33 (count = 0), Skipped
+Segment at 4:35 (count = 0), RegionEntry
+Segment at 4:37 (count = 0), Skipped
 Segment at 4:39 (count = 1), RegionEntry
-Segment at 4:40 (count = 0), Skipped
+Segment at 4:40 (count = 0)
+Segment at 4:49 (count = 0), Skipped
+Segment at 4:51 (count = 0), RegionEntry
+Segment at 4:54 (count = 0), Skipped
 Segment at 7:5 (count = 1), RegionEntry
-Segment at 7:6 (count = 0), Skipped
+Segment at 7:6 (count = 0)
+Segment at 7:17 (count = 0), Skipped
+Segment at 8:5 (count = 0), RegionEntry
+Segment at 8:17 (count = 0), Skipped
 Segment at 12:5 (count = 2), RegionEntry
 Segment at 18:6 (count = 0), Skipped
 Segment at 21:1 (count = 1), RegionEntry

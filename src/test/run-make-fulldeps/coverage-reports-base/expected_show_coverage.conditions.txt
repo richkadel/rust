@@ -55,7 +55,7 @@
    54|      0|            return;
    55|       |        }
    56|       |    } // Note: closing brace shows uncovered (vs. `0` for implicit else) because condition literal
-   57|       |    // `true` was const-evaluated. It's known at compile time that the `if` block will be executed.
+   57|       |      // `true` was const-evaluated. The compiler knows the `if` block will be executed.
    58|       |
    59|      1|    let mut countdown = 0;
    60|      1|    if true {

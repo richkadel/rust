@@ -1,24 +1,29 @@
+../coverage/async.rs:
     1|       |#![allow(unused_assignments)]
     2|       |
     3|       |// require-rust-edition-2018
     4|       |
     5|      1|async fn c(x: u8) -> u8 {
+  ------------------
+  | async::c:
+  |    5|      1|async fn c(x: u8) -> u8 {
+  ------------------
     6|      1|    if x == 8 {
     7|      1|        1
-    8|       |    } else {
+    8|      0|    } else {
     9|      0|        0
-   10|       |    }
+   10|      0|    }
    11|      1|}
    12|       |
-   13|       |async fn d() -> u8 { 1 }
+   13|      0|async fn d() -> u8 { 1 }
    14|       |
    15|       |// Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
-   16|      0|async fn e() -> u8 { 1 }
+   16|      0|async fn e() -> u8 { 1 } // unused function; executor does not block on `g()`
    17|       |
    18|      1|async fn f() -> u8 { 1 }
    19|       |
    20|       |// Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
-   21|      0|async fn foo() -> [bool; 10] { [false; 10] }
+   21|      0|async fn foo() -> [bool; 10] { [false; 10] } // unused function; executor does not block on `h()`
    22|       |
    23|      1|pub async fn g(x: u8) {
    24|      0|    match x {
@@ -28,9 +33,9 @@
    28|      0|    }
    29|      0|}
    30|       |
-   31|      1|async fn h(x: usize) { // The function signature is counted when called,
-   32|      0|    // but the body is not executed (not awaited) so the open brace has a `0` count
-   33|      0|    // (at least when displayed with `llvm-cov show` in color-mode).
+   31|      1|async fn h(x: usize) { // The function signature is counted when called, but the body is not
+   32|      0|                       // executed (not awaited) so the open brace has a `0` count (at least when
+   33|      0|                       // displayed with `llvm-cov show` in color-mode).
    34|      0|    match x {
    35|      0|        y if foo().await[y] => (),
    36|      0|        _ => (),
@@ -47,28 +52,28 @@
    46|      1|        y if f().await == y + 1 => (),
                       ^0                         ^0
    47|      1|        _ => (),
-   48|       |    }
+   48|      0|    }
    49|      1|}
    50|       |
    51|      1|fn j(x: u8) {
    52|      1|    // non-async versions of `c()`, `d()`, and `f()` to make it similar to async `i()`.
    53|      1|    fn c(x: u8) -> u8 {
    54|      1|        if x == 8 {
-   55|      1|            1 // This line appears covered, but the 1-character expression span covering the `1`
-                          ^0
-   56|      1|              // is not executed. (`llvm-cov show` displays a `^0` below the `1` ). This is because
-   57|      1|              // `fn j()` executes the open brace for the funciton body, followed by the function's
-   58|      1|              // first executable statement, `match x`. Inner function declarations are not
-   59|      1|              // "visible" to the MIR for `j()`, so the code region counts all lines between the
-   60|      1|              // open brace and the first statement as executed, which is, in a sense, true.
-   61|      1|              // `llvm-cov show` overcomes this kind of situation by showing the actual counts
-   62|      1|              // of the enclosed coverages, (that is, the `1` expression was not executed, and
-   63|      1|              // accurately displays a `0`).
-   64|      1|        } else {
+   55|      0|            1 // This line appears covered, but the 1-character expression span covering the `1`
+   56|      0|              // is not executed. (`llvm-cov show` displays a `^0` below the `1` ). This is because
+   57|      0|              // `fn j()` executes the open brace for the funciton body, followed by the function's
+   58|      0|              // first executable statement, `match x`. Inner function declarations are not
+   59|      0|              // "visible" to the MIR for `j()`, so the code region counts all lines between the
+   60|      0|              // open brace and the first statement as executed, which is, in a sense, true.
+   61|      0|              // `llvm-cov show` overcomes this kind of situation by showing the actual counts
+   62|      0|              // of the enclosed coverages, (that is, the `1` expression was not executed, and
+   63|      0|              // accurately displays a `0`).
+   64|      0|        } else {
    65|      1|            0
-   66|      1|        }
+   66|      0|        }
    67|      1|    }
    68|      1|    fn d() -> u8 { 1 }
+                  ^0
    69|      1|    fn f() -> u8 { 1 }
    70|      1|    match x {
    71|      1|        y if c(x) == y + 1 => { d(); }
@@ -76,68 +81,1454 @@
    72|      1|        y if f() == y + 1 => (),
                       ^0                   ^0
    73|      1|        _ => (),
-   74|       |    }
+   74|      0|    }
    75|      1|}
    76|       |
-   77|      0|fn k(x: u8) { // unused function
-   78|      0|    match x {
-   79|      0|        1 => (),
-   80|      0|        2 => (),
-   81|      0|        _ => (),
-   82|       |    }
-   83|      0|}
-   84|       |
-   85|      1|fn l(x: u8) {
-   86|      1|    match x {
-   87|      0|        1 => (),
-   88|      0|        2 => (),
-   89|      1|        _ => (),
-   90|       |    }
-   91|      1|}
-   92|       |
-   93|      1|fn main() {
-   94|      1|    let _ = g(10);
-   95|      1|    let _ = h(9);
-   96|      1|    let mut future = Box::pin(i(8));
-   97|      1|    j(7);
-   98|      1|    l(6);
-   99|      1|    executor::block_on(future.as_mut());
-  100|      1|}
-  101|       |
-  102|       |mod executor {
-  103|       |    use core::{
-  104|       |        future::Future,
-  105|       |        pin::Pin,
-  106|       |        task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
-  107|       |    };
-  108|       |
-  109|      1|    pub fn block_on<F: Future>(mut future: F) -> F::Output {
-  110|      1|        let mut future = unsafe { Pin::new_unchecked(&mut future) };
-  111|      1|
-  112|      1|        static VTABLE: RawWakerVTable = RawWakerVTable::new(
-  113|      1|            |_| unimplemented!("clone"),
-  114|      1|            |_| unimplemented!("wake"),
-  115|      1|            |_| unimplemented!("wake_by_ref"),
-  116|      1|            |_| (),
-  117|      1|        );
-  118|      1|        let waker = unsafe { Waker::from_raw(RawWaker::new(core::ptr::null(), &VTABLE)) };
-  119|      1|        let mut context = Context::from_waker(&waker);
-  120|       |
-  121|       |        loop {
-  122|      1|            if let Poll::Ready(val) = future.as_mut().poll(&mut context) {
-  123|      1|                break val;
-  124|      0|            }
-  125|       |        }
-  126|      1|    }
-  127|       |}
-  128|       |
-  129|       |// Async body coverage
-  130|       |// ===================
-  131|       |//
-  132|       |// Async function bodies are executed in (hidden) closures that are "unused" if not "awaited"
-  133|       |// with an executor. If unused, they have no coverage, so the enclosing MIR (same function,
-  134|       |// without the closure body) injects a `CoverageKind::Unreachable` region with the span of the
-  135|       |// closure body, and the `DefId` of the closure. When building the Coverage Map for the LLVM
-  136|       |// module (the crate), these unreachable code regions are only added if the Coverage Map does
-  137|       |// not add a function for the unreachable `DefId`.
+   77|       |// Reports `0` coverage *only* with -Clink-dead-code (on by default except under Windows)
+   78|      0|fn k(x: u8) { // unused function
+   79|      0|    match x {
+   80|      0|        1 => (),
+   81|      0|        2 => (),
+   82|      0|        _ => (),
+   83|      0|    }
+   84|      0|}
+   85|       |
+   86|      1|fn l(x: u8) {
+   87|      1|    match x {
+   88|      0|        1 => (),
+   89|      0|        2 => (),
+   90|      1|        _ => (),
+   91|      0|    }
+   92|      1|}
+   93|       |
+   94|      1|fn main() {
+   95|      1|    let _ = g(10);
+   96|      1|    let _ = h(9);
+   97|      1|    let mut future = Box::pin(i(8));
+   98|      1|    j(7);
+   99|      1|    l(6);
+  100|      1|    executor::block_on(future.as_mut());
+  101|      1|}
+  102|       |
+  103|       |mod executor {
+  104|       |    use core::{
+  105|       |        future::Future,
+  106|       |        pin::Pin,
+  107|       |        task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
+  108|       |    };
+  109|       |
+  110|      1|    pub fn block_on<F: Future>(mut future: F) -> F::Output {
+  111|      1|        let mut future = unsafe { Pin::new_unchecked(&mut future) };
+  112|      1|
+  113|      1|        static VTABLE: RawWakerVTable = RawWakerVTable::new(
+  114|      1|            |_| unimplemented!("clone"),
+  115|      1|            |_| unimplemented!("wake"),
+  116|      1|            |_| unimplemented!("wake_by_ref"),
+  117|      1|            |_| (),
+  118|      1|        );
+  119|      1|        let waker = unsafe { Waker::from_raw(RawWaker::new(core::ptr::null(), &VTABLE)) };
+  120|      1|        let mut context = Context::from_waker(&waker);
+  121|      0|
+  122|      0|        loop {
+  123|      1|            if let Poll::Ready(val) = future.as_mut().poll(&mut context) {
+  124|      1|                break val;
+  125|      0|            }
+  126|      0|        }
+  127|      1|    }
+  ------------------
+  | Unexecuted instantiation: async::executor::block_on::<core::pin::Pin<&mut core::future::from_generator::GenFuture<async::i::{closure#0}>>>
+  ------------------
+  128|       |}
+  129|       |
+  130|       |// Async body coverage
+  131|       |// ===================
+  132|       |//
+  133|       |// Async function bodies are executed in (hidden) closures that are "unused" if not "awaited"
+  134|       |// with an executor. If unused, they have no coverage, so the enclosing MIR (same function,
+  135|       |// without the closure body) injects a `CoverageKind::Unreachable` region with the span of the
+  136|       |// closure body, and the `DefId` of the closure. When building the Coverage Map for the LLVM
+  137|       |// module (the crate), these unreachable code regions are only added if the Coverage Map does
+  138|       |// not add a function for the unreachable `DefId`.
+
+/usr/local/google/home/richkadel/rust/library/core/src/macros/mod.rs:
+    1|       |#[doc(include = "panic.md")]
+    2|       |#[macro_export]
+    3|       |#[allow_internal_unstable(core_panic, const_caller_location)]
+    4|       |#[stable(feature = "core", since = "1.6.0")]
+    5|       |#[cfg_attr(not(bootstrap), rustc_diagnostic_item = "core_panic_macro")]
+    6|       |macro_rules! panic {
+    7|       |    () => (
+    8|       |        $crate::panic!("explicit panic")
+    9|       |    );
+   10|       |    ($msg:literal $(,)?) => (
+   11|       |        $crate::panicking::panic($msg)
+   12|       |    );
+   13|       |    ($msg:expr $(,)?) => (
+   14|       |        $crate::panicking::panic_str($msg)
+   15|       |    );
+   16|       |    ($fmt:expr, $($arg:tt)+) => (
+   17|      0|        $crate::panicking::panic_fmt($crate::format_args!($fmt, $($arg)+))
+   18|       |    );
+   19|       |}
+   20|       |
+   21|       |/// Asserts that two expressions are equal to each other (using [`PartialEq`]).
+   22|       |///
+   23|       |/// On panic, this macro will print the values of the expressions with their
+   24|       |/// debug representations.
+   25|       |///
+   26|       |/// Like [`assert!`], this macro has a second form, where a custom
+   27|       |/// panic message can be provided.
+   28|       |///
+   29|       |/// # Examples
+   30|       |///
+   31|       |/// ```
+   32|       |/// let a = 3;
+   33|       |/// let b = 1 + 2;
+   34|       |/// assert_eq!(a, b);
+   35|       |///
+   36|       |/// assert_eq!(a, b, "we are testing addition with {} and {}", a, b);
+   37|       |/// ```
+   38|       |#[macro_export]
+   39|       |#[stable(feature = "rust1", since = "1.0.0")]
+   40|       |macro_rules! assert_eq {
+   41|       |    ($left:expr, $right:expr $(,)?) => ({
+   42|       |        match (&$left, &$right) {
+   43|       |            (left_val, right_val) => {
+   44|       |                if !(*left_val == *right_val) {
+   45|       |                    // The reborrows below are intentional. Without them, the stack slot for the
+   46|       |                    // borrow is initialized even before the values are compared, leading to a
+   47|       |                    // noticeable slow down.
+   48|       |                    $crate::panic!(r#"assertion failed: `(left == right)`
+   49|       |  left: `{:?}`,
+   50|       | right: `{:?}`"#, &*left_val, &*right_val)
+   51|       |                }
+   52|       |            }
+   53|       |        }
+   54|       |    });
+   55|       |    ($left:expr, $right:expr, $($arg:tt)+) => ({
+   56|       |        match (&($left), &($right)) {
+   57|       |            (left_val, right_val) => {
+   58|       |                if !(*left_val == *right_val) {
+   59|       |                    // The reborrows below are intentional. Without them, the stack slot for the
+   60|       |                    // borrow is initialized even before the values are compared, leading to a
+   61|       |                    // noticeable slow down.
+   62|       |                    $crate::panic!(r#"assertion failed: `(left == right)`
+   63|       |  left: `{:?}`,
+   64|       | right: `{:?}`: {}"#, &*left_val, &*right_val,
+   65|       |                           $crate::format_args!($($arg)+))
+   66|       |                }
+   67|       |            }
+   68|       |        }
+   69|       |    });
+   70|       |}
+   71|       |
+   72|       |/// Asserts that two expressions are not equal to each other (using [`PartialEq`]).
+   73|       |///
+   74|       |/// On panic, this macro will print the values of the expressions with their
+   75|       |/// debug representations.
+   76|       |///
+   77|       |/// Like [`assert!`], this macro has a second form, where a custom
+   78|       |/// panic message can be provided.
+   79|       |///
+   80|       |/// # Examples
+   81|       |///
+   82|       |/// ```
+   83|       |/// let a = 3;
+   84|       |/// let b = 2;
+   85|       |/// assert_ne!(a, b);
+   86|       |///
+   87|       |/// assert_ne!(a, b, "we are testing that the values are not equal");
+   88|       |/// ```
+   89|       |#[macro_export]
+   90|       |#[stable(feature = "assert_ne", since = "1.13.0")]
+   91|       |macro_rules! assert_ne {
+   92|       |    ($left:expr, $right:expr $(,)?) => ({
+   93|       |        match (&$left, &$right) {
+   94|       |            (left_val, right_val) => {
+   95|       |                if *left_val == *right_val {
+   96|       |                    // The reborrows below are intentional. Without them, the stack slot for the
+   97|       |                    // borrow is initialized even before the values are compared, leading to a
+   98|       |                    // noticeable slow down.
+   99|       |                    $crate::panic!(r#"assertion failed: `(left != right)`
+  100|       |  left: `{:?}`,
+  101|       | right: `{:?}`"#, &*left_val, &*right_val)
+  102|       |                }
+  103|       |            }
+  104|       |        }
+  105|       |    });
+  106|       |    ($left:expr, $right:expr, $($arg:tt)+) => ({
+  107|       |        match (&($left), &($right)) {
+  108|       |            (left_val, right_val) => {
+  109|       |                if *left_val == *right_val {
+  110|       |                    // The reborrows below are intentional. Without them, the stack slot for the
+  111|       |                    // borrow is initialized even before the values are compared, leading to a
+  112|       |                    // noticeable slow down.
+  113|       |                    $crate::panic!(r#"assertion failed: `(left != right)`
+  114|       |  left: `{:?}`,
+  115|       | right: `{:?}`: {}"#, &*left_val, &*right_val,
+  116|       |                           $crate::format_args!($($arg)+))
+  117|       |                }
+  118|       |            }
+  119|       |        }
+  120|       |    });
+  121|       |}
+  122|       |
+  123|       |/// Asserts that a boolean expression is `true` at runtime.
+  124|       |///
+  125|       |/// This will invoke the [`panic!`] macro if the provided expression cannot be
+  126|       |/// evaluated to `true` at runtime.
+  127|       |///
+  128|       |/// Like [`assert!`], this macro also has a second version, where a custom panic
+  129|       |/// message can be provided.
+  130|       |///
+  131|       |/// # Uses
+  132|       |///
+  133|       |/// Unlike [`assert!`], `debug_assert!` statements are only enabled in non
+  134|       |/// optimized builds by default. An optimized build will not execute
+  135|       |/// `debug_assert!` statements unless `-C debug-assertions` is passed to the
+  136|       |/// compiler. This makes `debug_assert!` useful for checks that are too
+  137|       |/// expensive to be present in a release build but may be helpful during
+  138|       |/// development. The result of expanding `debug_assert!` is always type checked.
+  139|       |///
+  140|       |/// An unchecked assertion allows a program in an inconsistent state to keep
+  141|       |/// running, which might have unexpected consequences but does not introduce
+  142|       |/// unsafety as long as this only happens in safe code. The performance cost
+  143|       |/// of assertions, however, is not measurable in general. Replacing [`assert!`]
+  144|       |/// with `debug_assert!` is thus only encouraged after thorough profiling, and
+  145|       |/// more importantly, only in safe code!
+  146|       |///
+  147|       |/// # Examples
+  148|       |///
+  149|       |/// ```
+  150|       |/// // the panic message for these assertions is the stringified value of the
+  151|       |/// // expression given.
+  152|       |/// debug_assert!(true);
+  153|       |///
+  154|       |/// fn some_expensive_computation() -> bool { true } // a very simple function
+  155|       |/// debug_assert!(some_expensive_computation());
+  156|       |///
+  157|       |/// // assert with a custom message
+  158|       |/// let x = true;
+  159|       |/// debug_assert!(x, "x wasn't true!");
+  160|       |///
+  161|       |/// let a = 3; let b = 27;
+  162|       |/// debug_assert!(a + b == 30, "a = {}, b = {}", a, b);
+  163|       |/// ```
+  164|       |#[macro_export]
+  165|       |#[stable(feature = "rust1", since = "1.0.0")]
+  166|       |#[cfg_attr(not(bootstrap), rustc_diagnostic_item = "debug_assert_macro")]
+  167|       |macro_rules! debug_assert {
+  168|       |    ($($arg:tt)*) => (if $crate::cfg!(debug_assertions) { $crate::assert!($($arg)*); })
+  169|       |}
+  170|       |
+  171|       |/// Asserts that two expressions are equal to each other.
+  172|       |///
+  173|       |/// On panic, this macro will print the values of the expressions with their
+  174|       |/// debug representations.
+  175|       |///
+  176|       |/// Unlike [`assert_eq!`], `debug_assert_eq!` statements are only enabled in non
+  177|       |/// optimized builds by default. An optimized build will not execute
+  178|       |/// `debug_assert_eq!` statements unless `-C debug-assertions` is passed to the
+  179|       |/// compiler. This makes `debug_assert_eq!` useful for checks that are too
+  180|       |/// expensive to be present in a release build but may be helpful during
+  181|       |/// development. The result of expanding `debug_assert_eq!` is always type checked.
+  182|       |///
+  183|       |/// # Examples
+  184|       |///
+  185|       |/// ```
+  186|       |/// let a = 3;
+  187|       |/// let b = 1 + 2;
+  188|       |/// debug_assert_eq!(a, b);
+  189|       |/// ```
+  190|       |#[macro_export]
+  191|       |#[stable(feature = "rust1", since = "1.0.0")]
+  192|       |macro_rules! debug_assert_eq {
+  193|       |    ($($arg:tt)*) => (if $crate::cfg!(debug_assertions) { $crate::assert_eq!($($arg)*); })
+  194|       |}
+  195|       |
+  196|       |/// Asserts that two expressions are not equal to each other.
+  197|       |///
+  198|       |/// On panic, this macro will print the values of the expressions with their
+  199|       |/// debug representations.
+  200|       |///
+  201|       |/// Unlike [`assert_ne!`], `debug_assert_ne!` statements are only enabled in non
+  202|       |/// optimized builds by default. An optimized build will not execute
+  203|       |/// `debug_assert_ne!` statements unless `-C debug-assertions` is passed to the
+  204|       |/// compiler. This makes `debug_assert_ne!` useful for checks that are too
+  205|       |/// expensive to be present in a release build but may be helpful during
+  206|       |/// development. The result of expanding `debug_assert_ne!` is always type checked.
+  207|       |///
+  208|       |/// # Examples
+  209|       |///
+  210|       |/// ```
+  211|       |/// let a = 3;
+  212|       |/// let b = 2;
+  213|       |/// debug_assert_ne!(a, b);
+  214|       |/// ```
+  215|       |#[macro_export]
+  216|       |#[stable(feature = "assert_ne", since = "1.13.0")]
+  217|       |macro_rules! debug_assert_ne {
+  218|       |    ($($arg:tt)*) => (if $crate::cfg!(debug_assertions) { $crate::assert_ne!($($arg)*); })
+  219|       |}
+  220|       |
+  221|       |/// Returns whether the given expression matches any of the given patterns.
+  222|       |///
+  223|       |/// Like in a `match` expression, the pattern can be optionally followed by `if`
+  224|       |/// and a guard expression that has access to names bound by the pattern.
+  225|       |///
+  226|       |/// # Examples
+  227|       |///
+  228|       |/// ```
+  229|       |/// let foo = 'f';
+  230|       |/// assert!(matches!(foo, 'A'..='Z' | 'a'..='z'));
+  231|       |///
+  232|       |/// let bar = Some(4);
+  233|       |/// assert!(matches!(bar, Some(x) if x > 2));
+  234|       |/// ```
+  235|       |#[macro_export]
+  236|       |#[stable(feature = "matches_macro", since = "1.42.0")]
+  237|       |macro_rules! matches {
+  238|       |    ($expression:expr, $( $pattern:pat )|+ $( if $guard: expr )? $(,)?) => {
+  239|       |        match $expression {
+  240|       |            $( $pattern )|+ $( if $guard )? => true,
+  241|       |            _ => false
+  242|       |        }
+  243|       |    }
+  244|       |}
+  245|       |
+  246|       |/// Unwraps a result or propagates its error.
+  247|       |///
+  248|       |/// The `?` operator was added to replace `try!` and should be used instead.
+  249|       |/// Furthermore, `try` is a reserved word in Rust 2018, so if you must use
+  250|       |/// it, you will need to use the [raw-identifier syntax][ris]: `r#try`.
+  251|       |///
+  252|       |/// [ris]: https://doc.rust-lang.org/nightly/rust-by-example/compatibility/raw_identifiers.html
+  253|       |///
+  254|       |/// `try!` matches the given [`Result`]. In case of the `Ok` variant, the
+  255|       |/// expression has the value of the wrapped value.
+  256|       |///
+  257|       |/// In case of the `Err` variant, it retrieves the inner error. `try!` then
+  258|       |/// performs conversion using `From`. This provides automatic conversion
+  259|       |/// between specialized errors and more general ones. The resulting
+  260|       |/// error is then immediately returned.
+  261|       |///
+  262|       |/// Because of the early return, `try!` can only be used in functions that
+  263|       |/// return [`Result`].
+  264|       |///
+  265|       |/// # Examples
+  266|       |///
+  267|       |/// ```
+  268|       |/// use std::io;
+  269|       |/// use std::fs::File;
+  270|       |/// use std::io::prelude::*;
+  271|       |///
+  272|       |/// enum MyError {
+  273|       |///     FileWriteError
+  274|       |/// }
+  275|       |///
+  276|       |/// impl From<io::Error> for MyError {
+  277|       |///     fn from(e: io::Error) -> MyError {
+  278|       |///         MyError::FileWriteError
+  279|       |///     }
+  280|       |/// }
+  281|       |///
+  282|       |/// // The preferred method of quick returning Errors
+  283|       |/// fn write_to_file_question() -> Result<(), MyError> {
+  284|       |///     let mut file = File::create("my_best_friends.txt")?;
+  285|       |///     file.write_all(b"This is a list of my best friends.")?;
+  286|       |///     Ok(())
+  287|       |/// }
+  288|       |///
+  289|       |/// // The previous method of quick returning Errors
+  290|       |/// fn write_to_file_using_try() -> Result<(), MyError> {
+  291|       |///     let mut file = r#try!(File::create("my_best_friends.txt"));
+  292|       |///     r#try!(file.write_all(b"This is a list of my best friends."));
+  293|       |///     Ok(())
+  294|       |/// }
+  295|       |///
+  296|       |/// // This is equivalent to:
+  297|       |/// fn write_to_file_using_match() -> Result<(), MyError> {
+  298|       |///     let mut file = r#try!(File::create("my_best_friends.txt"));
+  299|       |///     match file.write_all(b"This is a list of my best friends.") {
+  300|       |///         Ok(v) => v,
+  301|       |///         Err(e) => return Err(From::from(e)),
+  302|       |///     }
+  303|       |///     Ok(())
+  304|       |/// }
+  305|       |/// ```
+  306|       |#[macro_export]
+  307|       |#[stable(feature = "rust1", since = "1.0.0")]
+  308|       |#[rustc_deprecated(since = "1.39.0", reason = "use the `?` operator instead")]
+  309|       |#[doc(alias = "?")]
+  310|       |macro_rules! r#try {
+  311|       |    ($expr:expr $(,)?) => {
+  312|       |        match $expr {
+  313|       |            $crate::result::Result::Ok(val) => val,
+  314|       |            $crate::result::Result::Err(err) => {
+  315|       |                return $crate::result::Result::Err($crate::convert::From::from(err));
+  316|       |            }
+  317|       |        }
+  318|       |    };
+  319|       |}
+  320|       |
+  321|       |/// Writes formatted data into a buffer.
+  322|       |///
+  323|       |/// This macro accepts a 'writer', a format string, and a list of arguments. Arguments will be
+  324|       |/// formatted according to the specified format string and the result will be passed to the writer.
+  325|       |/// The writer may be any value with a `write_fmt` method; generally this comes from an
+  326|       |/// implementation of either the [`fmt::Write`] or the [`io::Write`] trait. The macro
+  327|       |/// returns whatever the `write_fmt` method returns; commonly a [`fmt::Result`], or an
+  328|       |/// [`io::Result`].
+  329|       |///
+  330|       |/// See [`std::fmt`] for more information on the format string syntax.
+  331|       |///
+  332|       |/// [`std::fmt`]: ../std/fmt/index.html
+  333|       |/// [`fmt::Write`]: crate::fmt::Write
+  334|       |/// [`io::Write`]: ../std/io/trait.Write.html
+  335|       |/// [`fmt::Result`]: crate::fmt::Result
+  336|       |/// [`io::Result`]: ../std/io/type.Result.html
+  337|       |///
+  338|       |/// # Examples
+  339|       |///
+  340|       |/// ```
+  341|       |/// use std::io::Write;
+  342|       |///
+  343|       |/// fn main() -> std::io::Result<()> {
+  344|       |///     let mut w = Vec::new();
+  345|       |///     write!(&mut w, "test")?;
+  346|       |///     write!(&mut w, "formatted {}", "arguments")?;
+  347|       |///
+  348|       |///     assert_eq!(w, b"testformatted arguments");
+  349|       |///     Ok(())
+  350|       |/// }
+  351|       |/// ```
+  352|       |///
+  353|       |/// A module can import both `std::fmt::Write` and `std::io::Write` and call `write!` on objects
+  354|       |/// implementing either, as objects do not typically implement both. However, the module must
+  355|       |/// import the traits qualified so their names do not conflict:
+  356|       |///
+  357|       |/// ```
+  358|       |/// use std::fmt::Write as FmtWrite;
+  359|       |/// use std::io::Write as IoWrite;
+  360|       |///
+  361|       |/// fn main() -> Result<(), Box<dyn std::error::Error>> {
+  362|       |///     let mut s = String::new();
+  363|       |///     let mut v = Vec::new();
+  364|       |///
+  365|       |///     write!(&mut s, "{} {}", "abc", 123)?; // uses fmt::Write::write_fmt
+  366|       |///     write!(&mut v, "s = {:?}", s)?; // uses io::Write::write_fmt
+  367|       |///     assert_eq!(v, b"s = \"abc 123\"");
+  368|       |///     Ok(())
+  369|       |/// }
+  370|       |/// ```
+  371|       |///
+  372|       |/// Note: This macro can be used in `no_std` setups as well.
+  373|       |/// In a `no_std` setup you are responsible for the implementation details of the components.
+  374|       |///
+  375|       |/// ```no_run
+  376|       |/// # extern crate core;
+  377|       |/// use core::fmt::Write;
+  378|       |///
+  379|       |/// struct Example;
+  380|       |///
+  381|       |/// impl Write for Example {
+  382|       |///     fn write_str(&mut self, _s: &str) -> core::fmt::Result {
+  383|       |///          unimplemented!();
+  384|       |///     }
+  385|       |/// }
+  386|       |///
+  387|       |/// let mut m = Example{};
+  388|       |/// write!(&mut m, "Hello World").expect("Not written");
+  389|       |/// ```
+  390|       |#[macro_export]
+  391|       |#[stable(feature = "rust1", since = "1.0.0")]
+  392|       |macro_rules! write {
+  393|       |    ($dst:expr, $($arg:tt)*) => ($dst.write_fmt($crate::format_args!($($arg)*)))
+  394|       |}
+  395|       |
+  396|       |/// Write formatted data into a buffer, with a newline appended.
+  397|       |///
+  398|       |/// On all platforms, the newline is the LINE FEED character (`\n`/`U+000A`) alone
+  399|       |/// (no additional CARRIAGE RETURN (`\r`/`U+000D`).
+  400|       |///
+  401|       |/// For more information, see [`write!`]. For information on the format string syntax, see
+  402|       |/// [`std::fmt`].
+  403|       |///
+  404|       |/// [`std::fmt`]: crate::fmt
+  405|       |///
+  406|       |/// # Examples
+  407|       |///
+  408|       |/// ```
+  409|       |/// use std::io::{Write, Result};
+  410|       |///
+  411|       |/// fn main() -> Result<()> {
+  412|       |///     let mut w = Vec::new();
+  413|       |///     writeln!(&mut w)?;
+  414|       |///     writeln!(&mut w, "test")?;
+  415|       |///     writeln!(&mut w, "formatted {}", "arguments")?;
+  416|       |///
+  417|       |///     assert_eq!(&w[..], "\ntest\nformatted arguments\n".as_bytes());
+  418|       |///     Ok(())
+  419|       |/// }
+  420|       |/// ```
+  421|       |///
+  422|       |/// A module can import both `std::fmt::Write` and `std::io::Write` and call `write!` on objects
+  423|       |/// implementing either, as objects do not typically implement both. However, the module must
+  424|       |/// import the traits qualified so their names do not conflict:
+  425|       |///
+  426|       |/// ```
+  427|       |/// use std::fmt::Write as FmtWrite;
+  428|       |/// use std::io::Write as IoWrite;
+  429|       |///
+  430|       |/// fn main() -> Result<(), Box<dyn std::error::Error>> {
+  431|       |///     let mut s = String::new();
+  432|       |///     let mut v = Vec::new();
+  433|       |///
+  434|       |///     writeln!(&mut s, "{} {}", "abc", 123)?; // uses fmt::Write::write_fmt
+  435|       |///     writeln!(&mut v, "s = {:?}", s)?; // uses io::Write::write_fmt
+  436|       |///     assert_eq!(v, b"s = \"abc 123\\n\"\n");
+  437|       |///     Ok(())
+  438|       |/// }
+  439|       |/// ```
+  440|       |#[macro_export]
+  441|       |#[stable(feature = "rust1", since = "1.0.0")]
+  442|       |#[allow_internal_unstable(format_args_nl)]
+  443|       |macro_rules! writeln {
+  444|       |    ($dst:expr $(,)?) => (
+  445|       |        $crate::write!($dst, "\n")
+  446|       |    );
+  447|       |    ($dst:expr, $($arg:tt)*) => (
+  448|       |        $dst.write_fmt($crate::format_args_nl!($($arg)*))
+  449|       |    );
+  450|       |}
+  451|       |
+  452|       |/// Indicates unreachable code.
+  453|       |///
+  454|       |/// This is useful any time that the compiler can't determine that some code is unreachable. For
+  455|       |/// example:
+  456|       |///
+  457|       |/// * Match arms with guard conditions.
+  458|       |/// * Loops that dynamically terminate.
+  459|       |/// * Iterators that dynamically terminate.
+  460|       |///
+  461|       |/// If the determination that the code is unreachable proves incorrect, the
+  462|       |/// program immediately terminates with a [`panic!`].
+  463|       |///
+  464|       |/// The unsafe counterpart of this macro is the [`unreachable_unchecked`] function, which
+  465|       |/// will cause undefined behavior if the code is reached.
+  466|       |///
+  467|       |/// [`unreachable_unchecked`]: crate::hint::unreachable_unchecked
+  468|       |///
+  469|       |/// # Panics
+  470|       |///
+  471|       |/// This will always [`panic!`].
+  472|       |///
+  473|       |/// # Examples
+  474|       |///
+  475|       |/// Match arms:
+  476|       |///
+  477|       |/// ```
+  478|       |/// # #[allow(dead_code)]
+  479|       |/// fn foo(x: Option<i32>) {
+  480|       |///     match x {
+  481|       |///         Some(n) if n >= 0 => println!("Some(Non-negative)"),
+  482|       |///         Some(n) if n <  0 => println!("Some(Negative)"),
+  483|       |///         Some(_)           => unreachable!(), // compile error if commented out
+  484|       |///         None              => println!("None")
+  485|       |///     }
+  486|       |/// }
+  487|       |/// ```
+  488|       |///
+  489|       |/// Iterators:
+  490|       |///
+  491|       |/// ```
+  492|       |/// # #[allow(dead_code)]
+  493|       |/// fn divide_by_three(x: u32) -> u32 { // one of the poorest implementations of x/3
+  494|       |///     for i in 0.. {
+  495|       |///         if 3*i < i { panic!("u32 overflow"); }
+  496|       |///         if x < 3*i { return i-1; }
+  497|       |///     }
+  498|       |///     unreachable!();
+  499|       |/// }
+  500|       |/// ```
+  501|       |#[macro_export]
+  502|       |#[stable(feature = "rust1", since = "1.0.0")]
+  503|       |macro_rules! unreachable {
+  504|       |    () => ({
+  505|       |        $crate::panic!("internal error: entered unreachable code")
+  506|       |    });
+  507|       |    ($msg:expr $(,)?) => ({
+  508|       |        $crate::unreachable!("{}", $msg)
+  509|       |    });
+  510|       |    ($fmt:expr, $($arg:tt)*) => ({
+  511|       |        $crate::panic!($crate::concat!("internal error: entered unreachable code: ", $fmt), $($arg)*)
+  512|       |    });
+  513|       |}
+  514|       |
+  515|       |/// Indicates unimplemented code by panicking with a message of "not implemented".
+  516|       |///
+  517|       |/// This allows your code to type-check, which is useful if you are prototyping or
+  518|       |/// implementing a trait that requires multiple methods which you don't plan of using all of.
+  519|       |///
+  520|       |/// The difference between `unimplemented!` and [`todo!`] is that while `todo!`
+  521|       |/// conveys an intent of implementing the functionality later and the message is "not yet
+  522|       |/// implemented", `unimplemented!` makes no such claims. Its message is "not implemented".
+  523|       |/// Also some IDEs will mark `todo!`s.
+  524|       |///
+  525|       |/// # Panics
+  526|       |///
+  527|       |/// This will always [`panic!`] because `unimplemented!` is just a shorthand for `panic!` with a
+  528|       |/// fixed, specific message.
+  529|       |///
+  530|       |/// Like `panic!`, this macro has a second form for displaying custom values.
+  531|       |///
+  532|       |/// # Examples
+  533|       |///
+  534|       |/// Say we have a trait `Foo`:
+  535|       |///
+  536|       |/// ```
+  537|       |/// trait Foo {
+  538|       |///     fn bar(&self) -> u8;
+  539|       |///     fn baz(&self);
+  540|       |///     fn qux(&self) -> Result<u64, ()>;
+  541|       |/// }
+  542|       |/// ```
+  543|       |///
+  544|       |/// We want to implement `Foo` for 'MyStruct', but for some reason it only makes sense
+  545|       |/// to implement the `bar()` function. `baz()` and `qux()` will still need to be defined
+  546|       |/// in our implementation of `Foo`, but we can use `unimplemented!` in their definitions
+  547|       |/// to allow our code to compile.
+  548|       |///
+  549|       |/// We still want to have our program stop running if the unimplemented methods are
+  550|       |/// reached.
+  551|       |///
+  552|       |/// ```
+  553|       |/// # trait Foo {
+  554|       |/// #     fn bar(&self) -> u8;
+  555|       |/// #     fn baz(&self);
+  556|       |/// #     fn qux(&self) -> Result<u64, ()>;
+  557|       |/// # }
+  558|       |/// struct MyStruct;
+  559|       |///
+  560|       |/// impl Foo for MyStruct {
+  561|       |///     fn bar(&self) -> u8 {
+  562|       |///         1 + 1
+  563|       |///     }
+  564|       |///
+  565|       |///     fn baz(&self) {
+  566|       |///         // It makes no sense to `baz` a `MyStruct`, so we have no logic here
+  567|       |///         // at all.
+  568|       |///         // This will display "thread 'main' panicked at 'not implemented'".
+  569|       |///         unimplemented!();
+  570|       |///     }
+  571|       |///
+  572|       |///     fn qux(&self) -> Result<u64, ()> {
+  573|       |///         // We have some logic here,
+  574|       |///         // We can add a message to unimplemented! to display our omission.
+  575|       |///         // This will display:
+  576|       |///         // "thread 'main' panicked at 'not implemented: MyStruct isn't quxable'".
+  577|       |///         unimplemented!("MyStruct isn't quxable");
+  578|       |///     }
+  579|       |/// }
+  580|       |///
+  581|       |/// fn main() {
+  582|       |///     let s = MyStruct;
+  583|       |///     s.bar();
+  584|       |/// }
+  585|       |/// ```
+  586|       |#[macro_export]
+  587|       |#[stable(feature = "rust1", since = "1.0.0")]
+  588|       |macro_rules! unimplemented {
+  589|       |    () => ($crate::panic!("not implemented"));
+  590|       |    ($($arg:tt)+) => ($crate::panic!("not implemented: {}", $crate::format_args!($($arg)+)));
+  591|       |}
+  592|       |
+  593|       |/// Indicates unfinished code.
+  594|       |///
+  595|       |/// This can be useful if you are prototyping and are just looking to have your
+  596|       |/// code typecheck.
+  597|       |///
+  598|       |/// The difference between [`unimplemented!`] and `todo!` is that while `todo!` conveys
+  599|       |/// an intent of implementing the functionality later and the message is "not yet
+  600|       |/// implemented", `unimplemented!` makes no such claims. Its message is "not implemented".
+  601|       |/// Also some IDEs will mark `todo!`s.
+  602|       |///
+  603|       |/// # Panics
+  604|       |///
+  605|       |/// This will always [`panic!`].
+  606|       |///
+  607|       |/// # Examples
+  608|       |///
+  609|       |/// Here's an example of some in-progress code. We have a trait `Foo`:
+  610|       |///
+  611|       |/// ```
+  612|       |/// trait Foo {
+  613|       |///     fn bar(&self);
+  614|       |///     fn baz(&self);
+  615|       |/// }
+  616|       |/// ```
+  617|       |///
+  618|       |/// We want to implement `Foo` on one of our types, but we also want to work on
+  619|       |/// just `bar()` first. In order for our code to compile, we need to implement
+  620|       |/// `baz()`, so we can use `todo!`:
+  621|       |///
+  622|       |/// ```
+  623|       |/// # trait Foo {
+  624|       |/// #     fn bar(&self);
+  625|       |/// #     fn baz(&self);
+  626|       |/// # }
+  627|       |/// struct MyStruct;
+  628|       |///
+  629|       |/// impl Foo for MyStruct {
+  630|       |///     fn bar(&self) {
+  631|       |///         // implementation goes here
+  632|       |///     }
+  633|       |///
+  634|       |///     fn baz(&self) {
+  635|       |///         // let's not worry about implementing baz() for now
+  636|       |///         todo!();
+  637|       |///     }
+  638|       |/// }
+  639|       |///
+  640|       |/// fn main() {
+  641|       |///     let s = MyStruct;
+  642|       |///     s.bar();
+  643|       |///
+  644|       |///     // we aren't even using baz(), so this is fine.
+  645|       |/// }
+  646|       |/// ```
+  647|       |#[macro_export]
+  648|       |#[stable(feature = "todo_macro", since = "1.40.0")]
+  649|       |macro_rules! todo {
+  650|       |    () => ($crate::panic!("not yet implemented"));
+  651|       |    ($($arg:tt)+) => ($crate::panic!("not yet implemented: {}", $crate::format_args!($($arg)+)));
+  652|       |}
+  653|       |
+  654|       |/// Definitions of built-in macros.
+  655|       |///
+  656|       |/// Most of the macro properties (stability, visibility, etc.) are taken from the source code here,
+  657|       |/// with exception of expansion functions transforming macro inputs into outputs,
+  658|       |/// those functions are provided by the compiler.
+  659|       |pub(crate) mod builtin {
+  660|       |
+  661|       |    /// Causes compilation to fail with the given error message when encountered.
+  662|       |    ///
+  663|       |    /// This macro should be used when a crate uses a conditional compilation strategy to provide
+  664|       |    /// better error messages for erroneous conditions. It's the compiler-level form of [`panic!`],
+  665|       |    /// but emits an error during *compilation* rather than at *runtime*.
+  666|       |    ///
+  667|       |    /// # Examples
+  668|       |    ///
+  669|       |    /// Two such examples are macros and `#[cfg]` environments.
+  670|       |    ///
+  671|       |    /// Emit better compiler error if a macro is passed invalid values. Without the final branch,
+  672|       |    /// the compiler would still emit an error, but the error's message would not mention the two
+  673|       |    /// valid values.
+  674|       |    ///
+  675|       |    /// ```compile_fail
+  676|       |    /// macro_rules! give_me_foo_or_bar {
+  677|       |    ///     (foo) => {};
+  678|       |    ///     (bar) => {};
+  679|       |    ///     ($x:ident) => {
+  680|       |    ///         compile_error!("This macro only accepts `foo` or `bar`");
+  681|       |    ///     }
+  682|       |    /// }
+  683|       |    ///
+  684|       |    /// give_me_foo_or_bar!(neither);
+  685|       |    /// // ^ will fail at compile time with message "This macro only accepts `foo` or `bar`"
+  686|       |    /// ```
+  687|       |    ///
+  688|       |    /// Emit compiler error if one of a number of features isn't available.
+  689|       |    ///
+  690|       |    /// ```compile_fail
+  691|       |    /// #[cfg(not(any(feature = "foo", feature = "bar")))]
+  692|       |    /// compile_error!("Either feature \"foo\" or \"bar\" must be enabled for this crate.");
+  693|       |    /// ```
+  694|       |    #[stable(feature = "compile_error_macro", since = "1.20.0")]
+  695|       |    #[rustc_builtin_macro]
+  696|       |    #[macro_export]
+  697|       |    macro_rules! compile_error {
+  698|       |        ($msg:expr $(,)?) => {{ /* compiler built-in */ }};
+  699|       |    }
+  700|       |
+  701|       |    /// Constructs parameters for the other string-formatting macros.
+  702|       |    ///
+  703|       |    /// This macro functions by taking a formatting string literal containing
+  704|       |    /// `{}` for each additional argument passed. `format_args!` prepares the
+  705|       |    /// additional parameters to ensure the output can be interpreted as a string
+  706|       |    /// and canonicalizes the arguments into a single type. Any value that implements
+  707|       |    /// the [`Display`] trait can be passed to `format_args!`, as can any
+  708|       |    /// [`Debug`] implementation be passed to a `{:?}` within the formatting string.
+  709|       |    ///
+  710|       |    /// This macro produces a value of type [`fmt::Arguments`]. This value can be
+  711|       |    /// passed to the macros within [`std::fmt`] for performing useful redirection.
+  712|       |    /// All other formatting macros ([`format!`], [`write!`], [`println!`], etc) are
+  713|       |    /// proxied through this one. `format_args!`, unlike its derived macros, avoids
+  714|       |    /// heap allocations.
+  715|       |    ///
+  716|       |    /// You can use the [`fmt::Arguments`] value that `format_args!` returns
+  717|       |    /// in `Debug` and `Display` contexts as seen below. The example also shows
+  718|       |    /// that `Debug` and `Display` format to the same thing: the interpolated
+  719|       |    /// format string in `format_args!`.
+  720|       |    ///
+  721|       |    /// ```rust
+  722|       |    /// let debug = format!("{:?}", format_args!("{} foo {:?}", 1, 2));
+  723|       |    /// let display = format!("{}", format_args!("{} foo {:?}", 1, 2));
+  724|       |    /// assert_eq!("1 foo 2", display);
+  725|       |    /// assert_eq!(display, debug);
+  726|       |    /// ```
+  727|       |    ///
+  728|       |    /// For more information, see the documentation in [`std::fmt`].
+  729|       |    ///
+  730|       |    /// [`Display`]: crate::fmt::Display
+  731|       |    /// [`Debug`]: crate::fmt::Debug
+  732|       |    /// [`fmt::Arguments`]: crate::fmt::Arguments
+  733|       |    /// [`std::fmt`]: crate::fmt
+  734|       |    /// [`format!`]: ../std/macro.format.html
+  735|       |    /// [`println!`]: ../std/macro.println.html
+  736|       |    ///
+  737|       |    /// # Examples
+  738|       |    ///
+  739|       |    /// ```
+  740|       |    /// use std::fmt;
+  741|       |    ///
+  742|       |    /// let s = fmt::format(format_args!("hello {}", "world"));
+  743|       |    /// assert_eq!(s, format!("hello {}", "world"));
+  744|       |    /// ```
+  745|       |    #[stable(feature = "rust1", since = "1.0.0")]
+  746|       |    #[allow_internal_unstable(fmt_internals)]
+  747|       |    #[rustc_builtin_macro]
+  748|       |    #[macro_export]
+  749|       |    macro_rules! format_args {
+  750|       |        ($fmt:expr) => {{ /* compiler built-in */ }};
+  751|       |        ($fmt:expr, $($args:tt)*) => {{ /* compiler built-in */ }};
+  752|       |    }
+  753|       |
+  754|       |    /// Same as `format_args`, but adds a newline in the end.
+  755|       |    #[unstable(
+  756|       |        feature = "format_args_nl",
+  757|       |        issue = "none",
+  758|       |        reason = "`format_args_nl` is only for internal \
+  759|       |                  language use and is subject to change"
+  760|       |    )]
+  761|       |    #[allow_internal_unstable(fmt_internals)]
+  762|       |    #[rustc_builtin_macro]
+  763|       |    #[macro_export]
+  764|       |    macro_rules! format_args_nl {
+  765|       |        ($fmt:expr) => {{ /* compiler built-in */ }};
+  766|       |        ($fmt:expr, $($args:tt)*) => {{ /* compiler built-in */ }};
+  767|       |    }
+  768|       |
+  769|       |    /// Inspects an environment variable at compile time.
+  770|       |    ///
+  771|       |    /// This macro will expand to the value of the named environment variable at
+  772|       |    /// compile time, yielding an expression of type `&'static str`.
+  773|       |    ///
+  774|       |    /// If the environment variable is not defined, then a compilation error
+  775|       |    /// will be emitted. To not emit a compile error, use the [`option_env!`]
+  776|       |    /// macro instead.
+  777|       |    ///
+  778|       |    /// # Examples
+  779|       |    ///
+  780|       |    /// ```
+  781|       |    /// let path: &'static str = env!("PATH");
+  782|       |    /// println!("the $PATH variable at the time of compiling was: {}", path);
+  783|       |    /// ```
+  784|       |    ///
+  785|       |    /// You can customize the error message by passing a string as the second
+  786|       |    /// parameter:
+  787|       |    ///
+  788|       |    /// ```compile_fail
+  789|       |    /// let doc: &'static str = env!("documentation", "what's that?!");
+  790|       |    /// ```
+  791|       |    ///
+  792|       |    /// If the `documentation` environment variable is not defined, you'll get
+  793|       |    /// the following error:
+  794|       |    ///
+  795|       |    /// ```text
+  796|       |    /// error: what's that?!
+  797|       |    /// ```
+  798|       |    #[stable(feature = "rust1", since = "1.0.0")]
+  799|       |    #[rustc_builtin_macro]
+  800|       |    #[macro_export]
+  801|       |    macro_rules! env {
+  802|       |        ($name:expr $(,)?) => {{ /* compiler built-in */ }};
+  803|       |    }
+  804|       |
+  805|       |    /// Optionally inspects an environment variable at compile time.
+  806|       |    ///
+  807|       |    /// If the named environment variable is present at compile time, this will
+  808|       |    /// expand into an expression of type `Option<&'static str>` whose value is
+  809|       |    /// `Some` of the value of the environment variable. If the environment
+  810|       |    /// variable is not present, then this will expand to `None`. See
+  811|       |    /// [`Option<T>`][Option] for more information on this type.
+  812|       |    ///
+  813|       |    /// A compile time error is never emitted when using this macro regardless
+  814|       |    /// of whether the environment variable is present or not.
+  815|       |    ///
+  816|       |    /// # Examples
+  817|       |    ///
+  818|       |    /// ```
+  819|       |    /// let key: Option<&'static str> = option_env!("SECRET_KEY");
+  820|       |    /// println!("the secret key might be: {:?}", key);
+  821|       |    /// ```
+  822|       |    #[stable(feature = "rust1", since = "1.0.0")]
+  823|       |    #[rustc_builtin_macro]
+  824|       |    #[macro_export]
+  825|       |    macro_rules! option_env {
+  826|       |        ($name:expr $(,)?) => {{ /* compiler built-in */ }};
+  827|       |    }
+  828|       |
+  829|       |    /// Concatenates identifiers into one identifier.
+  830|       |    ///
+  831|       |    /// This macro takes any number of comma-separated identifiers, and
+  832|       |    /// concatenates them all into one, yielding an expression which is a new
+  833|       |    /// identifier. Note that hygiene makes it such that this macro cannot
+  834|       |    /// capture local variables. Also, as a general rule, macros are only
+  835|       |    /// allowed in item, statement or expression position. That means while
+  836|       |    /// you may use this macro for referring to existing variables, functions or
+  837|       |    /// modules etc, you cannot define a new one with it.
+  838|       |    ///
+  839|       |    /// # Examples
+  840|       |    ///
+  841|       |    /// ```
+  842|       |    /// #![feature(concat_idents)]
+  843|       |    ///
+  844|       |    /// # fn main() {
+  845|       |    /// fn foobar() -> u32 { 23 }
+  846|       |    ///
+  847|       |    /// let f = concat_idents!(foo, bar);
+  848|       |    /// println!("{}", f());
+  849|       |    ///
+  850|       |    /// // fn concat_idents!(new, fun, name) { } // not usable in this way!
+  851|       |    /// # }
+  852|       |    /// ```
+  853|       |    #[unstable(
+  854|       |        feature = "concat_idents",
+  855|       |        issue = "29599",
+  856|       |        reason = "`concat_idents` is not stable enough for use and is subject to change"
+  857|       |    )]
+  858|       |    #[rustc_builtin_macro]
+  859|       |    #[macro_export]
+  860|       |    macro_rules! concat_idents {
+  861|       |        ($($e:ident),+ $(,)?) => {{ /* compiler built-in */ }};
+  862|       |    }
+  863|       |
+  864|       |    /// Concatenates literals into a static string slice.
+  865|       |    ///
+  866|       |    /// This macro takes any number of comma-separated literals, yielding an
+  867|       |    /// expression of type `&'static str` which represents all of the literals
+  868|       |    /// concatenated left-to-right.
+  869|       |    ///
+  870|       |    /// Integer and floating point literals are stringified in order to be
+  871|       |    /// concatenated.
+  872|       |    ///
+  873|       |    /// # Examples
+  874|       |    ///
+  875|       |    /// ```
+  876|       |    /// let s = concat!("test", 10, 'b', true);
+  877|       |    /// assert_eq!(s, "test10btrue");
+  878|       |    /// ```
+  879|       |    #[stable(feature = "rust1", since = "1.0.0")]
+  880|       |    #[rustc_builtin_macro]
+  881|       |    #[macro_export]
+  882|       |    macro_rules! concat {
+  883|       |        ($($e:expr),* $(,)?) => {{ /* compiler built-in */ }};
+  884|       |    }
+  885|       |
+  886|       |    /// Expands to the line number on which it was invoked.
+  887|       |    ///
+  888|       |    /// With [`column!`] and [`file!`], these macros provide debugging information for
+  889|       |    /// developers about the location within the source.
+  890|       |    ///
+  891|       |    /// The expanded expression has type `u32` and is 1-based, so the first line
+  892|       |    /// in each file evaluates to 1, the second to 2, etc. This is consistent
+  893|       |    /// with error messages by common compilers or popular editors.
+  894|       |    /// The returned line is *not necessarily* the line of the `line!` invocation itself,
+  895|       |    /// but rather the first macro invocation leading up to the invocation
+  896|       |    /// of the `line!` macro.
+  897|       |    ///
+  898|       |    /// # Examples
+  899|       |    ///
+  900|       |    /// ```
+  901|       |    /// let current_line = line!();
+  902|       |    /// println!("defined on line: {}", current_line);
+  903|       |    /// ```
+  904|       |    #[stable(feature = "rust1", since = "1.0.0")]
+  905|       |    #[rustc_builtin_macro]
+  906|       |    #[macro_export]
+  907|       |    macro_rules! line {
+  908|       |        () => {
+  909|       |            /* compiler built-in */
+  910|       |        };
+  911|       |    }
+  912|       |
+  913|       |    /// Expands to the column number at which it was invoked.
+  914|       |    ///
+  915|       |    /// With [`line!`] and [`file!`], these macros provide debugging information for
+  916|       |    /// developers about the location within the source.
+  917|       |    ///
+  918|       |    /// The expanded expression has type `u32` and is 1-based, so the first column
+  919|       |    /// in each line evaluates to 1, the second to 2, etc. This is consistent
+  920|       |    /// with error messages by common compilers or popular editors.
+  921|       |    /// The returned column is *not necessarily* the line of the `column!` invocation itself,
+  922|       |    /// but rather the first macro invocation leading up to the invocation
+  923|       |    /// of the `column!` macro.
+  924|       |    ///
+  925|       |    /// # Examples
+  926|       |    ///
+  927|       |    /// ```
+  928|       |    /// let current_col = column!();
+  929|       |    /// println!("defined on column: {}", current_col);
+  930|       |    /// ```
+  931|       |    #[stable(feature = "rust1", since = "1.0.0")]
+  932|       |    #[rustc_builtin_macro]
+  933|       |    #[macro_export]
+  934|       |    macro_rules! column {
+  935|       |        () => {
+  936|       |            /* compiler built-in */
+  937|       |        };
+  938|       |    }
+  939|       |
+  940|       |    /// Expands to the file name in which it was invoked.
+  941|       |    ///
+  942|       |    /// With [`line!`] and [`column!`], these macros provide debugging information for
+  943|       |    /// developers about the location within the source.
+  944|       |    ///
+  945|       |    /// The expanded expression has type `&'static str`, and the returned file
+  946|       |    /// is not the invocation of the `file!` macro itself, but rather the
+  947|       |    /// first macro invocation leading up to the invocation of the `file!`
+  948|       |    /// macro.
+  949|       |    ///
+  950|       |    /// # Examples
+  951|       |    ///
+  952|       |    /// ```
+  953|       |    /// let this_file = file!();
+  954|       |    /// println!("defined in file: {}", this_file);
+  955|       |    /// ```
+  956|       |    #[stable(feature = "rust1", since = "1.0.0")]
+  957|       |    #[rustc_builtin_macro]
+  958|       |    #[macro_export]
+  959|       |    macro_rules! file {
+  960|       |        () => {
+  961|       |            /* compiler built-in */
+  962|       |        };
+  963|       |    }
+  964|       |
+  965|       |    /// Stringifies its arguments.
+  966|       |    ///
+  967|       |    /// This macro will yield an expression of type `&'static str` which is the
+  968|       |    /// stringification of all the tokens passed to the macro. No restrictions
+  969|       |    /// are placed on the syntax of the macro invocation itself.
+  970|       |    ///
+  971|       |    /// Note that the expanded results of the input tokens may change in the
+  972|       |    /// future. You should be careful if you rely on the output.
+  973|       |    ///
+  974|       |    /// # Examples
+  975|       |    ///
+  976|       |    /// ```
+  977|       |    /// let one_plus_one = stringify!(1 + 1);
+  978|       |    /// assert_eq!(one_plus_one, "1 + 1");
+  979|       |    /// ```
+  980|       |    #[stable(feature = "rust1", since = "1.0.0")]
+  981|       |    #[rustc_builtin_macro]
+  982|       |    #[macro_export]
+  983|       |    macro_rules! stringify {
+  984|       |        ($($t:tt)*) => {
+  985|       |            /* compiler built-in */
+  986|       |        };
+  987|       |    }
+  988|       |
+  989|       |    /// Includes a UTF-8 encoded file as a string.
+  990|       |    ///
+  991|       |    /// The file is located relative to the current file (similarly to how
+  992|       |    /// modules are found). The provided path is interpreted in a platform-specific
+  993|       |    /// way at compile time. So, for instance, an invocation with a Windows path
+  994|       |    /// containing backslashes `\` would not compile correctly on Unix.
+  995|       |    ///
+  996|       |    /// This macro will yield an expression of type `&'static str` which is the
+  997|       |    /// contents of the file.
+  998|       |    ///
+  999|       |    /// # Examples
+ 1000|       |    ///
+ 1001|       |    /// Assume there are two files in the same directory with the following
+ 1002|       |    /// contents:
+ 1003|       |    ///
+ 1004|       |    /// File 'spanish.in':
+ 1005|       |    ///
+ 1006|       |    /// ```text
+ 1007|       |    /// adiós
+ 1008|       |    /// ```
+ 1009|       |    ///
+ 1010|       |    /// File 'main.rs':
+ 1011|       |    ///
+ 1012|       |    /// ```ignore (cannot-doctest-external-file-dependency)
+ 1013|       |    /// fn main() {
+ 1014|       |    ///     let my_str = include_str!("spanish.in");
+ 1015|       |    ///     assert_eq!(my_str, "adiós\n");
+ 1016|       |    ///     print!("{}", my_str);
+ 1017|       |    /// }
+ 1018|       |    /// ```
+ 1019|       |    ///
+ 1020|       |    /// Compiling 'main.rs' and running the resulting binary will print "adiós".
+ 1021|       |    #[stable(feature = "rust1", since = "1.0.0")]
+ 1022|       |    #[rustc_builtin_macro]
+ 1023|       |    #[macro_export]
+ 1024|       |    macro_rules! include_str {
+ 1025|       |        ($file:expr $(,)?) => {{ /* compiler built-in */ }};
+ 1026|       |    }
+ 1027|       |
+ 1028|       |    /// Includes a file as a reference to a byte array.
+ 1029|       |    ///
+ 1030|       |    /// The file is located relative to the current file (similarly to how
+ 1031|       |    /// modules are found). The provided path is interpreted in a platform-specific
+ 1032|       |    /// way at compile time. So, for instance, an invocation with a Windows path
+ 1033|       |    /// containing backslashes `\` would not compile correctly on Unix.
+ 1034|       |    ///
+ 1035|       |    /// This macro will yield an expression of type `&'static [u8; N]` which is
+ 1036|       |    /// the contents of the file.
+ 1037|       |    ///
+ 1038|       |    /// # Examples
+ 1039|       |    ///
+ 1040|       |    /// Assume there are two files in the same directory with the following
+ 1041|       |    /// contents:
+ 1042|       |    ///
+ 1043|       |    /// File 'spanish.in':
+ 1044|       |    ///
+ 1045|       |    /// ```text
+ 1046|       |    /// adiós
+ 1047|       |    /// ```
+ 1048|       |    ///
+ 1049|       |    /// File 'main.rs':
+ 1050|       |    ///
+ 1051|       |    /// ```ignore (cannot-doctest-external-file-dependency)
+ 1052|       |    /// fn main() {
+ 1053|       |    ///     let bytes = include_bytes!("spanish.in");
+ 1054|       |    ///     assert_eq!(bytes, b"adi\xc3\xb3s\n");
+ 1055|       |    ///     print!("{}", String::from_utf8_lossy(bytes));
+ 1056|       |    /// }
+ 1057|       |    /// ```
+ 1058|       |    ///
+ 1059|       |    /// Compiling 'main.rs' and running the resulting binary will print "adiós".
+ 1060|       |    #[stable(feature = "rust1", since = "1.0.0")]
+ 1061|       |    #[rustc_builtin_macro]
+ 1062|       |    #[macro_export]
+ 1063|       |    macro_rules! include_bytes {
+ 1064|       |        ($file:expr $(,)?) => {{ /* compiler built-in */ }};
+ 1065|       |    }
+ 1066|       |
+ 1067|       |    /// Expands to a string that represents the current module path.
+ 1068|       |    ///
+ 1069|       |    /// The current module path can be thought of as the hierarchy of modules
+ 1070|       |    /// leading back up to the crate root. The first component of the path
+ 1071|       |    /// returned is the name of the crate currently being compiled.
+ 1072|       |    ///
+ 1073|       |    /// # Examples
+ 1074|       |    ///
+ 1075|       |    /// ```
+ 1076|       |    /// mod test {
+ 1077|       |    ///     pub fn foo() {
+ 1078|       |    ///         assert!(module_path!().ends_with("test"));
+ 1079|       |    ///     }
+ 1080|       |    /// }
+ 1081|       |    ///
+ 1082|       |    /// test::foo();
+ 1083|       |    /// ```
+ 1084|       |    #[stable(feature = "rust1", since = "1.0.0")]
+ 1085|       |    #[rustc_builtin_macro]
+ 1086|       |    #[macro_export]
+ 1087|       |    macro_rules! module_path {
+ 1088|       |        () => {
+ 1089|       |            /* compiler built-in */
+ 1090|       |        };
+ 1091|       |    }
+ 1092|       |
+ 1093|       |    /// Evaluates boolean combinations of configuration flags at compile-time.
+ 1094|       |    ///
+ 1095|       |    /// In addition to the `#[cfg]` attribute, this macro is provided to allow
+ 1096|       |    /// boolean expression evaluation of configuration flags. This frequently
+ 1097|       |    /// leads to less duplicated code.
+ 1098|       |    ///
+ 1099|       |    /// The syntax given to this macro is the same syntax as the [`cfg`]
+ 1100|       |    /// attribute.
+ 1101|       |    ///
+ 1102|       |    /// `cfg!`, unlike `#[cfg]`, does not remove any code and only evaluates to true or false. For
+ 1103|       |    /// example, all blocks in an if/else expression need to be valid when `cfg!` is used for
+ 1104|       |    /// the condition, regardless of what `cfg!` is evaluating.
+ 1105|       |    ///
+ 1106|       |    /// [`cfg`]: ../reference/conditional-compilation.html#the-cfg-attribute
+ 1107|       |    ///
+ 1108|       |    /// # Examples
+ 1109|       |    ///
+ 1110|       |    /// ```
+ 1111|       |    /// let my_directory = if cfg!(windows) {
+ 1112|       |    ///     "windows-specific-directory"
+ 1113|       |    /// } else {
+ 1114|       |    ///     "unix-directory"
+ 1115|       |    /// };
+ 1116|       |    /// ```
+ 1117|       |    #[stable(feature = "rust1", since = "1.0.0")]
+ 1118|       |    #[rustc_builtin_macro]
+ 1119|       |    #[macro_export]
+ 1120|       |    macro_rules! cfg {
+ 1121|       |        ($($cfg:tt)*) => {
+ 1122|       |            /* compiler built-in */
+ 1123|       |        };
+ 1124|       |    }
+ 1125|       |
+ 1126|       |    /// Parses a file as an expression or an item according to the context.
+ 1127|       |    ///
+ 1128|       |    /// The file is located relative to the current file (similarly to how
+ 1129|       |    /// modules are found). The provided path is interpreted in a platform-specific
+ 1130|       |    /// way at compile time. So, for instance, an invocation with a Windows path
+ 1131|       |    /// containing backslashes `\` would not compile correctly on Unix.
+ 1132|       |    ///
+ 1133|       |    /// Using this macro is often a bad idea, because if the file is
+ 1134|       |    /// parsed as an expression, it is going to be placed in the
+ 1135|       |    /// surrounding code unhygienically. This could result in variables
+ 1136|       |    /// or functions being different from what the file expected if
+ 1137|       |    /// there are variables or functions that have the same name in
+ 1138|       |    /// the current file.
+ 1139|       |    ///
+ 1140|       |    /// # Examples
+ 1141|       |    ///
+ 1142|       |    /// Assume there are two files in the same directory with the following
+ 1143|       |    /// contents:
+ 1144|       |    ///
+ 1145|       |    /// File 'monkeys.in':
+ 1146|       |    ///
+ 1147|       |    /// ```ignore (only-for-syntax-highlight)
+ 1148|       |    /// ['🙈', '🙊', '🙉']
+ 1149|       |    ///     .iter()
+ 1150|       |    ///     .cycle()
+ 1151|       |    ///     .take(6)
+ 1152|       |    ///     .collect::<String>()
+ 1153|       |    /// ```
+ 1154|       |    ///
+ 1155|       |    /// File 'main.rs':
+ 1156|       |    ///
+ 1157|       |    /// ```ignore (cannot-doctest-external-file-dependency)
+ 1158|       |    /// fn main() {
+ 1159|       |    ///     let my_string = include!("monkeys.in");
+ 1160|       |    ///     assert_eq!("🙈🙊🙉🙈🙊🙉", my_string);
+ 1161|       |    ///     println!("{}", my_string);
+ 1162|       |    /// }
+ 1163|       |    /// ```
+ 1164|       |    ///
+ 1165|       |    /// Compiling 'main.rs' and running the resulting binary will print
+ 1166|       |    /// "🙈🙊🙉🙈🙊🙉".
+ 1167|       |    #[stable(feature = "rust1", since = "1.0.0")]
+ 1168|       |    #[rustc_builtin_macro]
+ 1169|       |    #[macro_export]
+ 1170|       |    macro_rules! include {
+ 1171|       |        ($file:expr $(,)?) => {{ /* compiler built-in */ }};
+ 1172|       |    }
+ 1173|       |
+ 1174|       |    /// Asserts that a boolean expression is `true` at runtime.
+ 1175|       |    ///
+ 1176|       |    /// This will invoke the [`panic!`] macro if the provided expression cannot be
+ 1177|       |    /// evaluated to `true` at runtime.
+ 1178|       |    ///
+ 1179|       |    /// # Uses
+ 1180|       |    ///
+ 1181|       |    /// Assertions are always checked in both debug and release builds, and cannot
+ 1182|       |    /// be disabled. See [`debug_assert!`] for assertions that are not enabled in
+ 1183|       |    /// release builds by default.
+ 1184|       |    ///
+ 1185|       |    /// Unsafe code may rely on `assert!` to enforce run-time invariants that, if
+ 1186|       |    /// violated could lead to unsafety.
+ 1187|       |    ///
+ 1188|       |    /// Other use-cases of `assert!` include testing and enforcing run-time
+ 1189|       |    /// invariants in safe code (whose violation cannot result in unsafety).
+ 1190|       |    ///
+ 1191|       |    /// # Custom Messages
+ 1192|       |    ///
+ 1193|       |    /// This macro has a second form, where a custom panic message can
+ 1194|       |    /// be provided with or without arguments for formatting. See [`std::fmt`]
+ 1195|       |    /// for syntax for this form.
+ 1196|       |    ///
+ 1197|       |    /// [`std::fmt`]: crate::fmt
+ 1198|       |    ///
+ 1199|       |    /// # Examples
+ 1200|       |    ///
+ 1201|       |    /// ```
+ 1202|       |    /// // the panic message for these assertions is the stringified value of the
+ 1203|       |    /// // expression given.
+ 1204|       |    /// assert!(true);
+ 1205|       |    ///
+ 1206|       |    /// fn some_computation() -> bool { true } // a very simple function
+ 1207|       |    ///
+ 1208|       |    /// assert!(some_computation());
+ 1209|       |    ///
+ 1210|       |    /// // assert with a custom message
+ 1211|       |    /// let x = true;
+ 1212|       |    /// assert!(x, "x wasn't true!");
+ 1213|       |    ///
+ 1214|       |    /// let a = 3; let b = 27;
+ 1215|       |    /// assert!(a + b == 30, "a = {}, b = {}", a, b);
+ 1216|       |    /// ```
+ 1217|       |    #[stable(feature = "rust1", since = "1.0.0")]
+ 1218|       |    #[rustc_builtin_macro]
+ 1219|       |    #[macro_export]
+ 1220|       |    #[cfg_attr(not(bootstrap), rustc_diagnostic_item = "assert_macro")]
+ 1221|       |    #[allow_internal_unstable(core_panic)]
+ 1222|       |    macro_rules! assert {
+ 1223|       |        ($cond:expr $(,)?) => {{ /* compiler built-in */ }};
+ 1224|       |        ($cond:expr, $($arg:tt)+) => {{ /* compiler built-in */ }};
+ 1225|       |    }
+ 1226|       |
+ 1227|       |    /// Inline assembly.
+ 1228|       |    ///
+ 1229|       |    /// Read the [unstable book] for the usage.
+ 1230|       |    ///
+ 1231|       |    /// [unstable book]: ../unstable-book/library-features/asm.html
+ 1232|       |    #[unstable(
+ 1233|       |        feature = "asm",
+ 1234|       |        issue = "72016",
+ 1235|       |        reason = "inline assembly is not stable enough for use and is subject to change"
+ 1236|       |    )]
+ 1237|       |    #[rustc_builtin_macro]
+ 1238|       |    #[macro_export]
+ 1239|       |    macro_rules! asm {
+ 1240|       |        ("assembly template",
+ 1241|       |            $(operands,)*
+ 1242|       |            $(options($(option),*))?
+ 1243|       |        ) => {
+ 1244|       |            /* compiler built-in */
+ 1245|       |        };
+ 1246|       |    }
+ 1247|       |
+ 1248|       |    /// LLVM-style inline assembly.
+ 1249|       |    ///
+ 1250|       |    /// Read the [unstable book] for the usage.
+ 1251|       |    ///
+ 1252|       |    /// [unstable book]: ../unstable-book/library-features/llvm-asm.html
+ 1253|       |    #[unstable(
+ 1254|       |        feature = "llvm_asm",
+ 1255|       |        issue = "70173",
+ 1256|       |        reason = "prefer using the new asm! syntax instead"
+ 1257|       |    )]
+ 1258|       |    #[rustc_builtin_macro]
+ 1259|       |    #[macro_export]
+ 1260|       |    macro_rules! llvm_asm {
+ 1261|       |        ("assembly template"
+ 1262|       |                        : $("output"(operand),)*
+ 1263|       |                        : $("input"(operand),)*
+ 1264|       |                        : $("clobbers",)*
+ 1265|       |                        : $("options",)*) => {
+ 1266|       |            /* compiler built-in */
+ 1267|       |        };
+ 1268|       |    }
+ 1269|       |
+ 1270|       |    /// Module-level inline assembly.
+ 1271|       |    #[unstable(
+ 1272|       |        feature = "global_asm",
+ 1273|       |        issue = "35119",
+ 1274|       |        reason = "`global_asm!` is not stable enough for use and is subject to change"
+ 1275|       |    )]
+ 1276|       |    #[rustc_builtin_macro]
+ 1277|       |    #[macro_export]
+ 1278|       |    macro_rules! global_asm {
+ 1279|       |        ("assembly") => {
+ 1280|       |            /* compiler built-in */
+ 1281|       |        };
+ 1282|       |    }
+ 1283|       |
+ 1284|       |    /// Prints passed tokens into the standard output.
+ 1285|       |    #[unstable(
+ 1286|       |        feature = "log_syntax",
+ 1287|       |        issue = "29598",
+ 1288|       |        reason = "`log_syntax!` is not stable enough for use and is subject to change"
+ 1289|       |    )]
+ 1290|       |    #[rustc_builtin_macro]
+ 1291|       |    #[macro_export]
+ 1292|       |    macro_rules! log_syntax {
+ 1293|       |        ($($arg:tt)*) => {
+ 1294|       |            /* compiler built-in */
+ 1295|       |        };
+ 1296|       |    }
+ 1297|       |
+ 1298|       |    /// Enables or disables tracing functionality used for debugging other macros.
+ 1299|       |    #[unstable(
+ 1300|       |        feature = "trace_macros",
+ 1301|       |        issue = "29598",
+ 1302|       |        reason = "`trace_macros` is not stable enough for use and is subject to change"
+ 1303|       |    )]
+ 1304|       |    #[rustc_builtin_macro]
+ 1305|       |    #[macro_export]
+ 1306|       |    macro_rules! trace_macros {
+ 1307|       |        (true) => {{ /* compiler built-in */ }};
+ 1308|       |        (false) => {{ /* compiler built-in */ }};
+ 1309|       |    }
+ 1310|       |
+ 1311|       |    /// Attribute macro applied to a function to turn it into a unit test.
+ 1312|       |    #[stable(feature = "rust1", since = "1.0.0")]
+ 1313|       |    #[allow_internal_unstable(test, rustc_attrs)]
+ 1314|       |    #[rustc_builtin_macro]
+ 1315|       |    pub macro test($item:item) {
+ 1316|       |        /* compiler built-in */
+ 1317|       |    }
+ 1318|       |
+ 1319|       |    /// Attribute macro applied to a function to turn it into a benchmark test.
+ 1320|       |    #[unstable(
+ 1321|       |        feature = "test",
+ 1322|       |        issue = "50297",
+ 1323|       |        soft,
+ 1324|       |        reason = "`bench` is a part of custom test frameworks which are unstable"
+ 1325|       |    )]
+ 1326|       |    #[allow_internal_unstable(test, rustc_attrs)]
+ 1327|       |    #[rustc_builtin_macro]
+ 1328|       |    pub macro bench($item:item) {
+ 1329|       |        /* compiler built-in */
+ 1330|       |    }
+ 1331|       |
+ 1332|       |    /// An implementation detail of the `#[test]` and `#[bench]` macros.
+ 1333|       |    #[unstable(
+ 1334|       |        feature = "custom_test_frameworks",
+ 1335|       |        issue = "50297",
+ 1336|       |        reason = "custom test frameworks are an unstable feature"
+ 1337|       |    )]
+ 1338|       |    #[allow_internal_unstable(test, rustc_attrs)]
+ 1339|       |    #[rustc_builtin_macro]
+ 1340|       |    pub macro test_case($item:item) {
+ 1341|       |        /* compiler built-in */
+ 1342|       |    }
+ 1343|       |
+ 1344|       |    /// Attribute macro applied to a static to register it as a global allocator.
+ 1345|       |    ///
+ 1346|       |    /// See also [`std::alloc::GlobalAlloc`](../std/alloc/trait.GlobalAlloc.html).
+ 1347|       |    #[stable(feature = "global_allocator", since = "1.28.0")]
+ 1348|       |    #[allow_internal_unstable(rustc_attrs)]
+ 1349|       |    #[rustc_builtin_macro]
+ 1350|       |    pub macro global_allocator($item:item) {
+ 1351|       |        /* compiler built-in */
+ 1352|       |    }
+ 1353|       |
+ 1354|       |    /// Keeps the item it's applied to if the passed path is accessible, and removes it otherwise.
+ 1355|       |    #[unstable(
+ 1356|       |        feature = "cfg_accessible",
+ 1357|       |        issue = "64797",
+ 1358|       |        reason = "`cfg_accessible` is not fully implemented"
+ 1359|       |    )]
+ 1360|       |    #[rustc_builtin_macro]
+ 1361|       |    pub macro cfg_accessible($item:item) {
+ 1362|       |        /* compiler built-in */
+ 1363|       |    }
+ 1364|       |
+ 1365|       |    /// Unstable implementation detail of the `rustc` compiler, do not use.
+ 1366|       |    #[rustc_builtin_macro]
+ 1367|       |    #[stable(feature = "rust1", since = "1.0.0")]
+ 1368|       |    #[allow_internal_unstable(core_intrinsics, libstd_sys_internals)]
+ 1369|       |    pub macro RustcDecodable($item:item) {
+ 1370|       |        /* compiler built-in */
+ 1371|       |    }
+ 1372|       |
+ 1373|       |    /// Unstable implementation detail of the `rustc` compiler, do not use.
+ 1374|       |    #[rustc_builtin_macro]
+ 1375|       |    #[stable(feature = "rust1", since = "1.0.0")]
+ 1376|       |    #[allow_internal_unstable(core_intrinsics)]
+ 1377|       |    pub macro RustcEncodable($item:item) {
+ 1378|       |        /* compiler built-in */
+ 1379|       |    }
+ 1380|       |}
 

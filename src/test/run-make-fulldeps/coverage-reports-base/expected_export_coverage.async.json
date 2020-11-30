@@ -7,24 +7,50 @@
           "summary": {
             "functions": {
               "count": 15,
-              "covered": 15,
-              "percent": 100
+              "covered": 14,
+              "percent": 93.33333333333333
             },
             "instantiations": {
-              "count": 15,
-              "covered": 15,
-              "percent": 100
+              "count": 16,
+              "covered": 14,
+              "percent": 87.5
             },
             "lines": {
-              "count": 93,
-              "covered": 75,
-              "percent": 80.64516129032258
+              "count": 218,
+              "covered": 74,
+              "percent": 33.94495412844037
             },
             "regions": {
-              "count": 50,
-              "covered": 35,
-              "notcovered": 15,
-              "percent": 70
+              "count": 85,
+              "covered": 34,
+              "notcovered": 51,
+              "percent": 40
+            }
+          }
+        },
+        {
+          "filename": "/usr/local/google/home/richkadel/rust/library/core/src/macros/mod.rs",
+          "summary": {
+            "functions": {
+              "count": 0,
+              "covered": 0,
+              "percent": 0
+            },
+            "instantiations": {
+              "count": 0,
+              "covered": 0,
+              "percent": 0
+            },
+            "lines": {
+              "count": 0,
+              "covered": 0,
+              "percent": 0
+            },
+            "regions": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0
             }
           }
         }
@@ -32,24 +58,24 @@
       "totals": {
         "functions": {
           "count": 15,
-          "covered": 15,
-          "percent": 100
+          "covered": 14,
+          "percent": 93.33333333333333
         },
         "instantiations": {
-          "count": 15,
-          "covered": 15,
-          "percent": 100
+          "count": 16,
+          "covered": 14,
+          "percent": 87.5
         },
         "lines": {
-          "count": 93,
-          "covered": 75,
-          "percent": 80.64516129032258
+          "count": 218,
+          "covered": 74,
+          "percent": 33.94495412844037
         },
         "regions": {
-          "count": 50,
-          "covered": 35,
-          "notcovered": 15,
-          "percent": 70
+          "count": 85,
+          "covered": 34,
+          "notcovered": 51,
+          "percent": 40
         }
       }
     }
