@@ -2,7 +2,10 @@ Counter in file 0 98:5 -> 100:20, #1
 Counter in file 0 100:21 -> 102:10, #2
 Counter in file 0 102:10 -> 102:11, (#1 - #2)
 Counter in file 0 103:9 -> 104:6, (#2 + (#1 - #2))
-Counter in file 0 123:5 -> 128:6, 0
+Counter in file 0 123:5 -> 124:20, 0
+Counter in file 0 124:21 -> 126:10, 0
+Counter in file 0 126:10 -> 126:11, 0
+Counter in file 0 127:9 -> 128:6, 0
 Counter in file 0 131:53 -> 131:67, 0
 Counter in file 0 141:59 -> 141:85, 0
 Counter in file 0 143:56 -> 145:6, 0
@@ -65,7 +68,10 @@ Combined regions:
   102:10 -> 102:11 (count=5)
   103:9 -> 104:6 (count=5)
   104:6 -> 120:9 (count=1)
-  123:5 -> 128:6 (count=0)
+  123:5 -> 124:20 (count=0)
+  124:21 -> 126:10 (count=0)
+  126:10 -> 126:11 (count=0)
+  127:9 -> 128:6 (count=0)
   128:6 -> 131:33 (count=1)
   131:53 -> 131:67 (count=0)
   131:67 -> 136:33 (count=1)
@@ -121,6 +127,11 @@ Segment at 103:9 (count = 5), RegionEntry
 Segment at 104:6 (count = 1), RegionEntry
 Segment at 120:9 (count = 0), Skipped
 Segment at 123:5 (count = 0), RegionEntry
+Segment at 124:20 (count = 0), Skipped
+Segment at 124:21 (count = 0), RegionEntry
+Segment at 126:10 (count = 0), RegionEntry
+Segment at 126:11 (count = 0), Skipped
+Segment at 127:9 (count = 0), RegionEntry
 Segment at 128:6 (count = 1), RegionEntry
 Segment at 131:33 (count = 0), Skipped
 Segment at 131:53 (count = 0), RegionEntry

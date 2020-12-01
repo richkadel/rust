@@ -2,7 +2,7 @@
     2|       |// structure of this test.
     3|       |
     4|      2|#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-                       ^0            ^0         ^0  ^1          ^0
+                       ^0            ^0      ^0 ^0  ^1       ^0 ^0^0
     5|       |pub struct Version {
     6|       |    major: usize,
     7|      1|    minor: usize, // Count: 1 - `PartialOrd` compared `minor` values in 3.2.1 vs. 3.3.0

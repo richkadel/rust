@@ -53,16 +53,7 @@ endif
 			$$( grep -q '^\/\/ require-rust-edition-2018' $(SOURCEDIR)/$@.rs && \
 				echo "--edition=2018" \
 			) \
-			-Zinstrument-coverage \
-			--emit llvm-ir,link
-	# FIXME(richkadel): There is an unresolved anomaly in `llvm-cov show` results when the binary is
-	# compiled without `--emit llvm-ir`. Some generic function instantiations are showing unusual and
-	# probably incorrect coverage results when omitting `--emit llvm-ir`.
-	#
-	# This was a recent anomaly that seems to coincide with the new code that
-	# ensures known MIR `DefId`s for MIR that had been instrumented for Coverage, but were optimized
-	# out (and were not found in the pre-generated coverage map data) still get coverage (with `Zero`)
-	# executions.
+			-Zinstrument-coverage
 
 	# Run it in order to generate some profiling data,
 	# with `LLVM_PROFILE_FILE=<profdata_file>` environment variable set to
@@ -95,13 +86,6 @@ endif
 		>&2 cat "$(TMPDIR)"/show_coverage_stderr.$@.txt ; \
 		exit $$status \
 	)
-	# FIXME(richkadel): --ignore-filename-regex excludes the path to some (inlined?) mods, such as:
-	# `$PATH_TO_RUST/library/core/src/macros/mod.rs`.
-	#
-	# This was a recent anomaly that seems to coincide with the new code that
-	# ensures known MIR `DefId`s for MIR that had been instrumented for Coverage, but were optimized
-	# out (and were not found in the pre-generated coverage map data) still get coverage (with `Zero`)
-	# executions.
 
 ifdef DEBUG_FLAG
 	# The first line (beginning with "Args:" contains hard-coded, build-specific

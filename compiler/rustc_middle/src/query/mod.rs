@@ -346,11 +346,17 @@ rustc_queries! {
             cache_on_disk_if { key.is_local() }
         }
 
-        /// Returns the `CodeRegion` for the body of a function that has instrumented coverage, in
-        /// case the function was optimized out before codegen, and before being added to the
-        /// Coverage Map.
-        query covered_body_as_code_region(key: DefId) -> Option<mir::coverage::CodeRegion> {
-            desc { |tcx| "retrieving the MIR body as a `CodeRegion`, if instrumented, for `{}`", tcx.def_path_str(key) }
+        /// Returns the name of the file that contains the function body, if instrumented for coverage.
+        query covered_file_name(key: DefId) -> Option<Symbol> {
+            desc { |tcx| "retrieving the covered file name, if instrumented, for `{}`", tcx.def_path_str(key) }
+            storage(ArenaCacheSelector<'tcx>)
+            cache_on_disk_if { key.is_local() }
+        }
+
+        /// Returns the `CodeRegions` for a function that has instrumented coverage, in case the
+        /// function was optimized out before codegen, and before being added to the Coverage Map.
+        query covered_code_regions(key: DefId) -> Vec<&'tcx mir::coverage::CodeRegion> {
+            desc { |tcx| "retrieving the covered `CodeRegion`s, if instrumented, for `{}`", tcx.def_path_str(key) }
             storage(ArenaCacheSelector<'tcx>)
             cache_on_disk_if { key.is_local() }
         }

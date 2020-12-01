@@ -2,7 +2,7 @@ use super::*;
 
 use rustc_middle::mir::coverage::*;
 use rustc_middle::mir::visit::Visitor;
-use rustc_middle::mir::{Coverage, CoverageInfo, Location};
+use rustc_middle::mir::{self, Coverage, CoverageInfo, Location};
 use rustc_middle::ty::query::Providers;
 use rustc_middle::ty::TyCtxt;
 use rustc_span::def_id::DefId;
@@ -11,7 +11,8 @@ use rustc_span::def_id::DefId;
 /// counter) and `FunctionCoverage::new()` (to extract the coverage map metadata from the MIR).
 pub(crate) fn provide(providers: &mut Providers) {
     providers.coverageinfo = |tcx, def_id| coverageinfo_from_mir(tcx, def_id);
-    providers.covered_body_as_code_region = |tcx, def_id| covered_body_as_code_region(tcx, def_id);
+    providers.covered_file_name = |tcx, def_id| covered_file_name(tcx, def_id);
+    providers.covered_code_regions = |tcx, def_id| covered_code_regions(tcx, def_id);
 }
 
 /// The `num_counters` argument to `llvm.instrprof.increment` is the max counter_id + 1, or in
@@ -127,25 +128,33 @@ fn coverageinfo_from_mir<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId) -> CoverageInfo
     coverage_visitor.info
 }
 
-fn covered_body_as_code_region<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId) -> Option<CodeRegion> {
+fn covered_file_name<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId) -> Option<Symbol> {
     let mir_body = tcx.optimized_mir(def_id);
-    if !mir_body.basic_blocks().iter_enumerated().any(|(_, data)| {
-        data.statements.iter().any(|statement| match statement.kind {
-            StatementKind::Coverage(_) => true,
-            _ => false,
-        })
-    }) {
-        return None;
+    for bb_data in mir_body.basic_blocks().iter() {
+        for statement in bb_data.statements.iter() {
+            if let StatementKind::Coverage(box ref coverage) = statement.kind {
+                if let Some(code_region) = coverage.code_region.as_ref() {
+                    return Some(code_region.file_name);
+                }
+            }
+        }
     }
-    let (some_fn_sig, hir_body) = fn_sig_and_body(tcx, mir_body.source.def_id());
-    let body_span = hir_body.value.span;
-    let fn_sig_span = match some_fn_sig {
-        Some(fn_sig) => fn_sig.span.with_hi(body_span.lo()),
-        None => body_span.shrink_to_lo(),
-    };
-    let source_map = tcx.sess.source_map();
-    let source_file = source_map.lookup_source_file(body_span.lo());
-    let file_name = Symbol::intern(&source_file.name.to_string());
-    let function_span_to_closing_brace = fn_sig_span.with_hi(body_span.hi());
-    Some(make_code_region(file_name, &source_file, function_span_to_closing_brace, body_span))
+    None
+}
+
+fn covered_code_regions<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId) -> Vec<&'tcx CodeRegion> {
+    let mir_body: &'tcx mir::Body<'tcx> = tcx.optimized_mir(def_id);
+    mir_body
+        .basic_blocks()
+        .iter()
+        .map(|data| {
+            data.statements.iter().filter_map(|statement| match statement.kind {
+                StatementKind::Coverage(box ref coverage) => {
+                    coverage.code_region.as_ref() // may be None
+                }
+                _ => None,
+            })
+        })
+        .flatten()
+        .collect()
 }

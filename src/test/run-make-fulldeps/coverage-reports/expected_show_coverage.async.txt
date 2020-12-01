@@ -23,7 +23,7 @@
    23|      0|        y if e().await == y => (),
    24|      0|        y if f().await == y => (),
    25|      0|        _ => (),
-   26|      0|    }
+   26|       |    }
    27|      0|}
    28|       |
    29|      1|async fn h(x: usize) { // The function signature is counted when called, but the body is not
@@ -32,7 +32,7 @@
    32|      0|    match x {
    33|      0|        y if foo().await[y] => (),
    34|      0|        _ => (),
-   35|      0|    }
+   35|       |    }
    36|      0|}
    37|       |
    38|      1|async fn i(x: u8) { // line coverage is 1, but there are 2 regions:
@@ -82,7 +82,7 @@
    77|      0|        1 => (),
    78|      0|        2 => (),
    79|      0|        _ => (),
-   80|      0|    }
+   80|       |    }
    81|      0|}
    82|       |
    83|      1|fn l(x: u8) {
